@@ -13,7 +13,7 @@ async function settle(page: Page) {
 }
 
 // O painel de cenários e o indicador de conexão não fazem parte do layout do Figma.
-const hide = (page: Page) => [page.getByRole('button', { name: /painel de cenários/ }), page.getByTestId('realtime-status')]
+const hide = (page: Page) => [page.getByRole('button', { name: /painel de cenários/ }), page.getByTestId('realtime-status'), page.locator('[data-sonner-toaster]')]
 
 test.describe('Regressão visual', () => {
   test('início', async ({ app, page }) => {

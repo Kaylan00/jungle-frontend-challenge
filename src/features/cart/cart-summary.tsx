@@ -85,10 +85,10 @@ export function CouponForm({ cart, compact }: { cart: Cart; compact?: boolean })
       }}
       noValidate
     >
-      <label htmlFor="coupon" className={cn('mb-2 block text-[13px] font-semibold', compact && 'sr-only')}>
+      <label htmlFor="coupon" className={cn('mb-2 block text-[13px] font-semibold max-lg:sr-only', compact && 'sr-only')}>
         Código promocional
       </label>
-      <div className={cn('flex overflow-hidden border border-input', compact ? 'rounded-full' : 'rounded-md')}>
+      <div className={cn('flex overflow-hidden border border-input max-lg:rounded-full', compact ? 'rounded-full' : 'rounded-md')}>
         <input
           id="coupon"
           value={code}
@@ -102,7 +102,7 @@ export function CouponForm({ cart, compact }: { cart: Cart; compact?: boolean })
           className="h-10 min-w-0 flex-1 bg-transparent px-3 text-[13px] uppercase placeholder:normal-case placeholder:text-subtle-foreground"
           autoComplete="off"
         />
-        <button type="submit" disabled={apply.isPending || !code.trim()} className={cn('bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60', compact && 'rounded-full')}>
+        <button type="submit" disabled={apply.isPending || !code.trim()} className={cn('bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60 max-lg:rounded-full', compact && 'rounded-full')}>
           {apply.isPending ? 'Aplicando…' : 'Aplicar'}
         </button>
       </div>

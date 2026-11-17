@@ -15,7 +15,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { AlertTriangle, CheckCircle2, Loader2, Wallet as WalletIcon } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronLeft, Loader2, Wallet as WalletIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -70,7 +70,14 @@ export function CheckoutPage() {
           <li aria-current="page">Pagamento</li>
         </ol>
       </nav>
-      <h1 className="mb-4 text-center text-xl font-bold md:sr-only">Pagamento com carteira</h1>
+      <div className="mb-4 flex items-center gap-3 md:hidden">
+        <Link to="/carrinho" className="grid size-9 place-items-center rounded-full bg-card text-primary" aria-label="Voltar ao carrinho">
+          <ChevronLeft className="size-5" aria-hidden="true" />
+        </Link>
+        <h1 className="flex-1 text-center text-xl font-bold">Pagamento com carteira</h1>
+        <span className="size-9" />
+      </div>
+      <h1 className="sr-only max-md:hidden">Pagamento com carteira</h1>
       <PendingOrdersBanner />
       {cart.isError && !cart.data ? (
         <ErrorState title="Não foi possível carregar o carrinho" message={cart.error.message} onRetry={() => void cart.refetch()} />
@@ -294,9 +301,9 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
 
   return (
     <>
-      <form onSubmit={onReview} noValidate className="grid gap-10 lg:grid-cols-[1fr_400px] lg:gap-12" aria-label="Pagamento" data-testid="checkout-form">
-        {/* Perfil do colecionador */}
-        <section aria-labelledby="perfil-colecionador">
+      <form onSubmit={onReview} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px] lg:gap-x-12 lg:gap-y-5" aria-label="Pagamento" data-testid="checkout-form">
+        {/* Perfil do colecionador (no mobile vem depois da carteira, como no Figma) */}
+        <section aria-labelledby="perfil-colecionador" className="max-lg:order-2 lg:row-span-2">
           <h2 id="perfil-colecionador" className="mb-3 text-[15px] font-semibold">
             Perfil do colecionador
           </h2>
@@ -327,9 +334,9 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
               )}
             </div>
             <FormField label="Nome do perfil" required error={errors.profileName?.message} {...reg('profileName')} />
-            <FormField label="Endereço da carteira" value={wallet?.address ?? ''} readOnly hint="Vem da carteira selecionada ao lado." />
+            <FormField label="Endereço da carteira" value={wallet?.address ?? ''} readOnly hint="Preenchido pela carteira selecionada." />
             <FormField label="ENS ou carteira secundária (opcional)" value={wallet?.secondaryAddress ?? ''} readOnly placeholder="ENS ou carteira secundária (opcional)" />
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 max-lg:hidden">
               <label htmlFor="checkout-provider" className="text-[13px] font-medium">
                 Tipo de carteira<span className="ml-0.5 text-primary" aria-hidden="true">*</span>
               </label>
@@ -365,7 +372,7 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
         </section>
 
         {/* Resumo + carteira */}
-        <aside aria-label="Resumo e carteira" className="space-y-5">
+        <aside aria-label="Resumo e carteira" className="space-y-5 max-lg:order-1">
           <section aria-labelledby="seus-nfts">
             <div className="mb-2 flex justify-between text-[14px] font-semibold">
               <h2 id="seus-nfts">Seus NFTs</h2>
@@ -426,6 +433,28 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
             </div>
             {errors.walletId && <p className="mt-1 text-[12px] text-destructive">⚠ {errors.walletId.message}</p>}
 
+            {/* Mobile (Figma): tipo de carteira em cartões. No desktop é o select "Tipo de carteira". */}
+            <div role="radiogroup" aria-label="Tipo de carteira" className="mt-3 space-y-2 lg:hidden">
+              {WalletProvider.options.map((p) => (
+                <label key={p} className={cn('flex cursor-pointer items-center gap-3 rounded-xl bg-card p-3 text-[13px]', provider === p && 'ring-1 ring-primary')}>
+                  <span aria-hidden="true" className="grid size-8 place-items-center rounded-full border border-primary/40 text-[12px] font-bold text-primary">
+                    {PROVIDER_LABEL[p][0]}
+                  </span>
+                  <span className="flex-1">{PROVIDER_LABEL[p]}</span>
+                  <input
+                    type="radio"
+                    name="provider-choice"
+                    checked={provider === p}
+                    onChange={() => {
+                      if (conn.status === 'connected') void disconnect()
+                      form.setValue('provider', p)
+                    }}
+                    className="size-4 accent-[var(--primary)]"
+                  />
+                </label>
+              ))}
+            </div>
+
             <div className="mt-3 rounded-md border border-border p-3 text-[13px]" aria-live="polite" data-testid="wallet-connection" data-status={connected ? 'connected' : conn.status}>
               {connected ? (
                 <div className="flex items-center justify-between gap-2">
@@ -460,10 +489,13 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
             </div>
           </fieldset>
 
-          <Button type="submit" className="h-11 w-full font-semibold max-lg:rounded-full" disabled={quoting} data-testid="review-button">
+        </aside>
+
+        <div className="max-lg:order-3 lg:col-start-2">
+          <Button type="submit" className="h-11 w-full font-semibold max-lg:h-12 max-lg:rounded-full" disabled={quoting} data-testid="review-button">
             {quoting ? 'Gerando revisão…' : 'Revisar e confirmar compra'}
           </Button>
-        </aside>
+        </div>
       </form>
 
       {/* Revisão: Dialog do shadcn (foco preso dentro, Esc fecha, foco volta ao botão) */}

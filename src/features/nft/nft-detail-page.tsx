@@ -109,7 +109,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
         </ol>
       </nav>
 
-      <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10">
         {/* Galeria */}
         <div className="grid gap-3 md:grid-cols-[100px_1fr]">
           <ul className="order-2 flex gap-3 md:order-1 md:flex-col" aria-label="Imagens do NFT">
@@ -220,7 +220,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
             </p>
           </fieldset>
 
-          <div className="hidden items-center justify-between gap-4 md:flex">
+          <div className="hidden flex-wrap items-center justify-between gap-4 md:flex">
             <QuantityStepper value={qty} max={Math.max(1, limit)} onChange={setQty} label="Quantidade" disabled={!!unavailableReason} />
             <div className="flex gap-3">
               <Button className="h-9 px-8 text-[13px] font-semibold uppercase" onClick={() => buy(true)} disabled={!!unavailableReason || add.isPending} data-testid="buy-button">
@@ -367,7 +367,7 @@ function DetailSkeleton() {
   return (
     <div className="container-page pt-6" aria-busy="true" aria-label="Carregando NFT" data-testid="detail-loading">
       <Skeleton className="mb-3 hidden h-4 w-40 md:block" />
-      <div className="grid gap-8 md:grid-cols-2 lg:gap-10">
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
         <div className="grid gap-3 md:grid-cols-[100px_1fr]">
           <div className="order-2 flex gap-3 md:order-1 md:flex-col">
             {Array.from({ length: 4 }, (_, i) => (

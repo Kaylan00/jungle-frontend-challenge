@@ -60,4 +60,22 @@ test.describe('Teclado e acessibilidade', () => {
       expect(serious.map((v) => `${path}: ${v.id} (${v.nodes.length})`)).toEqual([])
     }
   })
+
+  test('sem overflow horizontal em 390, 768 e 1440 px nem com zoom de 200%', async ({ app, page }) => {
+    test.skip(app.isMobile, 'O próprio teste percorre as larguras')
+    await app.login('ana')
+    await app.addToCart('nft-01', { edition: 'nft-01-ed-3' })
+    const routes = ['/', '/nft/nft-01', '/carrinho', '/pagamento', '/perfil', '/perfil/carteiras', '/perfil/favoritos', '/login']
+    // 640 px ≈ 1280 px com zoom de 200% (WCAG 1.4.10, reflow)
+    for (const width of [390, 640, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      for (const path of routes) {
+        await app.goto(path)
+        await page.waitForLoadState('networkidle')
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+        expect(overflow, `${path} em ${width}px`).toBeLessThanOrEqual(0)
+      }
+    }
+  })
 })
+
