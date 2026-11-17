@@ -9,6 +9,8 @@ import type { Page } from '@playwright/test'
 async function settle(page: Page) {
   await page.waitForLoadState('networkidle')
   await page.evaluate(() => document.fonts.ready)
+  // Imagens lazy escondidas no layout atual (ex.: só desktop) nunca disparam load: força o carregamento.
+  await page.evaluate(() => document.querySelectorAll<HTMLImageElement>('img[loading="lazy"]').forEach((img) => (img.loading = 'eager')))
   await page.evaluate(() => Promise.all(Array.from(document.images).map((img) => (img.complete ? null : new Promise((r) => (img.onload = img.onerror = r))))))
 }
 
