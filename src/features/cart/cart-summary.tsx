@@ -141,8 +141,8 @@ export function CouponForm({ cart, compact, variant }: { cart: Cart; compact?: b
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? 'coupon-error' : undefined}
           className={cn(
-            'h-10 min-w-0 flex-1 bg-transparent px-3 text-[13px] uppercase placeholder:normal-case placeholder:text-subtle-foreground',
-            !compact && 'max-md:h-[50px] max-md:pl-4 max-md:placeholder:text-[#b39463] lg:h-[38px] lg:pl-[8px] lg:text-[12px] lg:tracking-[0.15px] lg:placeholder:text-[#b39463]',
+            'h-10 min-w-0 flex-1 text-ellipsis bg-transparent px-3 text-[13px] uppercase placeholder:normal-case placeholder:text-subtle-foreground',
+            !compact && 'max-md:h-[50px] max-md:pl-3 max-md:pr-1 max-md:text-[12px] max-md:placeholder:text-[#b39463] lg:h-[38px] lg:pl-[8px] lg:text-[12px] lg:tracking-[0.15px] lg:placeholder:text-[#b39463]',
             cartLg && 'lg:pr-0 lg:leading-4 lg:tracking-normal',
           )}
           autoComplete="off"
@@ -154,7 +154,7 @@ export function CouponForm({ cart, compact, variant }: { cart: Cart; compact?: b
             'bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60 max-lg:rounded-full',
             compact
               ? 'rounded-full'
-              : 'max-md:w-[97px] max-md:bg-[linear-gradient(90deg,#855632,#965f35)] max-md:px-0 max-md:text-[15px] max-md:font-bold max-md:text-foreground max-md:shadow-[-2px_0_6px_rgba(0,0,0,0.25)] max-md:disabled:opacity-100 lg:w-[102px] lg:px-0 lg:text-[14px] lg:font-bold lg:disabled:opacity-100',
+              : 'max-md:w-[97px] max-md:bg-[linear-gradient(90deg,#855632,#965f35)] max-md:px-0 max-md:text-[15px] max-md:font-bold max-md:text-foreground max-md:shadow-[-2px_0_6px_rgba(0,0,0,0.25)] max-md:disabled:opacity-100 lg:w-[97px] lg:px-0 lg:text-[14px] lg:font-bold lg:disabled:opacity-100',
             cartLg && 'lg:text-[15px] lg:leading-4',
           )}
         >
