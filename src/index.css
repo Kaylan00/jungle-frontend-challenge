@@ -1,0 +1,112 @@
+@import "tailwindcss";
+@import "@fontsource-variable/roboto-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Tokens da identidade KURIO (lidos do Figma).
+ * Fundo marrom quase preto, superfícies em marrom, destaque laranja-cobre e texto creme.
+ * Os componentes do shadcn/ui usam estas variáveis, então herdam a identidade sem reescrita.
+ */
+:root {
+  --background: #160c0a;
+  --foreground: #f4eee8;
+  --card: #221614;
+  --card-foreground: #f4eee8;
+  --popover: #221614;
+  --popover-foreground: #f4eee8;
+  --primary: #d08c52;
+  --primary-hover: #dd9a60;
+  --primary-foreground: #1a0f0c;
+  --secondary: #2c1d19;
+  --secondary-foreground: #f4eee8;
+  --muted: #2c1d19;
+  /* Texto secundário (tan). Contraste 7.4:1 sobre o fundo. */
+  --muted-foreground: #c9a785;
+  --subtle-foreground: #a8917c;
+  --accent: #2c1d19;
+  --accent-foreground: #f4eee8;
+  --destructive: #e5534b;
+  --success: #6fbf73;
+  --warning: #e8b04b;
+  --border: #3a2822;
+  --input: #3a2822;
+  --ring: #d08c52;
+  --band: #3a2214;
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --font-sans: "Roboto Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: "Roboto Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-band: var(--band);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 14px;
+    overflow-x: hidden;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /* Movimento reduzido: sem shimmer, sem transições longas. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-[1200px] px-4 md:px-6 xl:px-0;
+  }
+}
