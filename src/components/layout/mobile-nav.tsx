@@ -1,5 +1,4 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { ScanLine } from 'lucide-react'
 import { useCartCount } from '@/features/cart/hooks'
 import { cn } from '@/lib/utils'
 import { hasMobileNav } from './mobile-nav-routes'
@@ -40,6 +39,49 @@ function UserIcon() {
   )
 }
 
+/* Ícone "Scan" do Figma (Iconly Curved, 26.82 x 24): cantos curvos e linha do meio de ponta a ponta. */
+function ScanIcon() {
+  return (
+    <svg viewBox="0 0 27 24" width="26.82" height="24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+      <path d="M9.6 1.3H7.4C3.2 1.3 1.5 3 1.5 7.2v1.3" />
+      <path d="M17.4 1.3h2.2c4.2 0 5.9 1.7 5.9 5.9v1.3" />
+      <path d="M9.6 22.7H7.4c-4.2 0-5.9-1.7-5.9-5.9v-1.3" />
+      <path d="M17.4 22.7h2.2c4.2 0 5.9-1.7 5.9-5.9v-1.3" />
+      <path d="M.95 12h25.1" />
+    </svg>
+  )
+}
+
+/*
+ * Peça central da barra com o recorte do Figma: círculo de raio 50 com centro 5px abaixo da borda
+ * superior, ligado à borda por curvas de transição (raio 10) em vez de quinas. A peça fica entre
+ * duas metades com cantos de 40px; o caminho passa 1px de cada lado para não abrir fresta.
+ */
+const NOTCH = { w: 140, cx: 70, R: 50, cy: 5, r: 10 }
+const notchPath = (() => {
+  const { w, cx, R, cy, r } = NOTCH
+  const d = Math.sqrt((R + r) ** 2 - (r - cy) ** 2)
+  const k = R / (R + r)
+  const tx = d * k
+  const ty = cy + (r - cy) * k
+  const f = (n: number) => n.toFixed(2)
+  return [
+    `M-1 0H${f(cx - d)}`,
+    `A${r} ${r} 0 0 1 ${f(cx - tx)} ${f(ty)}`,
+    `A${R} ${R} 0 0 0 ${f(cx + tx)} ${f(ty)}`,
+    `A${r} ${r} 0 0 1 ${f(cx + d)} 0`,
+    `H${w + 1}V96H-1Z`,
+  ].join('')
+})()
+
+function NotchPiece() {
+  return (
+    <svg width={NOTCH.w} height="96" viewBox={`0 0 ${NOTCH.w} 96`} className="shrink-0 overflow-visible text-card" aria-hidden="true">
+      <path d={notchPath} fill="currentColor" />
+    </svg>
+  )
+}
+
 /**
  * Barra inferior do layout mobile (Figma 414: barra de 96px com cantos de 40px e um recorte em volta do
  * botão central redondo; início, favoritos, botão central, carrinho e perfil).
@@ -52,10 +94,11 @@ export function MobileNav() {
     cn('absolute top-[34px] grid size-11 -translate-x-1/2 place-items-center rounded-full text-muted-foreground transition-colors hover:text-highlight', active && 'text-highlight')
   return (
     <nav aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-40 h-24 md:hidden">
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 rounded-t-[40px] bg-card shadow-[0_-8px_24px_rgba(0,0,0,0.25)] [mask-image:radial-gradient(circle_at_50%_7px,transparent_43px,#000_44px)]"
-      />
+      <div aria-hidden="true" className="absolute inset-0 flex drop-shadow-[0_-8px_24px_rgba(0,0,0,0.25)]">
+        <div className="flex-1 rounded-tl-[40px] bg-card" />
+        <NotchPiece />
+        <div className="flex-1 rounded-tr-[40px] bg-card" />
+      </div>
       <Link to="/" className={cn(item(pathname === '/'), 'left-[calc(50%-161px)]')} aria-label="Início" aria-current={pathname === '/' ? 'page' : undefined}>
         <HomeIcon />
       </Link>
@@ -68,7 +111,7 @@ export function MobileNav() {
         className="absolute -top-[25px] left-1/2 grid size-16 -translate-x-1/2 place-items-center rounded-full bg-[linear-gradient(180deg,#70492a,#c78349)] text-foreground transition-[filter] hover:brightness-110"
         aria-label="Explorar catálogo"
       >
-        <ScanLine className="size-[27px]" strokeWidth={1.8} aria-hidden="true" />
+        <ScanIcon />
       </Link>
       <Link
         to="/carrinho"
