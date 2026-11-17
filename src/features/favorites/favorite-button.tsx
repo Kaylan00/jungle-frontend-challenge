@@ -4,7 +4,21 @@ import { useSession } from '@/features/auth/use-session'
 import { cn } from '@/lib/utils'
 import { useFavorites, useToggleFavorite } from './hooks'
 
-export function FavoriteButton({ nftId, nftName, size = 'md', withLabel = false }: { nftId: string; nftName: string; size?: 'sm' | 'md'; withLabel?: boolean }) {
+export function FavoriteButton({
+  nftId,
+  nftName,
+  size = 'md',
+  withLabel = false,
+  className,
+  iconClassName,
+}: {
+  nftId: string
+  nftName: string
+  size?: 'sm' | 'md'
+  withLabel?: boolean
+  className?: string
+  iconClassName?: string
+}) {
   const { user } = useSession()
   const { data } = useFavorites()
   const toggle = useToggleFavorite()
@@ -34,9 +48,10 @@ export function FavoriteButton({ nftId, nftName, size = 'md', withLabel = false 
         'relative z-20 inline-flex items-center justify-center gap-2 rounded-full border border-transparent text-foreground transition-colors hover:text-primary',
         size === 'sm' ? 'size-8 bg-background/80' : 'h-9 rounded-md border-primary/70 px-3 text-sm',
         active && 'text-primary',
+        className,
       )}
     >
-      <Heart className={cn('size-4', active && 'fill-current')} aria-hidden="true" />
+      <Heart className={cn('size-4', iconClassName, active && 'fill-current')} aria-hidden="true" />
       {withLabel && <span>{active ? 'Favoritado' : 'Favoritar'}</span>}
     </button>
   )

@@ -15,26 +15,26 @@ export function Hero() {
 
   return (
     <section aria-labelledby="hero-title" className="container-page">
-      {/* Desktop */}
-      <div className="hidden grid-cols-[1fr_450px] items-center gap-10 py-8 md:grid">
-        <div className="pl-10">
-          <p className="mb-4 text-[13px] font-medium">Bem-vindo à Kurio</p>
-          <h1 id="hero-title" className="text-[40px] font-bold uppercase leading-[1.45] tracking-tight lg:text-[44px]">
+      {/* Desktop (Figma 1440: arte 450x450 em x=870, texto em x=160) */}
+      <div className="hidden grid-cols-[1fr_450px] gap-10 pt-8 md:grid">
+        <div className="pt-[39px] md:pl-4 xl:pl-10">
+          <p className="text-sm leading-6 tracking-[0.1em]">Bem-vindo à Kurio</p>
+          <h1 id="hero-title" className="mt-[5px] text-[34px] font-bold uppercase leading-[1.6] lg:text-[43px] lg:leading-[70px]">
             Seja dono do futuro
             <br />
             da arte digital
           </h1>
-          <p className="mt-3 max-w-[460px] text-[13px] leading-relaxed text-muted-foreground">
+          <p className="mt-[3px] max-w-[560px] leading-6 text-muted-foreground">
             Descubra NFTs selecionados de criadores emergentes e consagrados. Colecione arte digital rara, apoie artistas e tenha uma parte da cultura da internet.
           </p>
           <Link
             to="/"
             hash="catalogo"
-            className="mt-8 inline-flex h-10 items-center rounded-md bg-primary px-6 text-[13px] font-bold uppercase text-primary-foreground hover:bg-primary-hover"
+            className="mt-8 inline-flex h-10 w-[140px] items-center rounded-[4px] bg-primary pl-7 text-base font-semibold uppercase text-primary-foreground transition-colors hover:bg-primary-hover"
           >
             Explorar
           </Link>
-          <Dots count={items.length || 3} index={index} onSelect={setIndex} className="mt-10 justify-center" />
+          <Dots count={items.length || 3} index={index} onSelect={setIndex} className="mt-9 xl:ml-[556px]" />
         </div>
         <div className="relative aspect-square w-[450px]">
           {isPending || !current ? (
@@ -82,7 +82,7 @@ export function Hero() {
 
 function Dots({ count, index, onSelect, className }: { count: number; index: number; onSelect: (i: number) => void; className?: string }) {
   return (
-    <div className={cn('flex gap-1.5', className)} role="group" aria-label="Destaques">
+    <div className={cn('flex', className)} role="group" aria-label="Destaques">
       {Array.from({ length: count }, (_, i) => (
         <button
           key={i}
@@ -90,9 +90,9 @@ function Dots({ count, index, onSelect, className }: { count: number; index: num
           onClick={() => onSelect(i)}
           aria-label={`Destaque ${i + 1} de ${count}`}
           aria-current={i === index ? 'true' : undefined}
-          className="grid size-6 place-items-center"
+          className="grid h-6 w-4 place-items-center"
         >
-          <span className={cn('size-1.5 rounded-full bg-primary transition-opacity', i === index ? 'opacity-100' : 'opacity-50')} />
+          <span className="size-2 rounded-full bg-primary" />
         </button>
       ))}
     </div>

@@ -8,15 +8,19 @@ const LABEL = {
   offline: 'Desconectado',
 } as const
 
-/** Estado da conexão em tempo real: texto + cor (não depende só da cor). */
+/**
+ * Estado da conexão em tempo real. Não existe no Figma, então fica fora do cabeçalho:
+ * um ponto discreto fixo no canto inferior direito. O texto do estado continua para leitor
+ * de tela (sr-only) e no title ao passar o mouse (não depende só da cor).
+ */
 export function RealtimeBadge() {
   const status = useRealtimeStatus()
   return (
     <span
-      className="hidden items-center gap-1.5 text-xs text-muted-foreground lg:inline-flex"
+      className="fixed bottom-4 right-4 z-30 hidden items-center gap-1.5 rounded-full border border-border bg-card/90 p-1.5 text-xs text-muted-foreground shadow-sm lg:inline-flex"
       data-testid="realtime-status"
       data-status={status}
-      title="Atualizações de preço e pedidos em tempo real"
+      title={`${LABEL[status]}: atualizações de preço e pedidos em tempo real`}
     >
       <span
         aria-hidden="true"
@@ -27,7 +31,7 @@ export function RealtimeBadge() {
           status === 'offline' && 'bg-destructive',
         )}
       />
-      {LABEL[status]}
+      <span className="sr-only">Conexão em tempo real: {LABEL[status]}</span>
     </span>
   )
 }

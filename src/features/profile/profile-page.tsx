@@ -8,7 +8,7 @@
  * Ao salvar, o cache do perfil e o da sessão recebem o usuário novo, então o cabeçalho atualiza junto.
  */
 import { zodResolver } from '@hookform/resolvers/zod'
-import { UserRound } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { PasswordChangeInput, ProfileInput, type User } from '@/api/contracts'
@@ -17,6 +17,7 @@ import { ErrorState } from '@/components/shared/error-state'
 import { applyApiFieldErrors, FormField } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { notifyError, notifySuccess, useChangePassword, useProfile, useRemoveAvatar, useUpdateAvatar, useUpdateProfile } from './hooks'
 import { ProfileLayout } from './profile-layout'
 
@@ -38,10 +39,9 @@ export function ProfilePage() {
           retrying={profile.isFetching}
         />
       ) : (
-        <div className="flex flex-col gap-10">
-          <ProfileForm user={profile.data} />
+        <ProfileForm user={profile.data}>
           <PasswordForm />
-        </div>
+        </ProfileForm>
       )}
     </ProfileLayout>
   )
@@ -53,7 +53,15 @@ function toProfileInput(user: User): ProfileInput {
 
 const profileFields = ['name', 'username', 'email', 'ensName', 'walletNickname'] as const
 
-function ProfileForm({ user }: { user: User }) {
+/** Campos da tela de perfil: no Figma o rótulo fica 18px acima do campo. */
+const profileField = 'gap-[17px]'
+
+/**
+ * Formulário do perfil. No Figma há um único botão "Salvar" no fim da página, abaixo da troca de senha;
+ * por isso o bloco marcado com data-testid="profile-form" envolve o formulário do perfil, o de senha
+ * (passado como children) e o botão, que envia o formulário do perfil pelo atributo form.
+ */
+function ProfileForm({ user, children }: { user: User; children?: React.ReactNode }) {
   const update = useUpdateProfile()
   const [formError, setFormError] = useState<string | null>(null)
   const form = useForm<ProfileInput>({ resolver: zodResolver(ProfileInput), defaultValues: toProfileInput(user) })
@@ -78,43 +86,76 @@ function ProfileForm({ user }: { user: User }) {
   })
 
   return (
-    <form onSubmit={onSubmit} noValidate aria-labelledby="profile-form-title" data-testid="profile-form">
-      <h2 id="profile-form-title" className="mb-5 text-[14px] font-bold">
-        Perfil do colecionador
-      </h2>
-      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
-        <FormField id="profile-name" label="Nome de exibição" required autoComplete="name" error={errors.name?.message} {...form.register('name')} />
-        <FormField id="profile-username" label="Nome de usuário" required autoComplete="username" error={errors.username?.message} {...form.register('username')} />
-        <FormField id="profile-email" label="E-mail" required type="email" autoComplete="email" error={errors.email?.message} {...form.register('email')} />
-        <FormField
-          id="profile-ens"
-          label="Nome ENS"
-          required
-          autoComplete="off"
-          prefix={<EnsSuffix />}
-          className="rounded-l-none"
-          error={errors.ensName?.message}
-          {...form.register('ensName')}
-        />
-        <FormField id="profile-wallet-nickname" label="Apelido da carteira" required error={errors.walletNickname?.message} {...form.register('walletNickname')} />
-        <AvatarField user={user} />
-      </div>
-      {formError && (
-        <p role="alert" className="mt-4 text-[13px] text-destructive" data-testid="form-error">
-          {formError}
-        </p>
-      )}
-      <Button type="submit" disabled={isSubmitting} className="mt-6 h-10 min-w-32 font-semibold">
+    <div data-testid="profile-form" className="flex flex-col">
+      <form id="profile-form" onSubmit={onSubmit} noValidate aria-labelledby="profile-form-title">
+        <h2 id="profile-form-title" className="mb-[38px] text-[16px] font-bold leading-4 text-[#f5f1eb]">
+          Perfil do colecionador
+        </h2>
+        <div className="grid gap-x-7 gap-y-[30px] md:grid-cols-2">
+          <FormField id="profile-name" label="Nome de exibição" required autoComplete="name" containerClassName={profileField} error={errors.name?.message} {...form.register('name')} />
+          <FormField
+            id="profile-username"
+            label="Nome de usuário"
+            required
+            autoComplete="username"
+            containerClassName={profileField}
+            error={errors.username?.message}
+            {...form.register('username')}
+          />
+          <FormField id="profile-email" label="E-mail" required type="email" autoComplete="email" containerClassName={profileField} error={errors.email?.message} {...form.register('email')} />
+          <FormField
+            id="profile-ens"
+            label="Nome ENS"
+            required
+            autoComplete="off"
+            prefix={<EnsSuffix />}
+            containerClassName={profileField}
+            error={errors.ensName?.message}
+            {...form.register('ensName')}
+          />
+          <FormField
+            id="profile-wallet-nickname"
+            label="Apelido da carteira"
+            required
+            containerClassName={profileField}
+            error={errors.walletNickname?.message}
+            {...form.register('walletNickname')}
+          />
+          <AvatarField user={user} />
+        </div>
+        {formError && (
+          <p role="alert" className="mt-4 text-[13px] text-destructive" data-testid="form-error">
+            {formError}
+          </p>
+        )}
+      </form>
+      {children}
+      <Button type="submit" form="profile-form" disabled={isSubmitting} className={cn('mt-8', primaryButton)}>
         {isSubmitting ? 'Salvando…' : 'Salvar'}
       </Button>
-    </form>
+    </div>
   )
 }
 
-/** Caixa fixa ".eth" à esquerda do campo: o valor salvo é só o nome. */
+/** Botão laranja do Figma (perfil e carteiras): 40px de altura, raio de 2px, texto 14px em negrito. */
+export const primaryButton = 'h-10 self-start rounded-[2px] bg-[#d28a4c] px-10 text-[14px] font-bold text-[#140d0a] hover:bg-[#dd9a60]'
+
+/**
+ * Caixa ".eth" à esquerda do campo (Figma: 78px com seta). O valor salvo é só o nome; o seletor tem
+ * uma única opção, então é informativo, mas continua sendo um controle real e rotulado.
+ */
 export function EnsSuffix() {
   return (
-    <span className="flex h-10 shrink-0 items-center rounded-l-md border border-r-0 border-input bg-secondary px-3 text-[13px] text-foreground">.eth</span>
+    <span className="relative mr-2.5 flex h-10 w-[78px] shrink-0">
+      <select
+        aria-label="Domínio ENS"
+        defaultValue=".eth"
+        className="h-10 w-full appearance-none rounded-[2px] border border-[#3f2319] bg-transparent pl-[9px] pr-7 text-[14px] text-[#f5f1eb] focus-visible:border-primary focus-visible:outline-none [&>option]:bg-card"
+      >
+        <option value=".eth">.eth</option>
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-[3px] top-1/2 size-6 -translate-y-1/2 text-[#f5f1eb]" strokeWidth={1.5} aria-hidden="true" />
+    </span>
   )
 }
 
@@ -156,28 +197,31 @@ function AvatarField({ user }: { user: User }) {
   }
 
   return (
-    <div className="flex flex-col gap-1.5" role="group" aria-labelledby="avatar-label" aria-describedby={error ? 'avatar-error' : undefined}>
-      <span id="avatar-label" className="text-[13px] font-medium">
+    <div className="flex flex-col gap-2.5 md:-mt-[7px]" role="group" aria-labelledby="avatar-label" aria-describedby={error ? 'avatar-error' : 'avatar-hint'}>
+      <span id="avatar-label" className="text-[14px] leading-4 text-foreground">
         Avatar
       </span>
-      <div className="flex h-10 items-center gap-3">
+      <div className="flex min-h-[50px] flex-wrap items-center gap-y-2">
         {user.avatarUrl ? (
-          <img src={user.avatarUrl} alt="Seu avatar atual" width={40} height={40} className="size-10 rounded-full object-cover" data-testid="avatar-image" />
+          <img src={user.avatarUrl} alt="Seu avatar atual" width={50} height={50} className="size-[50px] rounded-full object-cover" data-testid="avatar-image" />
         ) : (
-          <span className="grid size-10 place-items-center rounded-full bg-secondary" role="img" aria-label="Sem avatar">
-            <UserRound className="size-5 text-muted-foreground" aria-hidden="true" />
+          <span className="grid size-[50px] place-items-center rounded-full border border-[#3f2319] bg-[#2f1d15]" role="img" aria-label="Sem avatar">
+            <AvatarPlaceholderIcon />
           </span>
         )}
-        <Button type="button" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
+        <Button type="button" disabled={busy} onClick={() => inputRef.current?.click()} className={cn(primaryButton, 'ml-6 px-5')}>
           {updateAvatar.isPending ? 'Enviando…' : 'Alterar'}
           <span className="sr-only"> avatar</span>
         </Button>
-        {user.avatarUrl && (
-          <Button type="button" size="sm" variant="link" disabled={busy} onClick={() => void onRemove()} className="px-1">
-            {removeAvatar.isPending ? 'Removendo…' : 'Remover'}
-            <span className="sr-only"> avatar</span>
-          </Button>
-        )}
+        <button
+          type="button"
+          disabled={busy || !user.avatarUrl}
+          onClick={() => void onRemove()}
+          className="ml-5 text-[14px] text-[#f5f1eb] hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:hover:text-[#f5f1eb] disabled:hover:no-underline"
+        >
+          {removeAvatar.isPending ? 'Removendo…' : 'Remover'}
+          <span className="sr-only"> avatar</span>
+        </button>
         <input
           ref={inputRef}
           type="file"
@@ -197,9 +241,22 @@ function AvatarField({ user }: { user: User }) {
           {error}
         </p>
       ) : (
-        <p className="text-[12px] text-muted-foreground">PNG, JPEG ou WebP, até 1 MB.</p>
+        <p id="avatar-hint" className="sr-only">
+          PNG, JPEG ou WebP, até 1 MB.
+        </p>
       )}
     </div>
+  )
+}
+
+/** Ícone de imagem do Figma dentro do círculo do avatar vazio. */
+function AvatarPlaceholderIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke="#d28a4c" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="8.5" cy="8.5" r="1.6" />
+      <path d="M3.5 16.5c2.2-2.4 3.8-3.2 5.6-1.7 1.6 1.3 2.6 1.6 4.4-.6 1.7-2 3.9-2.8 7-1" />
+    </svg>
   )
 }
 
@@ -218,7 +275,7 @@ function PasswordForm() {
   const change = useChangePassword()
   const [formError, setFormError] = useState<string | null>(null)
   const form = useForm<PasswordChangeInput>({ resolver: zodResolver(PasswordChangeInput), defaultValues: emptyPassword })
-  const { errors, isSubmitting } = form.formState
+  const { errors, isSubmitting, isDirty } = form.formState
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null)
@@ -238,38 +295,45 @@ function PasswordForm() {
     }
   })
 
+  // No Figma a troca de senha não tem botão próprio: "Alterar senha" aparece quando a pessoa começa a preencher.
+  const showSubmit = isDirty || isSubmitting || Boolean(formError) || Object.keys(errors).length > 0
+
   return (
-    <form onSubmit={onSubmit} noValidate aria-labelledby="password-form-title" data-testid="password-form">
-      <h2 id="password-form-title" className="mb-5 text-[14px] font-bold">
+    <form onSubmit={onSubmit} noValidate aria-labelledby="password-form-title" data-testid="password-form" className="mt-8 md:w-[calc(50%-14px)]">
+      <h2 id="password-form-title" className="mb-[23px] text-[16px] font-bold leading-4 text-[#f5f1eb]">
         Alterar senha
       </h2>
-      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
+      <div className="flex flex-col gap-[23px]">
         <FormField
           id="password-current"
           label="Senha atual"
-          required
+          aria-required
           type="password"
           autoComplete="current-password"
+          containerClassName={passwordField}
+          toggleClassName={passwordToggle}
           error={errors.currentPassword?.message}
           {...form.register('currentPassword')}
         />
         <FormField
           id="password-new"
           label="Nova senha"
-          required
+          aria-required
           type="password"
           autoComplete="new-password"
-          hint="Mínimo de 8 caracteres, com letras e números."
+          containerClassName={passwordField}
+          toggleClassName={passwordToggle}
           error={errors.newPassword?.message}
-          containerClassName="md:col-start-1"
           {...form.register('newPassword')}
         />
         <FormField
           id="password-confirm"
           label="Confirmar nova senha"
-          required
+          aria-required
           type="password"
           autoComplete="new-password"
+          containerClassName={passwordField}
+          toggleClassName={passwordToggle}
           error={errors.confirmPassword?.message}
           {...form.register('confirmPassword')}
         />
@@ -279,12 +343,22 @@ function PasswordForm() {
           {formError}
         </p>
       )}
-      <Button type="submit" variant="outline" disabled={isSubmitting} className="mt-6 h-10 min-w-32 border-primary font-semibold text-primary">
-        {isSubmitting ? 'Alterando…' : 'Alterar senha'}
-      </Button>
+      {showSubmit && (
+        <Button
+          type="submit"
+          variant="outline"
+          disabled={isSubmitting}
+          className="mt-6 h-10 rounded-[2px] border-[#d28a4c] bg-transparent px-6 text-[14px] font-bold text-[#e89b55] hover:bg-[#d28a4c]/10 hover:text-[#e89b55]"
+        >
+          {isSubmitting ? 'Alterando…' : 'Alterar senha'}
+        </Button>
+      )}
     </form>
   )
 }
+
+const passwordField = 'gap-3'
+const passwordToggle = 'right-[11px] [&_svg]:h-[13px] [&_svg]:w-4'
 
 function ProfileSkeleton() {
   return (

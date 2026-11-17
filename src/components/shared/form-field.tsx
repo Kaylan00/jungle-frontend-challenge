@@ -1,4 +1,3 @@
-import { Eye, EyeOff } from 'lucide-react'
 import { forwardRef, useId, useState } from 'react'
 import type { FieldValues, Path, UseFormSetError } from 'react-hook-form'
 import { cn } from '@/lib/utils'
@@ -6,6 +5,8 @@ import { cn } from '@/lib/utils'
 /**
  * Campo de formulário acessível: label ligado ao input, erro ligado via aria-describedby,
  * aria-invalid quando há erro, asterisco de obrigatório com texto para leitor de tela.
+ * Visual do Figma: rótulo 14px regular, asterisco laranja grande, campo de 40px com borda
+ * marrom e fundo transparente, texto de 14px.
  */
 export const FormField = forwardRef<
   HTMLInputElement,
@@ -16,8 +17,13 @@ export const FormField = forwardRef<
     hideLabel?: boolean
     prefix?: React.ReactNode
     containerClassName?: string
+    /** Classes extras do botão de mostrar/ocultar senha (posição varia entre telas no Figma). */
+    toggleClassName?: string
   }
->(function FormField({ label, error, hint, hideLabel, prefix, required, className, containerClassName, type, id: idProp, ...props }, ref) {
+>(function FormField(
+  { label, error, hint, hideLabel, prefix, required, className, containerClassName, toggleClassName, type, id: idProp, ...props },
+  ref,
+) {
   const autoId = useId()
   const id = idProp ?? autoId
   const errorId = `${id}-error`
@@ -27,14 +33,10 @@ export const FormField = forwardRef<
   const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
 
   return (
-    <div className={cn('flex flex-col gap-1.5', containerClassName)}>
-      <label htmlFor={id} className={cn('text-[13px] font-medium', hideLabel && 'sr-only')}>
+    <div className={cn('flex flex-col gap-2', containerClassName)}>
+      <label htmlFor={id} className={cn('text-[14px] leading-4 text-foreground', hideLabel && 'sr-only')}>
         {label}
-        {required && (
-          <span className="ml-0.5 text-primary" aria-hidden="true">
-            *
-          </span>
-        )}
+        {required && <RequiredMark />}
         {required && <span className="sr-only"> (obrigatório)</span>}
       </label>
       <div className="relative flex">
@@ -47,10 +49,10 @@ export const FormField = forwardRef<
           aria-describedby={describedBy}
           aria-required={required || undefined}
           className={cn(
-            'h-10 w-full min-w-0 rounded-md border border-input bg-card px-3 text-[13px] text-foreground placeholder:text-subtle-foreground',
-            'focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+            'h-10 w-full min-w-0 rounded-[2px] border border-[#3f2319] bg-transparent px-3 text-[14px] text-foreground placeholder:text-[#b39463]',
+            'focus-visible:border-primary focus-visible:outline-none',
             'aria-[invalid=true]:border-destructive',
-            isPassword && 'pr-10',
+            isPassword && 'pr-11',
             className,
           )}
           {...props}
@@ -59,11 +61,14 @@ export const FormField = forwardRef<
           <button
             type="button"
             onClick={() => setShow((s) => !s)}
-            className="absolute right-1 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded text-primary hover:bg-secondary"
+            className={cn(
+              'absolute right-2.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded text-[#b39463] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              toggleClassName,
+            )}
             aria-label={show ? 'Ocultar senha' : 'Mostrar senha'}
             aria-pressed={show}
           >
-            {show ? <Eye className="size-4" aria-hidden="true" /> : <EyeOff className="size-4" aria-hidden="true" />}
+            <EyeIcon off={!show} />
           </button>
         )}
       </div>
@@ -81,6 +86,26 @@ export const FormField = forwardRef<
     </div>
   )
 })
+
+/** Asterisco de obrigatório do Figma: laranja-coral e maior que o rótulo, alinhado ao topo das maiúsculas. */
+export function RequiredMark({ className }: { className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn('relative top-px ml-px inline-block align-top text-[22px] leading-4 text-[#f0805f]', className)}>
+      *
+    </span>
+  )
+}
+
+/** Olho do Figma: elipse com pupila; riscado quando a senha está oculta. */
+export function EyeIcon({ off = true, className }: { off?: boolean; className?: string }) {
+  return (
+    <svg viewBox="0 0 20 16" width={20} height={16} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden="true" className={className}>
+      <ellipse cx="10" cy="8" rx="9" ry="5.6" />
+      <circle cx="10" cy="8" r="2.4" />
+      {off && <path d="M2.6 14.6 17.4 1.4" />}
+    </svg>
+  )
+}
 
 /** Aplica no react-hook-form os erros por campo devolvidos pela API (ex.: e-mail já cadastrado). */
 export function applyApiFieldErrors<T extends FieldValues>(fields: Record<string, string>, setError: UseFormSetError<T>, allowed: ReadonlyArray<Path<T>>) {

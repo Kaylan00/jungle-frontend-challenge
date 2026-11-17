@@ -6,6 +6,7 @@ import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
 import { LiveAnnouncer } from '@/components/layout/live-announcer'
 import { MobileNav } from '@/components/layout/mobile-nav'
+import { RealtimeBadge } from '@/components/layout/realtime-badge'
 
 // Painel de cenários só existe com mocks ligados (não entra no bundle sem eles).
 const ScenarioPanel = import.meta.env.VITE_ENABLE_MOCKS === 'true' ? lazy(() => import('@/mocks/scenario-panel')) : null
@@ -42,6 +43,7 @@ function RootLayout() {
       </main>
       <Footer />
       <MobileNav />
+      <RealtimeBadge />
       <LiveAnnouncer />
       <Toaster
         theme="dark"

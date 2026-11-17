@@ -1,5 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { X } from 'lucide-react'
+import { Dialog as DialogPrimitive } from 'radix-ui'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -7,7 +9,7 @@ import { LoginInput, SignupInput } from '@/api/contracts'
 import { ApiError } from '@/api/http'
 import { applyApiFieldErrors, FormField } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogClose, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { HomePage } from '@/features/catalog/home-page'
 import { announce } from '@/lib/announcer'
 import { cn } from '@/lib/utils'
@@ -31,62 +33,82 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
 
   const close = () => void navigate({ to: search.redirect && !search.redirect.startsWith('/pagamento') ? search.redirect : '/', replace: true })
 
+  const isLogin = mode === 'login'
+
   return (
     <>
       <div aria-hidden="true" className="pointer-events-none hidden md:block">
         <HomePage search={{}} />
       </div>
       <Dialog open onOpenChange={(open) => !open && close()}>
-        <DialogContent
-          className={cn(
-            'gap-0 border-border bg-card p-0 sm:max-w-[430px]',
-            'max-md:inset-0 max-md:h-dvh max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-0',
-          )}
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            document.getElementById(mode === 'login' ? 'login-email' : 'signup-username')?.focus()
-          }}
-        >
-          <div className="flex flex-col px-6 pb-8 pt-10 max-md:justify-center max-md:pt-20 md:px-10">
-            <p className="mb-10 text-center text-2xl font-bold tracking-[0.12em] md:hidden">KURIO</p>
-            <nav aria-label="Entrar ou criar conta" className="flex items-center justify-center gap-2 text-lg">
-              <Link
-                to="/login"
-                search={search}
-                replace
-                aria-current={mode === 'login' ? 'page' : undefined}
-                className={cn(mode === 'login' ? 'text-primary' : 'text-foreground hover:text-primary')}
-              >
-                Entrar
-              </Link>
-              <span aria-hidden="true" className="h-5 w-px bg-primary/60" />
-              <Link
-                to="/cadastro"
-                search={search}
-                replace
-                aria-current={mode === 'signup' ? 'page' : undefined}
-                className={cn(mode === 'signup' ? 'text-primary' : 'text-foreground hover:text-primary')}
-              >
-                Criar conta
-              </Link>
-            </nav>
-            <DialogTitle className="sr-only">{mode === 'login' ? 'Entrar na Kurio' : 'Criar conta na Kurio'}</DialogTitle>
-            <DialogDescription className="mt-5 text-center text-[13px] text-foreground/90">
-              {mode === 'login' ? 'Entre para gerenciar sua carteira, coleção e perfil de criador.' : 'Crie seu perfil de colecionador e conecte uma carteira quando quiser.'}
-            </DialogDescription>
-            {search.reason === 'expired' && (
-              <p role="alert" className="mt-4 rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-[12px] text-warning">
-                Sua sessão expirou. Entre novamente: você volta para onde estava.
-              </p>
+        <DialogPortal>
+          {/* No Figma a página inicial aparece sem escurecer por trás da janela. */}
+          <DialogOverlay className="bg-transparent" />
+          <DialogPrimitive.Content
+            data-slot="dialog-content"
+            className={cn(
+              'fixed left-1/2 top-1/2 z-50 flex w-[500px] max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col bg-[#241612] text-foreground outline-none',
+              'border-b-[10px] border-[#d28a4c]',
+              isLogin ? 'min-h-[600px]' : 'min-h-[656px] rounded-[8px]',
+              // Telas altas: mesma posição do Figma (janela a 160px do topo); telas baixas: centralizada.
+              isLogin ? '[@media(min-height:860px)]:md:top-[160px]' : '[@media(min-height:860px)]:md:top-[158px]',
+              '[@media(min-height:860px)]:md:translate-y-0',
+              'max-md:inset-0 max-md:h-dvh max-md:w-auto max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-b-0',
             )}
-            {mode === 'login' ? <LoginForm onDone={() => void navigate({ to: target, replace: true })} /> : <SignupForm onDone={() => void navigate({ to: target, replace: true })} />}
-            <SocialLogins />
-          </div>
-        </DialogContent>
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              document.getElementById(isLogin ? 'login-email' : 'signup-username')?.focus()
+            }}
+          >
+            <DialogClose className={cn('absolute right-[9px] grid', isLogin ? 'top-[9px]' : 'top-[11px]', 'size-6 place-items-center rounded-sm text-[#d28a4c] hover:text-[#e89b55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')}>
+              <X className="size-[22px]" strokeWidth={1.5} aria-hidden="true" />
+              <span className="sr-only">Fechar</span>
+            </DialogClose>
+            <div className="flex flex-col px-6 pb-8 pt-[46px] max-md:justify-center max-md:pt-20 md:px-20">
+              <p className="mb-10 text-center text-2xl font-bold tracking-[0.12em] md:hidden">KURIO</p>
+              <nav aria-label="Entrar ou criar conta" className="flex items-center justify-center gap-2 text-[20px] leading-6">
+                <Link
+                  to="/login"
+                  search={search}
+                  replace
+                  aria-current={isLogin ? 'page' : undefined}
+                  className={cn(isLogin ? 'text-[#e89b55]' : 'text-[#f5f1eb] hover:text-[#e89b55]')}
+                >
+                  Entrar
+                </Link>
+                <span aria-hidden="true" className="h-5 w-px bg-[#8a4b38]" />
+                <Link
+                  to="/cadastro"
+                  search={search}
+                  replace
+                  aria-current={!isLogin ? 'page' : undefined}
+                  className={cn(!isLogin ? 'text-[#e89b55]' : 'text-[#f5f1eb] hover:text-[#e89b55]')}
+                >
+                  Criar conta
+                </Link>
+              </nav>
+              <DialogTitle className="sr-only">{isLogin ? 'Entrar na Kurio' : 'Criar conta na Kurio'}</DialogTitle>
+              <DialogDescription className="mt-[37px] text-center md:-mx-[36px] text-[13px] leading-4 text-[#f5f1eb]">
+                {isLogin ? 'Entre para gerenciar sua carteira, coleção e perfil de criador.' : 'Crie seu perfil de colecionador e conecte uma carteira quando quiser.'}
+              </DialogDescription>
+              {search.reason === 'expired' && (
+                <p role="alert" className="mt-4 rounded-[4px] border border-warning/50 bg-warning/10 px-3 py-2 text-[12px] text-warning">
+                  Sua sessão expirou. Entre novamente: você volta para onde estava.
+                </p>
+              )}
+              {isLogin ? <LoginForm onDone={() => void navigate({ to: target, replace: true })} /> : <SignupForm onDone={() => void navigate({ to: target, replace: true })} />}
+              <SocialLogins roomy={!isLogin} />
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPortal>
       </Dialog>
     </>
   )
 }
+
+/** Campos e botões da janela de login/cadastro (Figma: 340px de largura, raio de 4px). */
+const authInput = 'rounded-[4px] pl-4'
+const authSubmit = 'h-[45px] rounded-[4px] bg-[#d28a4c] text-[16px] font-bold text-[#140d0a] hover:bg-[#dd9a60]'
 
 function LoginForm({ onDone }: { onDone: () => void }) {
   const login = useLogin()
@@ -110,21 +132,38 @@ function LoginForm({ onDone }: { onDone: () => void }) {
   })
 
   return (
-    <form onSubmit={onSubmit} noValidate className="mt-6 flex flex-col gap-3" aria-label="Entrar">
-      <FormField id="login-email" label="E-mail" hideLabel type="email" autoComplete="email" placeholder="contato@email.com" error={errors.email?.message} {...form.register('email')} />
-      <FormField id="login-password" label="Senha" hideLabel type="password" autoComplete="current-password" placeholder="Senha" error={errors.password?.message} {...form.register('password')} />
-      <button type="button" className="self-end text-[13px] text-primary hover:underline" onClick={() => toast.info('Recuperação de senha não faz parte desta demonstração.')}>
+    <form onSubmit={onSubmit} noValidate className="mt-[25px] flex flex-col" aria-label="Entrar">
+      <div className="flex flex-col gap-3">
+        <FormField id="login-email" label="E-mail" hideLabel type="email" autoComplete="email" placeholder="contato@email.com" className={authInput} error={errors.email?.message} {...form.register('email')} />
+        <FormField
+          id="login-password"
+          label="Senha"
+          hideLabel
+          type="password"
+          autoComplete="current-password"
+          placeholder="Senha"
+          className={authInput}
+          toggleClassName="right-[7px]"
+          error={errors.password?.message}
+          {...form.register('password')}
+        />
+      </div>
+      <button
+        type="button"
+        className="mt-[10px] self-end text-[14px] leading-5 text-[#e89b55] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={() => toast.info('Recuperação de senha não faz parte desta demonstração.')}
+      >
         Esqueceu a senha?
       </button>
       {formError && (
-        <p role="alert" className="text-[13px] text-destructive" data-testid="form-error">
+        <p role="alert" className="mt-3 text-[13px] text-destructive" data-testid="form-error">
           {formError}
         </p>
       )}
-      <Button type="submit" disabled={isSubmitting} className="mt-2 h-11 font-semibold">
+      <Button type="submit" disabled={isSubmitting} className={cn('mt-[22px]', authSubmit)}>
         {isSubmitting ? 'Entrando…' : 'Entrar'}
       </Button>
-      <p className="mt-2 text-center text-[13px] text-muted-foreground md:hidden">
+      <p className="mt-4 text-center text-[13px] text-muted-foreground md:hidden">
         Novo na Kurio?{' '}
         <Link to="/cadastro" className="text-primary">
           Crie uma conta
@@ -156,45 +195,60 @@ function SignupForm({ onDone }: { onDone: () => void }) {
   })
 
   return (
-    <form onSubmit={onSubmit} noValidate className="mt-6 flex flex-col gap-3" aria-label="Criar conta">
-      <FormField id="signup-username" label="Nome de usuário" hideLabel autoComplete="username" placeholder="Nome de usuário" error={errors.username?.message} {...form.register('username')} />
-      <FormField id="signup-email" label="E-mail" hideLabel type="email" autoComplete="email" placeholder="Digite seu e-mail" error={errors.email?.message} {...form.register('email')} />
-      <FormField
-        id="signup-password"
-        label="Senha"
-        hideLabel
-        type="password"
-        autoComplete="new-password"
-        placeholder="Senha"
-        hint="Mínimo de 8 caracteres, com letras e números."
-        error={errors.password?.message}
-        {...form.register('password')}
-      />
-      <FormField id="signup-confirm" label="Confirmar senha" hideLabel type="password" autoComplete="new-password" placeholder="Confirmar senha" error={errors.confirmPassword?.message} {...form.register('confirmPassword')} />
+    <form onSubmit={onSubmit} noValidate className="mt-[25px] flex flex-col" aria-label="Criar conta">
+      <div className="flex flex-col gap-3">
+        <FormField id="signup-username" label="Nome de usuário" hideLabel autoComplete="username" placeholder="Nome de usuário" className={authInput} error={errors.username?.message} {...form.register('username')} />
+        <FormField id="signup-email" label="E-mail" hideLabel type="email" autoComplete="email" placeholder="Digite seu e-mail" className={authInput} error={errors.email?.message} {...form.register('email')} />
+        <FormField
+          id="signup-password"
+          label="Senha"
+          hideLabel
+          type="password"
+          autoComplete="new-password"
+          placeholder="Senha"
+          className={authInput}
+          toggleClassName="right-[7px]"
+          error={errors.password?.message}
+          {...form.register('password')}
+        />
+        <FormField
+          id="signup-confirm"
+          label="Confirmar senha"
+          hideLabel
+          type="password"
+          autoComplete="new-password"
+          placeholder="Confirmar senha"
+          className={cn(authInput, 'pr-4')}
+          toggleClassName="hidden"
+          error={errors.confirmPassword?.message}
+          {...form.register('confirmPassword')}
+        />
+      </div>
       {formError && (
-        <p role="alert" className="text-[13px] text-destructive" data-testid="form-error">
+        <p role="alert" className="mt-3 text-[13px] text-destructive" data-testid="form-error">
           {formError}
         </p>
       )}
-      <Button type="submit" disabled={isSubmitting} className="mt-2 h-11 font-semibold">
+      <Button type="submit" disabled={isSubmitting} className={cn('mt-6', authSubmit)}>
         {isSubmitting ? 'Criando conta…' : 'Criar conta'}
       </Button>
     </form>
   )
 }
 
-function SocialLogins() {
+function SocialLogins({ roomy }: { roomy?: boolean }) {
   const notAvailable = () => toast.info('Login social não faz parte desta demonstração. Use e-mail e senha.')
+  const social = 'flex h-10 items-center justify-center gap-3 rounded-[4px] border border-[#3f2319] text-[13px] text-[#cfb28c] hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
   return (
     <div className="mt-6">
-      <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
-        <span className="h-px flex-1 bg-border" />
+      <div className="-mx-6 flex items-center gap-3 text-[13px] leading-4 text-[#f5f1eb] md:-mx-20">
+        <span aria-hidden="true" className="h-px flex-1 bg-[#3f2319]" />
         Ou continue com
-        <span className="h-px flex-1 bg-border" />
+        <span aria-hidden="true" className="h-px flex-1 bg-[#3f2319]" />
       </div>
-      <div className="mt-4 flex flex-col gap-2">
-        <button type="button" onClick={notAvailable} className="flex h-10 items-center justify-center gap-2 rounded-md border border-border text-[13px] hover:bg-secondary">
-          <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
+      <div className={cn('flex flex-col', roomy ? 'mt-4 gap-4' : 'mt-3 gap-3')}>
+        <button type="button" onClick={notAvailable} className={social}>
+          <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
             <path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z" />
             <path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z" />
             <path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7H2.1a11 11 0 0 0 0 9.9l3.7-2.7z" />
@@ -202,9 +256,9 @@ function SocialLogins() {
           </svg>
           Continuar com Google
         </button>
-        <button type="button" onClick={notAvailable} className="flex h-10 items-center justify-center gap-2 rounded-md border border-border text-[13px] hover:bg-secondary">
-          <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-            <path fill="#1877F2" d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12z" />
+        <button type="button" onClick={notAvailable} className={social}>
+          <svg viewBox="0 0 20 20" className="size-5" aria-hidden="true">
+            <path fill="#3b5999" d="M11.6 20v-9.1h3.1l.5-3.6h-3.6V5c0-1 .3-1.7 1.8-1.7h1.9V.1C15 .1 13.9 0 12.6 0 9.9 0 8 1.7 8 4.7v2.6H4.9v3.6H8V20h3.6z" />
           </svg>
           Continuar com Facebook
         </button>

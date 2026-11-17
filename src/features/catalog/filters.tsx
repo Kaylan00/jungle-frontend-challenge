@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Category, Network, NftListResponse } from '@/api/contracts'
+import { Checkbox as CheckboxPrimitive } from 'radix-ui'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
 import { CATEGORY_LABEL, NETWORK_LABEL, type CatalogSearch } from './search-params'
@@ -39,28 +39,27 @@ export function CatalogFilters({
   }
 
   return (
-    <div className="space-y-7">
+    <div>
       <fieldset>
-        <legend className="mb-3 text-[15px] font-bold">Coleções</legend>
-        <ul className="space-y-1">
-          {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => {
-            const checked = Boolean(search.category?.includes(c))
-            const id = `${idPrefix}-cat-${c}`
-            return (
-              <li key={c}>
-                <label htmlFor={id} className={cn('flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-secondary', checked && 'text-primary')}>
-                  <Checkbox id={id} checked={checked} onCheckedChange={() => onChange({ category: toggle(search.category, c) })} className="size-3.5" />
-                  <span className="flex-1">{CATEGORY_LABEL[c]}</span>
-                  <span className={cn('tabular-nums', checked ? 'text-primary' : 'text-muted-foreground')}>({facets?.category[c] ?? 0})</span>
-                </label>
-              </li>
-            )
-          })}
+        <legend className={legend}>Coleções</legend>
+        <ul className="mt-2">
+          {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => (
+            <li key={c}>
+              <FilterRow
+                id={`${idPrefix}-cat-${c}`}
+                checked={Boolean(search.category?.includes(c))}
+                onToggle={() => onChange({ category: toggle(search.category, c) })}
+                label={CATEGORY_LABEL[c]}
+                count={facets?.category[c] ?? 0}
+                className="pr-3"
+              />
+            </li>
+          ))}
         </ul>
       </fieldset>
 
-      <fieldset>
-        <legend className="mb-3 text-[15px] font-bold">Faixa de preço</legend>
+      <fieldset className="mt-[37px]">
+        <legend className={legend}>Faixa de preço</legend>
         <Slider
           min={PRICE_MIN}
           max={PRICE_MAX}
@@ -69,14 +68,13 @@ export function CatalogFilters({
           onValueChange={(v) => setRange([v[0], v[1]])}
           aria-label="Faixa de preço em ETH"
           thumbLabels={['Preço mínimo', 'Preço máximo']}
-          className="px-1"
+          className="ml-[15px] mt-4 w-auto"
         />
-        <p className="mt-3 text-[13px] text-muted-foreground" aria-live="polite">
-          Preço: {range[0].toFixed(2).replace('.', ',')} – {range[1].toFixed(2).replace('.', ',')} ETH
+        <p className="ml-3 mt-[19px] text-[15px] leading-6" aria-live="polite">
+          Preço: {range[0].toFixed(2).replace('.', ',')} - {range[1].toFixed(2).replace('.', ',')} ETH
         </p>
         <Button
-          size="sm"
-          className="mt-3 h-7 px-3 text-[13px] font-bold"
+          className="ml-3 mt-2.5 h-9 w-[92px] rounded-[4px] text-base font-bold hover:bg-primary-hover"
           onClick={() =>
             onChange({
               minPrice: range[0] > PRICE_MIN ? String(range[0]) : undefined,
@@ -88,29 +86,69 @@ export function CatalogFilters({
         </Button>
       </fieldset>
 
-      <fieldset>
-        <legend className="mb-3 text-[15px] font-bold">Rede</legend>
-        <ul className="space-y-1">
-          {(Object.keys(NETWORK_LABEL) as Network[]).map((n) => {
-            const checked = Boolean(search.network?.includes(n))
-            const id = `${idPrefix}-net-${n}`
-            return (
-              <li key={n}>
-                <label htmlFor={id} className={cn('flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-secondary', checked && 'text-primary')}>
-                  <Checkbox id={id} checked={checked} onCheckedChange={() => onChange({ network: toggle(search.network, n) })} className="size-3.5" />
-                  <span className="flex-1">{NETWORK_LABEL[n]}</span>
-                  <span className={cn('tabular-nums', checked ? 'text-primary' : 'text-muted-foreground')}>({facets?.network[n] ?? 0})</span>
-                </label>
-              </li>
-            )
-          })}
+      <fieldset className="mt-9">
+        <legend className={legend}>Rede</legend>
+        <ul className="mt-2">
+          {(Object.keys(NETWORK_LABEL) as Network[]).map((n) => (
+            <li key={n}>
+              <FilterRow
+                id={`${idPrefix}-net-${n}`}
+                checked={Boolean(search.network?.includes(n))}
+                onToggle={() => onChange({ network: toggle(search.network, n) })}
+                label={NETWORK_LABEL[n]}
+                count={facets?.network[n] ?? 0}
+                className="pr-0"
+              />
+            </li>
+          ))}
         </ul>
       </fieldset>
 
-      <label htmlFor={`${idPrefix}-available`} className="flex cursor-pointer items-center gap-2 px-2 text-[13px]">
-        <Checkbox id={`${idPrefix}-available`} checked={Boolean(search.onlyAvailable)} onCheckedChange={(v) => onChange({ onlyAvailable: v === true ? true : undefined })} className="size-3.5" />
-        Somente disponíveis
-      </label>
+      {/* Não existe no Figma: filtro extra do desafio, no fim da caixa para não mexer no resto. */}
+      <FilterRow
+        id={`${idPrefix}-available`}
+        checked={Boolean(search.onlyAvailable)}
+        onToggle={() => onChange({ onlyAvailable: search.onlyAvailable ? undefined : true })}
+        label="Somente disponíveis"
+        className="pr-0.5"
+      />
     </div>
+  )
+}
+
+const legend = 'text-lg font-bold leading-6'
+
+/**
+ * Linha de filtro do Figma: só texto, sem caixinha; marcada fica laranja.
+ * Continua sendo um checkbox de verdade (role="checkbox", Espaço alterna, nome = rótulo + contagem).
+ */
+function FilterRow({
+  id,
+  checked,
+  onToggle,
+  label,
+  count,
+  className,
+}: {
+  id: string
+  checked: boolean
+  onToggle: () => void
+  label: string
+  count?: number
+  className?: string
+}) {
+  return (
+    <CheckboxPrimitive.Root
+      id={id}
+      checked={checked}
+      onCheckedChange={onToggle}
+      className={cn(
+        'flex h-10 w-full cursor-pointer items-center justify-between rounded-[4px] pl-3 text-left text-[15px] text-muted-foreground transition-colors hover:text-foreground data-[state=checked]:text-highlight',
+        className,
+      )}
+    >
+      <span>{label}</span>
+      {count !== undefined && <span className="tabular-nums">({count})</span>}
+    </CheckboxPrimitive.Root>
   )
 }

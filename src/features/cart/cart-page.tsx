@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouter } from '@tanstack/react-router'
-import { AlertTriangle, ChevronLeft, Trash2 } from 'lucide-react'
+import { AlertTriangle, ChevronLeft } from 'lucide-react'
+import { useState } from 'react'
 import type { Cart, CartItem } from '@/api/contracts'
 import { nftListQuery } from '@/api/queries'
 import { EmptyState, ErrorState } from '@/components/shared/error-state'
@@ -19,7 +20,7 @@ export function CartPage() {
   const router = useRouter()
 
   return (
-    <div className="container-page pt-4 md:pt-6">
+    <div className="container-page pt-4 md:pt-7">
       <div className="mb-4 flex items-center gap-3 md:hidden">
         <button type="button" onClick={() => router.history.back()} className="grid size-9 place-items-center rounded-full bg-card" aria-label="Voltar">
           <ChevronLeft className="size-5 text-primary" aria-hidden="true" />
@@ -27,16 +28,24 @@ export function CartPage() {
         <h1 className="flex-1 text-center text-xl font-bold">Carrinho de NFTs</h1>
         <span className="size-9" />
       </div>
-      <nav aria-label="Trilha de navegação" className="mb-2 hidden text-[13px] font-semibold md:block">
-        <ol className="flex gap-1.5">
-          <li><Link to="/" className="hover:text-primary">Início</Link></li>
+      <nav aria-label="Trilha de navegação" className="hidden text-[15px] font-bold leading-6 md:block">
+        <ol className="flex gap-[9px]">
+          <li>
+            <Link to="/" className="hover:text-primary">
+              Início
+            </Link>
+          </li>
           <li aria-hidden="true">/</li>
-          <li><Link to="/" hash="catalogo" className="hover:text-primary">Mercado</Link></li>
+          <li>
+            <Link to="/" hash="catalogo" className="hover:text-primary">
+              Mercado
+            </Link>
+          </li>
           <li aria-hidden="true">/</li>
           <li aria-current="page">Carrinho</li>
         </ol>
       </nav>
-      <h1 className="sr-only md:not-sr-only md:mb-4 md:text-lg md:font-bold">Carrinho de NFTs</h1>
+      <h1 className="sr-only">Carrinho de NFTs</h1>
 
       {cart.isError && !cart.data ? (
         <ErrorState title="Não foi possível carregar o carrinho" message={cart.error.message} onRetry={() => void cart.refetch()} retrying={cart.isFetching} />
@@ -63,10 +72,10 @@ export function CartPage() {
 
 function CartLayout({ list, summary, busy }: { list: React.ReactNode; summary: React.ReactNode; busy?: boolean }) {
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_340px] lg:gap-12" aria-busy={busy}>
+    <div className="grid gap-8 md:mt-[4px] lg:grid-cols-[minmax(0,1fr)_332px] lg:gap-12 xl:gap-[86px]" aria-busy={busy}>
       <section aria-label="Itens do carrinho">{list}</section>
       <aside aria-labelledby="resumo-title" className="rounded-2xl bg-card p-4 lg:rounded-none lg:bg-transparent lg:p-0">
-        <h2 id="resumo-title" className="mb-4 hidden border-b border-border pb-2 text-[15px] font-semibold lg:block">
+        <h2 id="resumo-title" className="mb-[23px] hidden border-b border-[#442c1b] pb-[7px] text-[18px] font-semibold leading-6 lg:block">
           Resumo da carteira
         </h2>
         {summary}
@@ -123,27 +132,49 @@ function CartItems({ cart }: { cart: Cart }) {
       )}
 
       {/* Desktop: tabela (Figma) */}
-      <table className="hidden w-full border-separate border-spacing-y-2 text-[13px] md:table">
+      <table className="-mt-3 hidden w-full table-fixed border-separate border-spacing-x-0 border-spacing-y-3 text-[15px] md:table">
+        <colgroup>
+          <col className="w-[39.9%]" />
+          <col className="w-[17.65%]" />
+          <col className="w-[17.4%]" />
+          <col className="w-[19.3%]" />
+          <col />
+        </colgroup>
         <thead>
-          <tr className="text-left text-[14px]">
-            <th scope="col" className="border-b border-border pb-2 font-semibold">NFTs</th>
-            <th scope="col" className="border-b border-border pb-2 font-semibold">Preço</th>
-            <th scope="col" className="border-b border-border pb-2 font-semibold">Edições</th>
-            <th scope="col" className="border-b border-border pb-2 font-semibold">Total</th>
-            <th scope="col" className="border-b border-border pb-2"><span className="sr-only">Remover</span></th>
+          <tr className="text-left leading-6">
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium">
+              NFTs
+            </th>
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium">
+              Preço
+            </th>
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium">
+              Edições
+            </th>
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium">
+              Total
+            </th>
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px]">
+              <span className="sr-only">Remover</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {cart.items.map((item) => (
-            <tr key={item.id} className="bg-card" data-testid="cart-item" data-item-nft={item.nftId}>
-              <td className="rounded-l-md p-0">
-                <div className="flex items-center gap-3">
-                  <img src={item.image} alt="" width={48} height={48} className="size-12 rounded-sm object-cover" />
-                  <div>
-                    <Link to="/nft/$nftId" params={{ nftId: item.nftId }} search={{ edicao: item.editionId }} className="font-bold hover:text-primary">
+            <tr key={item.id} className="bg-[#241612]" data-testid="cart-item" data-item-nft={item.nftId}>
+              <td className="h-[70px] p-0">
+                <div className="flex items-center gap-[17px]">
+                  <img src={item.image} alt="" width={70} height={70} className="size-[70px] shrink-0 rounded-[4px] object-cover" />
+                  <div className="min-w-0">
+                    <Link
+                      to="/nft/$nftId"
+                      params={{ nftId: item.nftId }}
+                      search={{ edicao: item.editionId }}
+                      className="block truncate text-[15px] font-bold leading-[22px] tracking-[0.5px] hover:text-primary"
+                    >
                       {item.name}
                     </Link>
-                    <p className="text-[12px] text-muted-foreground">Edição: {item.editionName}</p>
+                    <p className="text-[13px] leading-5 tracking-[0.3px] text-[#ae8f60]">Edição: {item.editionName}</p>
                     {item.issue && (
                       <p className={cn('mt-0.5 text-[12px]', item.issue === 'price_changed' ? 'text-warning' : 'text-destructive')} data-testid="item-issue">
                         ⚠ {issueText(item)}
@@ -152,7 +183,9 @@ function CartItems({ cart }: { cart: Cart }) {
                   </div>
                 </div>
               </td>
-              <td className="font-bold text-primary" data-testid="item-unit-price">{formatEth(item.unitPrice)}</td>
+              <td className="font-semibold tracking-[0.6px] text-[#cfb28c]" data-testid="item-unit-price">
+                {formatEth(item.unitPrice)}
+              </td>
               <td>
                 <QuantityStepper
                   value={item.quantity}
@@ -162,10 +195,18 @@ function CartItems({ cart }: { cart: Cart }) {
                   disabled={update.isPending || item.issue === 'sold_out'}
                 />
               </td>
-              <td className="font-bold text-primary" data-testid="item-line-total">{formatEth(item.lineTotal)}</td>
-              <td className="rounded-r-md pr-3 text-right">
-                <button type="button" onClick={() => remove.mutate({ itemId: item.id, name: item.name })} disabled={remove.isPending} className="grid size-8 place-items-center rounded hover:bg-secondary" aria-label={`Remover ${item.name} do carrinho`}>
-                  <Trash2 className="size-4 text-primary" aria-hidden="true" />
+              <td className="font-bold tracking-[0.6px] text-[#e89b55]" data-testid="item-line-total">
+                {formatEth(item.lineTotal)}
+              </td>
+              <td className="p-0">
+                <button
+                  type="button"
+                  onClick={() => remove.mutate({ itemId: item.id, name: item.name })}
+                  disabled={remove.isPending}
+                  className="-ml-[7px] grid size-8 place-items-center rounded hover:bg-secondary"
+                  aria-label={`Remover ${item.name} do carrinho`}
+                >
+                  <TrashIcon />
                 </button>
               </td>
             </tr>
@@ -193,7 +234,12 @@ function CartItems({ cart }: { cart: Cart }) {
                   label={`Quantidade de ${item.name}`}
                   disabled={update.isPending || item.issue === 'sold_out'}
                 />
-                <button type="button" onClick={() => remove.mutate({ itemId: item.id, name: item.name })} className="text-[12px] text-primary underline-offset-2 hover:underline" aria-label={`Remover ${item.name} do carrinho`}>
+                <button
+                  type="button"
+                  onClick={() => remove.mutate({ itemId: item.id, name: item.name })}
+                  className="text-[12px] text-primary underline-offset-2 hover:underline"
+                  aria-label={`Remover ${item.name} do carrinho`}
+                >
                   Remover
                 </button>
               </div>
@@ -205,49 +251,80 @@ function CartItems({ cart }: { cart: Cart }) {
   )
 }
 
+/** Lixeira do Figma (contorno simples, sem as linhas internas do ícone do Lucide). */
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="size-[22px] text-[#b39463]" aria-hidden="true">
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  )
+}
+
 function CartSummaryPanel({ cart }: { cart: Cart }) {
   const navigate = useNavigate()
   const { user } = useSession()
   const blocking = cart.items.filter((i) => i.issue === 'sold_out' || i.issue === 'insufficient_stock')
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 lg:space-y-0">
       <CouponForm cart={cart} />
-      <SummaryLines summary={cart.summary} coupon={cart.coupon} />
+      <SummaryLines summary={cart.summary} coupon={cart.coupon} variant="cart" className="lg:!mt-5" />
       {blocking.length > 0 && (
-        <p role="status" className="text-[12px] text-destructive">
+        <p role="status" className="text-[12px] text-destructive lg:!mt-3">
           Ajuste ou remova os itens marcados para continuar.
         </p>
       )}
       <Button
-        className="h-11 w-full rounded-md font-semibold max-lg:rounded-full"
+        className="h-11 w-full rounded-md font-semibold max-lg:rounded-full lg:!mt-[18px] lg:h-10 lg:rounded-[2px] lg:text-[15px] lg:font-bold"
         disabled={blocking.length > 0}
         onClick={() => void navigate(user ? { to: '/pagamento' } : { to: '/login', search: { redirect: '/pagamento' } })}
         data-testid="checkout-button"
       >
         Conectar e finalizar
       </Button>
-      <Link to="/" hash="catalogo" className="block text-center text-[13px] text-primary hover:underline">
+      <Link to="/" hash="catalogo" className="block text-center text-[13px] text-primary hover:underline lg:!mt-[10px] lg:text-[15px] lg:leading-6 lg:text-[#e89b55]">
         Continuar explorando
       </Link>
     </div>
   )
 }
 
+const PER_PAGE = 5
+
 function AlsoViewed() {
-  const { data } = useQuery(nftListQuery({ sort: 'popular', page: 1, pageSize: 5 }))
-  if (!data?.items.length) return null
+  const { data } = useQuery(nftListQuery({ sort: 'popular', page: 1, pageSize: PER_PAGE * 3 }))
+  const [page, setPage] = useState(0)
+  const items = data?.items ?? []
+  if (!items.length) return null
+  const pages = Math.ceil(items.length / PER_PAGE)
+  const current = Math.min(page, pages - 1)
   return (
-    <section aria-labelledby="tambem-viram" className="mt-14 hidden md:block">
-      <h2 id="tambem-viram" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary">
+    <section aria-labelledby="tambem-viram" className="mt-14 hidden md:block lg:mt-[91px]">
+      <h2 id="tambem-viram" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary lg:mb-8 lg:border-[#442c1b] lg:pb-[6px] lg:text-[17px] lg:leading-6 lg:text-[#e89b55]">
         Colecionadores também viram
       </h2>
-      <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5">
-        {data.items.map((n) => (
+      <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5 lg:gap-[26px]" aria-live="polite">
+        {items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE).map((n) => (
           <li key={n.id}>
             <NftCard nft={n} />
           </li>
         ))}
       </ul>
+      {pages > 1 && (
+        <div className="mt-[30px] flex justify-center gap-2" role="group" aria-label="Páginas de sugestões">
+          {Array.from({ length: pages }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setPage(i)}
+              aria-label={`Página ${i + 1} de ${pages}`}
+              aria-current={i === current ? 'true' : undefined}
+              className={cn('size-3 rounded-full border border-primary transition-colors hover:bg-primary/60', i === current && 'bg-primary')}
+            />
+          ))}
+        </div>
+      )}
     </section>
   )
 }

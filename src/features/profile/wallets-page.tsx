@@ -13,14 +13,14 @@ import { useForm } from 'react-hook-form'
 import { WalletInput, type Network, type User, type Wallet, type WalletProvider } from '@/api/contracts'
 import { ApiError } from '@/api/http'
 import { ErrorState } from '@/components/shared/error-state'
-import { applyApiFieldErrors, FormField } from '@/components/shared/form-field'
+import { applyApiFieldErrors, FormField, RequiredMark } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from '@/features/auth/use-session'
 import { cn } from '@/lib/utils'
 import { notifyError, notifySuccess, useSaveWallet, useWallets } from './hooks'
-import { EnsSuffix } from './profile-page'
+import { EnsSuffix, primaryButton } from './profile-page'
 import { ProfileLayout } from './profile-layout'
 
 type Role = Wallet['role']
@@ -55,6 +55,20 @@ const copiedFromPrimary = ['displayName', 'network', 'profileName', 'secondaryAd
 
 const roleLabel: Record<Role, string> = { primary: 'principal', secondary: 'secundária' }
 
+/** Visual do Figma: títulos de seção 17px em negrito, "Adicionar" laranja 16px, rótulos 4px acima do campo. */
+const sectionTitle = 'text-[17px] font-bold leading-4 text-[#f5f1eb]'
+const addButton =
+  'shrink-0 text-[16px] font-semibold leading-4 text-[#e89b55] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+const walletField = 'gap-[3px]'
+
+function SecondaryTitle() {
+  return (
+    <h2 id="wallet-secondary-title" className={sectionTitle}>
+      Carteira secundária
+    </h2>
+  )
+}
+
 export function WalletsPage() {
   const wallets = useWallets()
   const { user } = useSession()
@@ -76,22 +90,17 @@ export function WalletsPage() {
           retrying={wallets.isFetching}
         />
       ) : (
-        <div className="flex flex-col gap-10">
+        <div className="flex flex-col">
           <section aria-labelledby="wallet-primary-title">
-            <div className="mb-5 flex items-start justify-between gap-4">
+            <div className="mb-[37px] flex items-start justify-between gap-4">
               <div>
-                <h2 id="wallet-primary-title" className="text-[14px] font-bold">
+                <h2 id="wallet-primary-title" className={sectionTitle}>
                   Carteira principal
                 </h2>
-                <p className="mt-1 text-[13px] text-muted-foreground">Estas carteiras ficam disponíveis no pagamento e para receber NFTs comprados.</p>
+                <p className="mt-2 text-[14px] leading-4 tracking-[-0.01em] text-[#cfb28c]">Estas carteiras ficam disponíveis no pagamento e para receber NFTs comprados.</p>
               </div>
               {!showSecondaryForm && (
-                <button
-                  type="button"
-                  onClick={() => setSecondaryOpen(true)}
-                  aria-controls="wallet-secondary-section"
-                  className="shrink-0 text-[13px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
+                <button type="button" onClick={() => setSecondaryOpen(true)} aria-controls="wallet-secondary-section" className={addButton}>
                   Adicionar<span className="sr-only"> carteira secundária</span>
                 </button>
               )}
@@ -99,10 +108,7 @@ export function WalletsPage() {
             <WalletForm key={primary?.id ?? 'new-primary'} role="primary" wallet={primary} user={user} />
           </section>
 
-          <section id="wallet-secondary-section" aria-labelledby="wallet-secondary-title">
-            <h2 id="wallet-secondary-title" className="mb-5 text-[14px] font-bold">
-              Carteira secundária
-            </h2>
+          <section id="wallet-secondary-section" aria-labelledby="wallet-secondary-title" className="mt-[31px]">
             {showSecondaryForm ? (
               <WalletForm
                 key={secondary?.id ?? 'new-secondary'}
@@ -112,19 +118,18 @@ export function WalletsPage() {
                 user={user}
                 autoFocus={!secondary}
                 onCancel={secondary ? undefined : () => setSecondaryOpen(false)}
+                heading={<SecondaryTitle />}
               />
             ) : (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border px-4 py-5">
-                <p className="text-[13px] text-muted-foreground">Você ainda não adicionou uma carteira secundária.</p>
-                <button
-                  type="button"
-                  onClick={() => setSecondaryOpen(true)}
-                  aria-expanded={false}
-                  className="text-[13px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  Adicionar<span className="sr-only"> carteira secundária</span>
-                </button>
-              </div>
+              <>
+                <div className="flex items-start justify-between gap-4">
+                  <SecondaryTitle />
+                  <button type="button" onClick={() => setSecondaryOpen(true)} aria-expanded={false} className={addButton}>
+                    Adicionar<span className="sr-only"> carteira secundária</span>
+                  </button>
+                </div>
+                <p className="mt-[11px] text-[14px] leading-4 text-[#cfb28c]">Você ainda não adicionou uma carteira secundária.</p>
+              </>
             )}
           </section>
         </div>
@@ -172,6 +177,7 @@ function WalletForm({
   user,
   autoFocus,
   onCancel,
+  heading,
 }: {
   role: Role
   wallet?: Wallet
@@ -179,6 +185,8 @@ function WalletForm({
   user: User | null
   autoFocus?: boolean
   onCancel?: () => void
+  /** Título mostrado na mesma linha do "Igual à carteira principal" (carteira secundária). */
+  heading?: React.ReactNode
 }) {
   const save = useSaveWallet()
   const [formError, setFormError] = useState<string | null>(null)
@@ -220,19 +228,29 @@ function WalletForm({
 
   return (
     <form onSubmit={onSubmit} noValidate aria-label={`Carteira ${roleLabel[role]}`} data-testid={`wallet-form-${role}`}>
-      {role === 'secondary' && primary && (
-        <div className="mb-5 flex items-center gap-2">
-          <Checkbox id={id('same-as-primary')} checked={sameAsPrimary} onCheckedChange={(c) => toggleSameAsPrimary(c === true)} />
-          <label htmlFor={id('same-as-primary')} className="text-[13px]">
-            Igual à carteira principal
-          </label>
+      {heading && (
+        <div className="mb-[37px] flex items-start justify-between gap-4">
+          {heading}
+          {role === 'secondary' && primary && (
+            <div className="flex items-center gap-[9px]">
+              <Checkbox
+                id={id('same-as-primary')}
+                checked={sameAsPrimary}
+                onCheckedChange={(c) => toggleSameAsPrimary(c === true)}
+                className="size-4 rounded-full border-[1.5px] border-[#d28a4c] bg-transparent data-[state=checked]:border-[#d28a4c] data-[state=checked]:bg-[#d28a4c] data-[state=checked]:text-[#140d0a] dark:bg-transparent"
+              />
+              <label htmlFor={id('same-as-primary')} className="text-[14px] leading-4 text-[#f5f1eb]">
+                Igual à carteira principal
+              </label>
+            </div>
+          )}
         </div>
       )}
-      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
-        <FormField id={id('displayName')} label="Nome de exibição" required error={errors.displayName?.message} {...form.register('displayName')} />
-        <FormField id={id('nickname')} label="Apelido da carteira" required error={errors.nickname?.message} {...form.register('nickname')} />
+      <div className="grid gap-x-7 gap-y-[29px] md:grid-cols-2">
+        <FormField id={id('displayName')} label="Nome de exibição" required containerClassName={walletField} error={errors.displayName?.message} {...form.register('displayName')} />
+        <FormField id={id('nickname')} label="Apelido da carteira" required containerClassName={walletField} error={errors.nickname?.message} {...form.register('nickname')} />
         <SelectField id={id('network')} label="Rede" required options={networks} error={errors.network?.message} {...form.register('network', { deps: ['address', 'secondaryAddress'] })} />
-        <FormField id={id('profileName')} label="Nome do perfil" required error={errors.profileName?.message} {...form.register('profileName')} />
+        <FormField id={id('profileName')} label="Nome do perfil" required containerClassName={walletField} error={errors.profileName?.message} {...form.register('profileName')} />
         <FormField
           id={id('address')}
           label="Endereço da carteira"
@@ -240,29 +258,39 @@ function WalletForm({
           autoComplete="off"
           spellCheck={false}
           placeholder={network === 'solana' ? 'Endereço Solana da carteira' : 'Endereço 0x da carteira'}
-          className="font-mono"
+          containerClassName={walletField}
           error={errors.address?.message}
           {...form.register('address')}
         />
         <FormField
           id={id('secondaryAddress')}
           label="ENS ou carteira secundária (opcional)"
+          hideLabel
           autoComplete="off"
           spellCheck={false}
-          placeholder="nome.eth ou endereço"
+          placeholder="ENS ou carteira secundária (opcional)"
+          containerClassName={cn(walletField, 'md:pt-5')}
           error={errors.secondaryAddress?.message}
           {...form.register('secondaryAddress')}
         />
         <SelectField id={id('provider')} label="Tipo de carteira" required options={providers} error={errors.provider?.message} {...form.register('provider')} />
-        <FormField id={id('referralCode')} label="Código de indicação" required autoComplete="off" error={errors.referralCode?.message} {...form.register('referralCode')} />
-        <FormField id={id('email')} label="E-mail" required type="email" autoComplete="email" error={errors.email?.message} {...form.register('email')} />
+        <FormField
+          id={id('referralCode')}
+          label="Código de indicação"
+          required
+          autoComplete="off"
+          containerClassName={walletField}
+          error={errors.referralCode?.message}
+          {...form.register('referralCode')}
+        />
+        <FormField id={id('email')} label="E-mail" required type="email" autoComplete="email" containerClassName={walletField} error={errors.email?.message} {...form.register('email')} />
         <FormField
           id={id('ensName')}
           label="Nome ENS"
           required
           autoComplete="off"
           prefix={<EnsSuffix />}
-          className="rounded-l-none"
+          containerClassName={walletField}
           error={errors.ensName?.message}
           {...form.register('ensName')}
         />
@@ -272,8 +300,8 @@ function WalletForm({
           {formError}
         </p>
       )}
-      <div className="mt-6 flex items-center gap-3">
-        <Button type="submit" disabled={isSubmitting} className="h-10 min-w-36 font-semibold">
+      <div className="mt-8 flex items-center gap-3">
+        <Button type="submit" disabled={isSubmitting} className={cn(primaryButton, 'min-w-[131px] px-0.5')}>
           {isSubmitting ? 'Salvando…' : 'Salvar carteira'}
         </Button>
         {onCancel && (
@@ -295,14 +323,10 @@ const SelectField = forwardRef<
   const id = idProp ?? autoId
   const errorId = `${id}-error`
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[13px] font-medium">
+    <div className="flex flex-col gap-[3px]">
+      <label htmlFor={id} className="text-[14px] leading-4 text-foreground">
         {label}
-        {required && (
-          <span className="ml-0.5 text-primary" aria-hidden="true">
-            *
-          </span>
-        )}
+        {required && <RequiredMark />}
         {required && <span className="sr-only"> (obrigatório)</span>}
       </label>
       <div className="relative">
@@ -313,8 +337,8 @@ const SelectField = forwardRef<
           aria-describedby={error ? errorId : undefined}
           aria-required={required || undefined}
           className={cn(
-            'h-10 w-full appearance-none rounded-md border border-input bg-card pl-3 pr-9 text-[13px] text-foreground [&>option]:bg-card',
-            'focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+            'h-10 w-full appearance-none rounded-[2px] border border-[#3f2319] bg-transparent pl-3 pr-9 text-[14px] text-foreground [&>option]:bg-card',
+            'focus-visible:border-primary focus-visible:outline-none',
             'aria-[invalid=true]:border-destructive',
             className,
           )}
@@ -326,7 +350,7 @@ const SelectField = forwardRef<
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-primary" aria-hidden="true" />
+        <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 size-6 -translate-y-1/2 text-[#b39463]" strokeWidth={1.5} aria-hidden="true" />
       </div>
       {error && (
         <p id={errorId} className="flex items-center gap-1 text-[12px] text-destructive" data-testid="field-error">

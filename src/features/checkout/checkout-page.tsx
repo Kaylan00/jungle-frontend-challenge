@@ -15,7 +15,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { AlertTriangle, CheckCircle2, ChevronLeft, Loader2, Wallet as WalletIcon } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronLeft, Loader2, Wallet as WalletIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -25,7 +25,7 @@ import { api } from '@/api/endpoints'
 import { ApiError } from '@/api/http'
 import { qk, walletsQuery } from '@/api/queries'
 import { EmptyState, ErrorState } from '@/components/shared/error-state'
-import { FormField } from '@/components/shared/form-field'
+import { FormField, RequiredMark } from '@/components/shared/form-field'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -46,10 +46,19 @@ const CheckoutForm = CollectorInput.extend({
 })
 type CheckoutForm = z.infer<typeof CheckoutForm>
 
-const PROVIDER_LABEL: Record<WalletProvider, string> = { walletconnect: 'WalletConnect', metamask: 'MetaMask', coinbase: 'Coinbase Wallet' }
+const PROVIDER_LABEL: Record<WalletProvider, string> = {
+  walletconnect: 'WalletConnect',
+  metamask: 'MetaMask',
+  coinbase: 'Coinbase Wallet',
+}
 const DRAFT_KEY = 'kurio.checkout.draft'
 
-type Connection = { status: 'idle' | 'connecting' | 'connected' | 'rejected'; walletId?: string; network?: Network; message?: string }
+type Connection = {
+  status: 'idle' | 'connecting' | 'connected' | 'rejected'
+  walletId?: string
+  network?: Network
+  message?: string
+}
 
 export function CheckoutPage() {
   const { user } = useSession()
@@ -60,12 +69,20 @@ export function CheckoutPage() {
   if (recovering) return <RecoverAttempt attempt={recovering} onGiveUp={() => setRecovering(null)} />
 
   return (
-    <div className="container-page pt-4 md:pt-6">
-      <nav aria-label="Trilha de navegação" className="mb-4 hidden text-[13px] font-semibold md:block">
-        <ol className="flex gap-1.5">
-          <li><Link to="/" className="hover:text-primary">Início</Link></li>
+    <div className="container-page pt-4 md:pt-7">
+      <nav aria-label="Trilha de navegação" className="mb-4 hidden text-[15px] font-bold leading-6 md:block lg:mb-6">
+        <ol className="flex gap-[9px]">
+          <li>
+            <Link to="/" className="hover:text-primary">
+              Início
+            </Link>
+          </li>
           <li aria-hidden="true">/</li>
-          <li><Link to="/carrinho" className="hover:text-primary">Carrinho</Link></li>
+          <li>
+            <Link to="/" hash="catalogo" className="hover:text-primary">
+              Mercado
+            </Link>
+          </li>
           <li aria-hidden="true">/</li>
           <li aria-current="page">Pagamento</li>
         </ol>
@@ -89,13 +106,21 @@ export function CheckoutPage() {
         <EmptyState
           title="Não há itens para pagar"
           message="Seu carrinho está vazio. Se você acabou de comprar, os itens comprados já saíram do carrinho."
-          action={<Link to="/" hash="catalogo" className={buttonVariants()}>Explorar NFTs</Link>}
+          action={
+            <Link to="/" hash="catalogo" className={buttonVariants()}>
+              Explorar NFTs
+            </Link>
+          }
         />
       ) : wallets.data.items.length === 0 ? (
         <EmptyState
           title="Cadastre uma carteira para pagar"
           message="As carteiras cadastradas ficam disponíveis no pagamento."
-          action={<Link to="/perfil/carteiras" className={buttonVariants()}>Cadastrar carteira</Link>}
+          action={
+            <Link to="/perfil/carteiras" className={buttonVariants()}>
+              Cadastrar carteira
+            </Link>
+          }
         />
       ) : (
         <CheckoutForm_ cart={cart.data} wallets={wallets.data.items} />
@@ -131,7 +156,11 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
     }
   })()
 
-  const form = useForm<CheckoutForm>({ resolver: zodResolver(CheckoutForm), defaultValues: defaults, mode: 'onTouched' })
+  const form = useForm<CheckoutForm>({
+    resolver: zodResolver(CheckoutForm),
+    defaultValues: defaults,
+    mode: 'onTouched',
+  })
   const { errors } = form.formState
   const walletId = form.watch('walletId')
   const network = form.watch('network')
@@ -157,7 +186,10 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
   const connect = async () => {
     if (!wallet) return
     if (wallet.network !== network) {
-      form.setError('network', { type: 'manual', message: `A carteira ${wallet.nickname} opera na rede ${NETWORK_LABEL[wallet.network]}` })
+      form.setError('network', {
+        type: 'manual',
+        message: `A carteira ${wallet.nickname} opera na rede ${NETWORK_LABEL[wallet.network]}`,
+      })
       return
     }
     setConn({ status: 'connecting', walletId, network })
@@ -210,19 +242,29 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
     setQuoting(true)
     setSubmitError(null)
     try {
-      const q = await api.createQuote({ network: values.network, couponCode: cart.coupon?.code ?? null })
+      const q = await api.createQuote({
+        network: values.network,
+        couponCode: cart.coupon?.code ?? null,
+      })
       setQuote(q)
       setQuoteSignature(signature)
       setAttempt({
         userId: user!.id,
         key: newIdempotencyKey(),
-        body: { quoteId: q.id, fingerprint: q.fingerprint, walletId: values.walletId, network: values.network, provider: values.provider, collector: CollectorInput.parse(values) },
+        body: {
+          quoteId: q.id,
+          fingerprint: q.fingerprint,
+          walletId: values.walletId,
+          network: values.network,
+          provider: values.provider,
+          collector: CollectorInput.parse(values),
+        },
         createdAt: new Date().toISOString(),
       })
       setReviewOpen(true)
     } catch (e) {
       const err = e instanceof ApiError ? e : null
-      const msg = err?.code === 'AVAILABILITY_CONFLICT' ? 'Alguns itens não têm mais a quantidade desejada. Ajuste o carrinho.' : err?.message ?? 'Não foi possível gerar a revisão'
+      const msg = err?.code === 'AVAILABILITY_CONFLICT' ? 'Alguns itens não têm mais a quantidade desejada. Ajuste o carrinho.' : (err?.message ?? 'Não foi possível gerar a revisão')
       toast.error(msg)
       announce(msg, 'assertive')
       if (err?.code === 'AVAILABILITY_CONFLICT' || err?.code === 'COUPON_EXPIRED' || err?.code === 'COUPON_INVALID') {
@@ -236,7 +278,11 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
   const onReview = form.handleSubmit(async (values) => {
     if (!connected) {
       const msg = 'Conecte a carteira na rede selecionada antes de revisar.'
-      setConn((c) => ({ ...c, status: c.status === 'connected' ? 'idle' : c.status, message: msg }))
+      setConn((c) => ({
+        ...c,
+        status: c.status === 'connected' ? 'idle' : c.status,
+        message: msg,
+      }))
       toast.error(msg)
       announce(msg, 'assertive')
       return
@@ -273,7 +319,15 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
         if (fresh) {
           setQuote(fresh)
           setQuoteSignature(null)
-          setAttempt({ ...attempt, key: newIdempotencyKey(), body: { ...attempt.body, quoteId: fresh.id, fingerprint: fresh.fingerprint } })
+          setAttempt({
+            ...attempt,
+            key: newIdempotencyKey(),
+            body: {
+              ...attempt.body,
+              quoteId: fresh.id,
+              fingerprint: fresh.fingerprint,
+            },
+          })
         }
         const msg = 'Os valores mudaram desde a revisão. Confira o novo total e confirme novamente.'
         setReviewNotice(msg)
@@ -301,32 +355,41 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
 
   return (
     <>
-      <form onSubmit={onReview} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px] lg:gap-x-12 lg:gap-y-5" aria-label="Pagamento" data-testid="checkout-form">
+      <form onSubmit={onReview} noValidate className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_405px] lg:gap-x-8 lg:gap-y-[25px]" aria-label="Pagamento" data-testid="checkout-form">
         {/* Perfil do colecionador (no mobile vem depois da carteira, como no Figma) */}
         <section aria-labelledby="perfil-colecionador" className="max-lg:order-2 lg:row-span-2">
-          <h2 id="perfil-colecionador" className="mb-3 text-[15px] font-semibold">
+          <h2 id="perfil-colecionador" className="mb-3 text-[15px] font-semibold lg:mb-[13px] lg:text-[17px] lg:font-bold lg:leading-6">
             Perfil do colecionador
           </h2>
-          <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+          <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:gap-x-[23px] lg:gap-y-[17px]">
             <FormField label="Nome de exibição" required error={errors.displayName?.message} {...reg('displayName')} />
             <FormField label="Nome de usuário" required error={errors.username?.message} autoComplete="username" {...reg('username')} />
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="checkout-network" className="text-[13px] font-medium">
-                Rede<span className="ml-0.5 text-primary" aria-hidden="true">*</span>
+            <div className="flex flex-col gap-1.5 lg:gap-2">
+              <label htmlFor="checkout-network" className="text-[13px] font-medium lg:text-[14px] lg:font-normal lg:leading-4">
+                Rede
+                <RequiredMark className="max-lg:hidden" />
+                <span className="ml-0.5 text-primary lg:hidden" aria-hidden="true">
+                  *
+                </span>
               </label>
-              <select
-                id="checkout-network"
-                {...reg('network', { onChange: () => conn.status === 'connected' && void disconnect() })}
-                aria-invalid={errors.network ? true : undefined}
-                aria-describedby={errors.network ? 'checkout-network-error' : undefined}
-                className="h-10 rounded-md border border-input bg-card px-3 text-[13px]"
-              >
-                {Network.options.map((n) => (
-                  <option key={n} value={n}>
-                    {NETWORK_LABEL[n]}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  id="checkout-network"
+                  {...reg('network', {
+                    onChange: () => conn.status === 'connected' && void disconnect(),
+                  })}
+                  aria-invalid={errors.network ? true : undefined}
+                  aria-describedby={errors.network ? 'checkout-network-error' : undefined}
+                  className={SELECT}
+                >
+                  {Network.options.map((n) => (
+                    <option key={n} value={n}>
+                      {NETWORK_LABEL[n]}
+                    </option>
+                  ))}
+                </select>
+                <SelectChevron />
+              </div>
               {errors.network && (
                 <p id="checkout-network-error" className="text-[12px] text-destructive">
                   ⚠ {errors.network.message}
@@ -334,19 +397,30 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
               )}
             </div>
             <FormField label="Nome do perfil" required error={errors.profileName?.message} {...reg('profileName')} />
-            <FormField label="Endereço da carteira" value={wallet?.address ?? ''} readOnly hint="Preenchido pela carteira selecionada." />
-            <FormField label="ENS ou carteira secundária (opcional)" value={wallet?.secondaryAddress ?? ''} readOnly placeholder="ENS ou carteira secundária (opcional)" />
-            <div className="flex flex-col gap-1.5 max-lg:hidden">
-              <label htmlFor="checkout-provider" className="text-[13px] font-medium">
-                Tipo de carteira<span className="ml-0.5 text-primary" aria-hidden="true">*</span>
+            <FormField label="Endereço da carteira" value={wallet?.address ?? ''} readOnly placeholder="Endereço 0x da carteira" />
+            {/* Figma: o campo secundário não tem rótulo visível no desktop (fica alinhado ao campo do endereço). */}
+            <FormField
+              label="ENS ou carteira secundária (opcional)"
+              value={wallet?.secondaryAddress ?? ''}
+              readOnly
+              placeholder="ENS ou carteira secundária (opcional)"
+              containerClassName="lg:pt-6 lg:[&>label]:sr-only"
+            />
+            <div className="flex flex-col gap-2 max-lg:hidden">
+              <label htmlFor="checkout-provider" className="text-[14px] leading-4">
+                Tipo de carteira
+                <RequiredMark />
               </label>
-              <select id="checkout-provider" {...reg('provider')} className="h-10 rounded-md border border-input bg-card px-3 text-[13px]">
-                {WalletProvider.options.map((p) => (
-                  <option key={p} value={p}>
-                    {PROVIDER_LABEL[p]}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select id="checkout-provider" {...reg('provider')} className={SELECT}>
+                  {WalletProvider.options.map((p) => (
+                    <option key={p} value={p}>
+                      {PROVIDER_LABEL[p]}
+                    </option>
+                  ))}
+                </select>
+                <SelectChevron />
+              </div>
             </div>
             <FormField label="Código de indicação" required error={errors.referralCode?.message} {...reg('referralCode')} />
             <FormField label="E-mail" required type="email" autoComplete="email" error={errors.email?.message} {...reg('email')} />
@@ -354,15 +428,25 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
               label="Nome ENS"
               required
               error={errors.ensName?.message}
-              prefix={<span className="mr-2 grid h-10 shrink-0 place-items-center rounded-md border border-input bg-card px-2 text-[13px]">.eth</span>}
+              prefix={
+                <span className="mr-2 grid h-10 shrink-0 place-items-center rounded-md border border-input bg-card px-2 text-[13px] lg:rounded-[2px] lg:border-[#3f2319] lg:bg-transparent lg:px-3 lg:text-[14px]">
+                  .eth
+                </span>
+              }
               {...reg('ensName')}
             />
           </div>
-          <div className="mt-4 flex flex-col gap-1.5">
-            <label htmlFor="checkout-note" className="text-[13px] font-medium">
+          <div className="mt-4 flex flex-col gap-1.5 lg:mt-6 lg:gap-2">
+            <label htmlFor="checkout-note" className="text-[13px] font-medium lg:text-[14px] lg:font-normal lg:leading-4">
               Observação do colecionador (opcional)
             </label>
-            <Textarea id="checkout-note" rows={5} className="max-w-md bg-card" aria-describedby={errors.note ? 'checkout-note-error' : undefined} {...reg('note')} />
+            <Textarea
+              id="checkout-note"
+              rows={5}
+              className="max-w-md bg-card lg:h-[152px] lg:w-[350px] lg:max-w-none lg:resize-none lg:rounded-[2px] lg:border-[#3f2319] lg:bg-transparent lg:text-[14px] lg:shadow-none"
+              aria-describedby={errors.note ? 'checkout-note-error' : undefined}
+              {...reg('note')}
+            />
             {errors.note && (
               <p id="checkout-note-error" className="text-[12px] text-destructive">
                 ⚠ {errors.note.message}
@@ -372,28 +456,36 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
         </section>
 
         {/* Resumo + carteira */}
-        <aside aria-label="Resumo e carteira" className="space-y-5 max-lg:order-1">
+        <aside aria-label="Resumo e carteira" className="space-y-5 max-lg:order-1 lg:space-y-0">
           <section aria-labelledby="seus-nfts">
-            <div className="mb-2 flex justify-between text-[14px] font-semibold">
-              <h2 id="seus-nfts">Seus NFTs</h2>
-              <span>Subtotal</span>
+            <div className="mb-2 flex justify-between text-[14px] font-semibold lg:mb-3 lg:block lg:border-b lg:border-[#442c1b] lg:pb-2 lg:font-normal">
+              <h2 id="seus-nfts" className="lg:text-[17px] lg:font-bold lg:leading-6">
+                Seus NFTs
+              </h2>
+              <p className="lg:mt-[3px] lg:flex lg:justify-between lg:text-[16px] lg:leading-6">
+                <span className="hidden lg:inline">NFTs</span>
+                <span>Subtotal</span>
+              </p>
             </div>
-            <ul className="space-y-2">
+            <ul className="space-y-2 lg:space-y-3">
               {cart.items.map((i) => (
-                <li key={i.id} className="flex items-center gap-2 rounded-md bg-card p-1.5 text-[13px]">
-                  <img src={i.image} alt="" width={40} height={40} className="size-10 rounded-sm object-cover" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold">{i.name}</p>
-                    <p className="text-[11px] text-muted-foreground">Edição {i.editionName}</p>
+                <li key={i.id} className="flex items-center gap-2 rounded-md bg-card p-1.5 text-[13px] lg:h-[70px] lg:rounded-none lg:bg-[#241612] lg:py-0 lg:pl-1 lg:pr-3">
+                  <img src={i.image} alt="" width={70} height={70} className="size-10 rounded-sm object-cover lg:size-[70px] lg:rounded-[4px]" />
+                  <div className="min-w-0 flex-1 lg:ml-[1px]">
+                    <p className="truncate font-bold lg:text-[15px] lg:leading-[22px] lg:tracking-[0.5px]">{i.name}</p>
+                    <p className="text-[11px] text-muted-foreground lg:text-[13px] lg:leading-5 lg:tracking-[0.3px] lg:text-[#a98b5d]">Edição {i.editionName}</p>
                   </div>
-                  <span className="text-[12px] text-muted-foreground">(x {i.quantity})</span>
-                  <span className="w-24 text-right font-bold text-primary">{formatEth(i.lineTotal)}</span>
+                  <span className="text-[12px] text-muted-foreground lg:text-[13px] lg:text-[#c2a682]">(x {i.quantity})</span>
+                  <span className="w-24 text-right font-bold text-primary lg:w-[100px] lg:text-[18px] lg:text-[#e89b55]">{formatEth(i.lineTotal)}</span>
                 </li>
               ))}
             </ul>
             {cart.items.some((i) => i.issue) && (
               <p role="alert" className="mt-2 flex items-center gap-1.5 text-[12px] text-warning">
-                <AlertTriangle className="size-3.5" aria-hidden="true" /> Há itens com preço ou estoque alterados. <Link to="/carrinho" className="underline">Revisar carrinho</Link>
+                <AlertTriangle className="size-3.5" aria-hidden="true" /> Há itens com preço ou estoque alterados.{' '}
+                <Link to="/carrinho" className="underline">
+                  Revisar carrinho
+                </Link>
               </p>
             )}
           </section>
@@ -401,29 +493,32 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
           {showCoupon || cart.coupon ? (
             <CouponForm cart={cart} />
           ) : (
-            <button type="button" className="w-full text-center text-[13px] hover:text-primary" onClick={() => setShowCoupon(true)}>
-              Tem um código promocional? <span className="text-primary">Aplique aqui</span>
+            <button type="button" className="w-full text-center text-[13px] hover:text-primary lg:!mt-[7px] lg:text-[14px] lg:leading-6" onClick={() => setShowCoupon(true)}>
+              Tem um código promocional? <span className="text-primary lg:text-inherit">Aplique aqui</span>
             </button>
           )}
 
-          <SummaryLines summary={cart.summary} coupon={cart.coupon} />
-          <p className="-mt-2 text-[11px] text-muted-foreground">A taxa de rede final depende da rede escolhida e é confirmada na revisão.</p>
+          <SummaryLines summary={cart.summary} coupon={cart.coupon} variant="checkout" className="lg:!mt-[7px]" />
+          <p className="-mt-2 text-[11px] text-muted-foreground lg:sr-only">A taxa de rede final depende da rede escolhida e é confirmada na revisão.</p>
 
-          <fieldset>
-            <legend className="mb-2 text-center text-[15px] font-semibold">Carteira e rede</legend>
-            <div role="radiogroup" aria-label="Carteira" className="space-y-2">
+          <fieldset className="lg:!mt-[2px]">
+            <legend className="mb-2 text-center text-[15px] font-semibold lg:mb-[17px] lg:w-full lg:text-[17px] lg:font-bold lg:leading-6">Carteira e rede</legend>
+            <div role="radiogroup" aria-label="Carteira" className="space-y-2 lg:space-y-4">
               {wallets.map((w) => {
                 const checked = w.id === walletId
                 return (
                   <label
                     key={w.id}
-                    className={cn('flex cursor-pointer items-center gap-3 rounded-md border border-border bg-card p-3 text-[13px]', checked && 'border-primary')}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 rounded-md border border-border bg-card p-3 text-[13px] lg:min-h-[45px] lg:gap-[11px] lg:rounded-[2px] lg:border-[#3f2319] lg:bg-transparent lg:py-[5px] lg:text-[15px]',
+                      checked && 'border-primary lg:border-primary',
+                    )}
                     data-testid="wallet-option"
                   >
-                    <input type="radio" name="wallet" checked={checked} onChange={() => selectWallet(w)} className="size-4 accent-[var(--primary)]" />
+                    <input type="radio" name="wallet" checked={checked} onChange={() => selectWallet(w)} className={RADIO} />
                     <span className="flex-1">
-                      <span className="block font-bold">{w.nickname}</span>
-                      <span className="block text-[12px] text-muted-foreground">
+                      <span className="block font-bold lg:font-normal lg:leading-[18px]">{w.nickname}</span>
+                      <span className="block text-[12px] text-muted-foreground lg:text-[11px] lg:leading-[14px] lg:text-[#b39463]">
                         {w.secondaryAddress ?? `${w.address.slice(0, 6)}…${w.address.slice(-4)}`} · Rede {NETWORK_LABEL[w.network]} · {PROVIDER_LABEL[w.provider]}
                       </span>
                     </span>
@@ -455,7 +550,12 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
               ))}
             </div>
 
-            <div className="mt-3 rounded-md border border-border p-3 text-[13px]" aria-live="polite" data-testid="wallet-connection" data-status={connected ? 'connected' : conn.status}>
+            <div
+              className="mt-3 rounded-md border border-border p-3 text-[13px] lg:mt-4 lg:rounded-[2px] lg:border-[#3f2319]"
+              aria-live="polite"
+              data-testid="wallet-connection"
+              data-status={connected ? 'connected' : conn.status}
+            >
               {connected ? (
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-2 text-success">
@@ -488,11 +588,15 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
               )}
             </div>
           </fieldset>
-
         </aside>
 
         <div className="max-lg:order-3 lg:col-start-2">
-          <Button type="submit" className="h-11 w-full font-semibold max-lg:h-12 max-lg:rounded-full" disabled={quoting} data-testid="review-button">
+          <Button
+            type="submit"
+            className="h-11 w-full font-semibold max-lg:h-12 max-lg:rounded-full lg:h-[45px] lg:rounded-[4px] lg:text-[16px] lg:font-bold"
+            disabled={quoting}
+            data-testid="review-button"
+          >
             {quoting ? 'Gerando revisão…' : 'Revisar e confirmar compra'}
           </Button>
         </div>
@@ -503,9 +607,7 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
         <DialogContent className="max-h-[90dvh] overflow-y-auto border-border bg-card sm:max-w-lg" data-testid="review-dialog">
           <DialogHeader>
             <DialogTitle>Revise seu pedido</DialogTitle>
-            <DialogDescription>
-              Valores calculados agora pela API para a rede {NETWORK_LABEL[network]}. Confirme para enviar o pedido.
-            </DialogDescription>
+            <DialogDescription>Valores calculados agora pela API para a rede {NETWORK_LABEL[network]}. Confirme para enviar o pedido.</DialogDescription>
           </DialogHeader>
           {quote && (
             <div className="space-y-4 text-[13px]">
@@ -527,15 +629,24 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
                   <li key={`${l.nftId}-${l.editionId}`} className="flex items-center gap-2">
                     <img src={l.image} alt="" width={36} height={36} className="size-9 rounded-sm object-cover" />
                     <span className="flex-1">
-                      {l.name} <span className="text-muted-foreground">· {l.editionName} · {l.quantity} × {formatEth(l.unitPrice)}</span>
+                      {l.name}{' '}
+                      <span className="text-muted-foreground">
+                        · {l.editionName} · {l.quantity} × {formatEth(l.unitPrice)}
+                      </span>
                     </span>
-                    <span className="font-bold text-primary" data-testid="review-line-total">{formatEth(l.lineTotal)}</span>
+                    <span className="font-bold text-primary" data-testid="review-line-total">
+                      {formatEth(l.lineTotal)}
+                    </span>
                   </li>
                 ))}
               </ul>
               <SummaryLines summary={quote} coupon={quote.coupon} />
               <p className="text-[12px] text-muted-foreground">
-                Carteira: {wallet?.nickname} ({PROVIDER_LABEL[provider]}) · Cotação válida até {new Date(quote.expiresAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                Carteira: {wallet?.nickname} ({PROVIDER_LABEL[provider]}) · Cotação válida até{' '}
+                {new Date(quote.expiresAt).toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </p>
               {submitError && (
                 <p role="alert" className="rounded-md border border-destructive/60 bg-destructive/10 p-2.5 text-destructive" data-testid="submit-error">
@@ -566,6 +677,17 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
   )
 }
 
+const SELECT =
+  'h-10 w-full rounded-md border border-input bg-card px-3 text-[13px] lg:appearance-none lg:rounded-[2px] lg:border-[#3f2319] lg:bg-transparent lg:pr-10 lg:text-[14px] [&>option]:bg-card'
+
+/** Rádio do Figma: anel laranja; marcado, ganha o miolo preenchido. */
+const RADIO =
+  'size-4 shrink-0 accent-[var(--primary)] lg:appearance-none lg:rounded-full lg:border-[1.5px] lg:border-primary lg:checked:bg-primary lg:checked:shadow-[inset_0_0_0_2.5px_var(--background)]'
+
+function SelectChevron() {
+  return <ChevronDown className="pointer-events-none absolute right-[28px] top-1/2 hidden size-5 -translate-y-1/2 text-[#b39463] lg:block" strokeWidth={1.5} aria-hidden="true" />
+}
+
 /** Refresh no meio do envio: reenvia a mesma tentativa (mesma chave) para recuperar o pedido. */
 function RecoverAttempt({ attempt, onGiveUp }: { attempt: OrderAttempt; onGiveUp: () => void }) {
   const navigate = useNavigate()
@@ -580,7 +702,11 @@ function RecoverAttempt({ attempt, onGiveUp }: { attempt: OrderAttempt; onGiveUp
       clearAttempt()
       rememberPendingOrder(attempt.userId, order.id)
       queryClient.setQueryData(qk.order(attempt.userId, order.id), order)
-      void navigate({ to: '/pedido/$orderId', params: { orderId: order.id }, replace: true })
+      void navigate({
+        to: '/pedido/$orderId',
+        params: { orderId: order.id },
+        replace: true,
+      })
     } catch (e) {
       const err = e instanceof ApiError ? e : null
       if (err && !err.isTransient) {
@@ -618,7 +744,10 @@ function RecoverAttempt({ attempt, onGiveUp }: { attempt: OrderAttempt; onGiveUp
 
 function PendingOrdersBanner() {
   const { user } = useSession()
-  const pending = useQuery({ queryKey: [...qk.orders(user!.id), 'pending'], queryFn: ({ signal }) => api.listOrders('pending', { signal }) })
+  const pending = useQuery({
+    queryKey: [...qk.orders(user!.id), 'pending'],
+    queryFn: ({ signal }) => api.listOrders('pending', { signal }),
+  })
   const order = pending.data?.items[0]
   if (!order) return null
   return (

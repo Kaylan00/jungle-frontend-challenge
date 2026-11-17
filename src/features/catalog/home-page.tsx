@@ -63,7 +63,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
   const activeFilters = (search.category?.length ?? 0) + (search.network?.length ?? 0) + (search.minPrice || search.maxPrice ? 1 : 0) + (search.onlyAvailable ? 1 : 0)
 
   return (
-    <section id="catalogo" aria-labelledby="catalogo-title" className="container-page mt-10 scroll-mt-20 md:mt-16">
+    <section id="catalogo" aria-labelledby="catalogo-title" className="container-page mt-10 scroll-mt-20 md:mt-24">
       <h2 id="catalogo-title" className="sr-only">
         Catálogo de NFTs
       </h2>
@@ -99,26 +99,25 @@ function Catalog({ search }: { search: CatalogSearch }) {
         </Sheet>
       </div>
 
-      <div className="grid gap-10 md:grid-cols-[240px_1fr] lg:grid-cols-[254px_1fr]">
+      <div className="grid gap-10 md:grid-cols-[240px_1fr] xl:grid-cols-[310px_1fr] xl:gap-12">
         <aside className="hidden md:block" aria-label="Filtros do catálogo">
-          <div className="rounded-md bg-card p-4">
-            <div className="mb-4 hidden md:block">
-              <label className="relative block">
-                <span className="sr-only">Buscar NFTs</span>
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                <input
-                  type="search"
-                  value={term}
-                  onChange={(e) => setTerm(e.target.value)}
-                  placeholder="Buscar por nome"
-                  className="h-9 w-full rounded-md bg-secondary pl-8 pr-2 text-[13px]"
-                  data-testid="catalog-search"
-                />
-              </label>
-            </div>
+          <div className="mt-px bg-card px-5 pb-5 pt-[15px]">
             <CatalogFilters search={search} facets={list.data?.facets} onChange={(p) => void update(p)} />
+            {/* A busca por nome não aparece no Figma desktop; fica no fim da caixa de filtros. */}
+            <label className="relative mt-3 block">
+              <span className="sr-only">Buscar NFTs por nome</span>
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <input
+                type="search"
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder="Buscar por nome"
+                className="h-10 w-full rounded-[4px] bg-band pl-9 pr-2 text-[15px] placeholder:text-[#b19362]"
+                data-testid="catalog-search"
+              />
+            </label>
             {activeFilters > 0 && (
-              <button type="button" className="mt-5 text-[13px] text-primary underline-offset-4 hover:underline" onClick={() => void navigate({ to: '/', search: {}, hash: 'catalogo', resetScroll: false })}>
+              <button type="button" className="mt-4 pl-3 text-[15px] text-highlight underline-offset-4 hover:underline" onClick={() => void navigate({ to: '/', search: {}, hash: 'catalogo', resetScroll: false })}>
                 Limpar filtros
               </button>
             )}
@@ -127,8 +126,8 @@ function Catalog({ search }: { search: CatalogSearch }) {
         </aside>
 
         <div>
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div role="tablist" aria-label="Seleção do catálogo" className="flex gap-4 overflow-x-auto text-[14px] md:gap-5">
+          <div className="mb-[26px] flex flex-wrap items-start justify-between gap-3">
+            <div role="tablist" aria-label="Seleção do catálogo" className="flex gap-4 overflow-x-auto text-[15px] leading-5 md:gap-[21px]">
               {TABS.map((t, i) => {
                 const selected = i === (activeTab === -1 ? (search.sort ? -1 : 0) : activeTab)
                 return (
@@ -136,7 +135,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
                     key={t.label}
                     role="tab"
                     aria-selected={selected}
-                    className={cn('shrink-0 border-b-2 border-transparent pb-1 transition-colors hover:text-primary', selected && 'border-primary text-primary')}
+                    className={cn('shrink-0 border-b-2 border-transparent pb-0.5 transition-colors hover:text-highlight', selected && 'border-primary text-highlight')}
                     onClick={() => void update({ sort: t.sort })}
                   >
                     {t.label}
@@ -159,7 +158,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
               retrying={list.isFetching}
             />
           ) : list.isPending ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3 lg:gap-x-7" aria-busy="true" aria-label="Carregando NFTs" data-testid="catalog-loading">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3 lg:gap-x-7 xl:gap-x-[34px] xl:gap-y-[66px]" aria-busy="true" aria-label="Carregando NFTs" data-testid="catalog-loading">
               {Array.from({ length: PAGE_SIZE }, (_, i) => (
                 <NftCardSkeleton key={i} />
               ))}
@@ -180,7 +179,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
                 <ErrorState className="mb-4 py-4" title="Falha ao atualizar a lista" message={list.error.message} onRetry={() => void list.refetch()} retrying={list.isFetching} />
               )}
               <ul
-                className={cn('grid grid-cols-2 gap-x-4 gap-y-8 transition-opacity lg:grid-cols-3 lg:gap-x-7', list.isPlaceholderData && 'opacity-60')}
+                className={cn('grid grid-cols-2 gap-x-4 gap-y-8 transition-opacity lg:grid-cols-3 lg:gap-x-7 xl:gap-x-[34px] xl:gap-y-[66px]', list.isPlaceholderData && 'opacity-60')}
                 aria-busy={list.isFetching}
                 data-testid="catalog-grid"
               >
@@ -194,17 +193,20 @@ function Catalog({ search }: { search: CatalogSearch }) {
           )}
 
           {totalPages > 1 && (
-            <nav aria-label="Paginação do catálogo" className="mt-10 flex justify-end gap-2">
-              <PageButton disabled={page <= 1} onClick={() => void update({ page: page - 1 }, { keepPage: true })} label="Página anterior">
-                <ChevronLeft className="size-4" aria-hidden="true" />
-              </PageButton>
+            <nav aria-label="Paginação do catálogo" className="mt-[76px] flex justify-end gap-2">
+              {/* Figma: na primeira página não há botão de voltar. */}
+              {page > 1 && (
+                <PageButton onClick={() => void update({ page: page - 1 }, { keepPage: true })} label="Página anterior">
+                  <ChevronLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                </PageButton>
+              )}
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                 <PageButton key={n} current={n === page} onClick={() => void update({ page: n === 1 ? undefined : n }, { keepPage: true })} label={`Página ${n}`}>
                   {n}
                 </PageButton>
               ))}
               <PageButton disabled={page >= totalPages} onClick={() => void update({ page: page + 1 }, { keepPage: true })} label="Próxima página">
-                <ChevronRight className="size-4" aria-hidden="true" />
+                <ChevronRight className="size-5" strokeWidth={1.5} aria-hidden="true" />
               </PageButton>
             </nav>
           )}
@@ -223,8 +225,8 @@ function PageButton({ children, current, disabled, onClick, label }: { children:
       aria-label={label}
       aria-current={current ? 'page' : undefined}
       className={cn(
-        'grid size-8 place-items-center rounded-sm border border-border text-[13px] transition-colors hover:border-primary disabled:opacity-40',
-        current && 'border-primary bg-primary font-bold text-primary-foreground',
+        'grid size-[35px] place-items-center rounded-[4px] border border-[#3f2319] text-xl transition-colors hover:border-primary disabled:opacity-40',
+        current && 'border-primary bg-primary text-primary-foreground',
       )}
     >
       {children}
@@ -234,10 +236,10 @@ function PageButton({ children, current, disabled, onClick, label }: { children:
 
 function SortSelect({ value, onChange, className }: { value: SortOption | undefined; onChange: (v: SortOption | undefined) => void; className?: string }) {
   return (
-    <div className={cn('items-center gap-1 text-[14px]', className)}>
+    <div className={cn('items-center gap-[9px] text-[15px] leading-5', className)}>
       <span id="sort-label">Ordenar por:</span>
       <Select value={value ?? 'relevance'} onValueChange={(v) => onChange(v === 'relevance' ? undefined : (v as SortOption))}>
-        <SelectTrigger aria-labelledby="sort-label" className="h-8 border-0 bg-transparent px-1 text-[14px] shadow-none focus-visible:ring-2" data-testid="sort-select">
+        <SelectTrigger aria-labelledby="sort-label" className="h-5 gap-1.5 rounded-sm border-0 bg-transparent p-0 text-[15px] text-foreground shadow-none focus-visible:ring-2 dark:bg-transparent dark:hover:bg-transparent data-[size=default]:h-5 [&_svg:not([class*='text-'])]:text-foreground" data-testid="sort-select">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -256,15 +258,15 @@ function FeaturedBox() {
   const { data } = useQuery(featuredQuery)
   const nft = data?.items[1]
   return (
-    <div className="mt-6 overflow-hidden rounded-md bg-gradient-to-b from-band to-card">
-      <p className="px-4 pt-4 text-lg font-bold uppercase text-primary">NFT em destaque</p>
-      <p className="px-4 pb-3 text-center text-[15px] font-bold uppercase">Oferta limitada</p>
+    <div className="mt-6 overflow-hidden bg-gradient-to-b from-[#271910] to-[#1a110c]">
+      <p className="pl-[19px] pt-6 text-2xl font-bold uppercase leading-8 text-highlight">NFT em destaque</p>
+      <p className="mt-2.5 text-center text-[22px] font-bold uppercase leading-7">Oferta limitada</p>
       {nft ? (
-        <Link to="/nft/$nftId" params={{ nftId: nft.id }} className="block" aria-label={`NFT em destaque: ${nft.name}`}>
-          <img src={nft.image} alt="" width={254} height={254} loading="lazy" className="aspect-[254/300] w-full rounded-xl object-cover" />
+        <Link to="/nft/$nftId" params={{ nftId: nft.id }} className="mt-2.5 block" aria-label={`NFT em destaque: ${nft.name}`}>
+          <img src={nft.image} alt="" width={310} height={366} loading="lazy" className="aspect-[310/366] w-full rounded-[18px] object-cover" />
         </Link>
       ) : (
-        <div className="aspect-[254/300] w-full" />
+        <div className="mt-2.5 aspect-[310/366] w-full" />
       )}
     </div>
   )
@@ -272,20 +274,53 @@ function FeaturedBox() {
 
 function PromoBanners() {
   const { data } = useQuery(featuredQuery)
+  // Quebras de linha e respiro à direita como no Figma (cada banner tem a sua caixa de texto).
   const banners = [
-    { title: 'Lançamentos gênesis de edição limitada', text: 'Colecione edições escassas diretamente dos criadores antes da revelação pública.', nft: data?.items[0] },
-    { title: 'Arte digital selecionada e muito mais', text: 'Explore novos artistas, coleções verificadas e obras digitais que definem a cultura.', nft: data?.items[2] },
+    {
+      title: ['Lançamentos gênesis', 'de edição limitada'],
+      text: ['Colecione edições escassas', 'diretamente dos criadores antes', 'da revelação pública.'],
+      nft: data?.items[0],
+      pad: 'pr-4 xl:pr-[30px]',
+    },
+    {
+      title: ['Arte digital selecionada', 'e muito mais'],
+      text: ['Explore novos artistas,', 'coleções verificadas e obras', 'digitais que definem a cultura.'],
+      nft: data?.items[2],
+      pad: 'pr-4 xl:pr-[35px]',
+    },
   ]
   return (
-    <section aria-label="Destaques da Kurio" className="container-page mt-16 grid gap-6 md:grid-cols-2">
+    <section aria-label="Destaques da Kurio" className="container-page mt-16 grid gap-6 md:mt-24 md:grid-cols-2 xl:gap-[30px]">
       {banners.map((b) => (
-        <article key={b.title} className="grid grid-cols-[160px_1fr] overflow-hidden rounded-md bg-card md:grid-cols-[200px_1fr]">
-          <div className="aspect-square bg-secondary">{b.nft && <img src={b.nft.image} alt="" width={200} height={200} loading="lazy" className="size-full object-cover" />}</div>
-          <div className="flex flex-col items-end justify-center gap-2 p-4 text-right">
-            <h2 className="text-[14px] font-bold leading-snug">{b.title}</h2>
-            <p className="text-[12px] leading-relaxed text-muted-foreground">{b.text}</p>
-            <Link to="/" hash="catalogo" search={{ sort: 'recent' }} className="mt-1 inline-flex items-center gap-1 rounded-md bg-primary px-4 py-1.5 text-[12px] font-semibold text-primary-foreground hover:bg-primary-hover">
-              Explorar <ArrowRight className="size-3.5" aria-hidden="true" />
+        <article key={b.title[0]} className="grid h-[250px] grid-cols-[160px_1fr] md:grid-cols-[130px_1fr] lg:grid-cols-[200px_1fr] xl:grid-cols-[286px_1fr]">
+          {/* A arte tem cantos de 12px e fica por cima da caixa marrom (os cantos da esquerda mostram o fundo da página). */}
+          <div className="relative z-10 h-full overflow-hidden rounded-xl bg-secondary">
+            {b.nft && <img src={b.nft.image} alt="" width={286} height={250} loading="lazy" className="size-full object-cover" />}
+          </div>
+          <div className={cn('-ml-3 flex flex-col items-end rounded-r-[4px] bg-card pl-4 pt-[37px] text-right', b.pad)}>
+            <h2 className="text-lg font-bold leading-6">
+              {b.title.map((line, i) => (
+                <span key={line} className="xl:block xl:whitespace-nowrap">
+                  {line}
+                  {i < b.title.length - 1 && ' '}
+                </span>
+              ))}
+            </h2>
+            <p className="mt-[9px] leading-6 text-muted-foreground">
+              {b.text.map((line, i) => (
+                <span key={line} className="xl:block xl:whitespace-nowrap">
+                  {line}
+                  {i < b.text.length - 1 && ' '}
+                </span>
+              ))}
+            </p>
+            <Link
+              to="/"
+              hash="catalogo"
+              search={{ sort: 'recent' }}
+              className="-mt-0.5 inline-flex h-10 w-[140px] shrink-0 items-center justify-center gap-1 rounded-[4px] bg-primary text-sm text-primary-foreground transition-colors hover:bg-primary-hover"
+            >
+              Explorar <ArrowRight className="size-5" strokeWidth={1.75} aria-hidden="true" />
             </Link>
           </div>
         </article>
@@ -304,23 +339,25 @@ const ARTICLES = [
 /** "Diário da Cunhagem": conteúdo editorial está fora do escopo; os cards não levam a páginas. */
 function Journal() {
   return (
-    <section aria-labelledby="diario-title" className="container-page mt-20">
-      <h2 id="diario-title" className="text-center text-2xl font-bold">
+    <section aria-labelledby="diario-title" className="container-page mt-20 md:mb-4 md:mt-[97px]">
+      <h2 id="diario-title" className="text-center text-[28px] font-bold leading-9">
         Diário da Cunhagem
       </h2>
-      <p className="mt-2 text-center text-[13px] text-muted-foreground">Histórias, guias e insights para colecionadores sobre o universo da propriedade digital.</p>
-      <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
+      <p className="mt-[11px] text-center leading-5 text-muted-foreground">Histórias, guias e insights para colecionadores sobre o universo da propriedade digital.</p>
+      {/* Figma: 4 cards de 268px com 24px entre eles, alinhados à esquerda do container. */}
+      <div className="mt-[39px] grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6 xl:grid-cols-[repeat(4,268px)]">
         {ARTICLES.map((a) => (
           <article key={a.title} className="overflow-hidden rounded-md bg-card">
-            <img src={a.img} alt="" width={270} height={180} loading="lazy" className="aspect-[3/2] w-full object-cover" />
-            <div className="p-4">
-              <p className="text-[11px] text-muted-foreground">
-                {a.date} | Leitura de {a.read}
+            <img src={a.img} alt="" width={268} height={195} loading="lazy" className="aspect-[268/195] w-full object-cover" />
+            <div className="px-4 pb-[15px] pt-3">
+              <p className="whitespace-pre-wrap text-xs leading-4 text-muted-foreground">
+                {a.date}
+                {'  |  '}Leitura de {a.read}
               </p>
-              <h3 className="mt-2 text-[14px] font-bold leading-snug">{a.title}</h3>
-              <p className="mt-1 text-[12px] text-muted-foreground">{a.text}</p>
-              <span className="mt-3 inline-block cursor-not-allowed text-[12px] text-subtle-foreground" title="Conteúdo editorial em breve">
-                Ler mais (em breve)
+              <h3 className="mt-2 text-base font-bold leading-[21px]">{a.title}</h3>
+              <p className="mt-2 text-xs leading-4 text-muted-foreground">{a.text}</p>
+              <span className="mt-[7px] inline-block cursor-not-allowed text-xs font-bold leading-4 text-highlight" title="Conteúdo editorial em breve">
+                Ler mais →<span className="sr-only"> (em breve)</span>
               </span>
             </div>
           </article>

@@ -9,30 +9,36 @@
  * Os componentes do shadcn/ui usam estas variáveis, então herdam a identidade sem reescrita.
  */
 :root {
-  --background: #160c0a;
-  --foreground: #f4eee8;
-  --card: #221614;
-  --card-foreground: #f4eee8;
-  --popover: #221614;
-  --popover-foreground: #f4eee8;
-  --primary: #d08c52;
-  --primary-hover: #dd9a60;
-  --primary-foreground: #1a0f0c;
+  /* Medidos nos frames desktop do Figma (1440). */
+  --background: #140d0a;
+  --foreground: #f5f1eb;
+  --card: #241612;
+  --card-foreground: #f5f1eb;
+  --popover: #241612;
+  --popover-foreground: #f5f1eb;
+  /* Laranja de preenchimento (botões, sublinhados, bordas de destaque). */
+  --primary: #d28a4c;
+  --primary-hover: #df9a5e;
+  --primary-foreground: #140d0a;
+  /* Laranja de TEXTO do Figma (item ativo do menu, aba ativa, preços, coleção marcada). */
+  --highlight: #e89b55;
   --secondary: #2c1d19;
-  --secondary-foreground: #f4eee8;
+  --secondary-foreground: #f5f1eb;
   --muted: #2c1d19;
-  /* Texto secundário (tan). Contraste 7.4:1 sobre o fundo. */
-  --muted-foreground: #c9a785;
+  /* Texto secundário (tan). Contraste 9.6:1 sobre o fundo e 8.7:1 sobre o card. */
+  --muted-foreground: #cfb28c;
   --subtle-foreground: #a8917c;
   --accent: #2c1d19;
-  --accent-foreground: #f4eee8;
+  --accent-foreground: #f5f1eb;
   --destructive: #e5534b;
   --success: #6fbf73;
   --warning: #e8b04b;
-  --border: #3a2822;
-  --input: #3a2822;
-  --ring: #d08c52;
-  --band: #3a2214;
+  /* Linha divisória do cabeçalho. */
+  --border: #442c1b;
+  --input: #442c1b;
+  --ring: #d28a4c;
+  /* Faixa marrom do rodapé e fundo do campo da newsletter. */
+  --band: #38220f;
   --radius: 0.5rem;
 }
 
@@ -48,6 +54,7 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
+  --color-highlight: var(--highlight);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
