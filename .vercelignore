@@ -1,0 +1,7 @@
+node_modules
+dist
+lighthouse/reports
+e2e/__screenshots__
+test-results
+playwright-report
+.git

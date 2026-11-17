@@ -2,7 +2,7 @@
 
 Solução do [desafio de frontend da Jungle Gaming](https://github.com/junglegaming/frontend-challenge): marketplace de NFTs com descoberta, compra e conta do colecionador, em desktop e mobile, seguindo o [layout do Figma](https://www.figma.com/design/Ff0SksUi7UFtPWUO8kyNtw/Frontend-Challenge?node-id=0-1).
 
-- **Aplicação publicada:** _(link da Vercel)_
+- **Aplicação publicada:** https://jungle-frontend-challenge-navy.vercel.app
 - **Arquitetura e decisões:** [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Relatório Lighthouse:** [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md)
 

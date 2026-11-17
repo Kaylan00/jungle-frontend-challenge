@@ -13,7 +13,6 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { homedir, cpus, totalmem, release, platform, tmpdir } from 'node:os'
 import { join } from 'node:path'
-import * as chromeLauncher from 'chrome-launcher'
 import lighthouse from 'lighthouse'
 import desktopConfig from 'lighthouse/core/config/desktop-config.js'
 
@@ -38,6 +37,20 @@ function findChrome() {
     if (existsSync(p)) return p
   }
   throw new Error('Binário do Chromium não encontrado em ' + join(base, dir))
+}
+
+function launchChrome(chromePath, userDataDir) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(chromePath, ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run', `--user-data-dir=${userDataDir}`, '--remote-debugging-port=0', 'about:blank'])
+    const t = setTimeout(() => reject(new Error('Chrome não abriu')), 20_000)
+    proc.stderr.on('data', (d) => {
+      const m = String(d).match(/DevTools listening on ws:\/\/[^:]+:(\d+)\//)
+      if (m) {
+        clearTimeout(t)
+        resolve({ port: Number(m[1]), kill: () => proc.kill('SIGKILL') })
+      }
+    })
+  })
 }
 
 async function startPreview() {
@@ -90,9 +103,9 @@ try {
       const runs = []
       for (let i = 1; i <= RUNS; i++) {
         // Perfil de navegador novo a cada medição: sem cache nem service worker anterior.
-        // Perfil temporário explícito (no WSL o chrome-launcher tentaria usar a pasta do Windows).
-        const userDataDir = mkdtempSync(join(tmpdir(), 'kurio-lh-'))
-        const chrome = await chromeLauncher.launch({ chromePath, userDataDir, chromeFlags: ['--headless=new', '--no-sandbox', '--disable-gpu'] })
+        // Chrome aberto direto (o chrome-launcher detecta WSL e converte caminhos para o Windows).
+        const userDataDir = mkdtempSync(join(process.platform === 'win32' ? tmpdir() : '/tmp', 'kurio-lh-'))
+        const chrome = await launchChrome(chromePath, userDataDir)
         try {
           const result = await lighthouse(
             baseUrl + pageDef.path,
@@ -114,7 +127,8 @@ try {
           runs.push(run)
           console.log(`${pageDef.name} ${profile.name} #${i}`, JSON.stringify(run))
         } finally {
-          await chrome.kill()
+          chrome.kill()
+          await new Promise((r) => setTimeout(r, 300))
           rmSync(userDataDir, { recursive: true, force: true })
         }
       }
