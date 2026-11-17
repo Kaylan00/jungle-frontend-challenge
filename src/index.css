@@ -86,6 +86,26 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Tailwind 4 deixa botões com cursor padrão: todo elemento clicável mostra a mãozinha. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='radio'],
+  [role='checkbox'],
+  [role='tab'],
+  [role='option'],
+  [role='menuitem'],
+  select:not(:disabled),
+  summary,
+  label:has(input:not(:disabled)),
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled),
+  input[type='file']:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
   html {
     color-scheme: dark;
     -webkit-text-size-adjust: 100%;
