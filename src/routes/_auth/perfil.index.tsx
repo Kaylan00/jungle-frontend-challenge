@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { ProfilePage } from '@/features/profile/profile-page'
 
 export const Route = createFileRoute('/_auth/perfil/')({
-  component: () => <div className="container-page py-10"><h1 className="text-2xl font-bold">Perfil</h1></div>,
+  component: ProfilePage,
 })

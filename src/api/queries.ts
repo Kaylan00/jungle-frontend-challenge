@@ -32,10 +32,12 @@ export const qk = {
 
 export const sessionQuery = queryOptions({
   queryKey: qk.session,
-  queryFn: async ({ signal }): Promise<Session | null> => {
+  // Sem `signal` de propósito: a sessão é compartilhada pelo guard das rotas (ensureQueryData).
+  // Se ela fosse cancelável, desmontar um componente no meio da busca rejeitaria o guard.
+  queryFn: async (): Promise<Session | null> => {
     if (!sessionStore.getToken()) return null
     try {
-      return await api.getSession({ signal })
+      return await api.getSession()
     } catch (e) {
       if (e instanceof ApiError && (e.code === 'UNAUTHENTICATED' || e.code === 'SESSION_EXPIRED')) {
         sessionStore.clear(e.code === 'SESSION_EXPIRED' ? 'expired' : 'logout')
