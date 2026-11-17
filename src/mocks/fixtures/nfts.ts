@@ -42,7 +42,7 @@ const rows: Array<{
   reviews: number
   daysAgo: number
 }> = [
-  { name: 'Emerald Ape #042', art: 'emerald', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/1', '4.80', 1, 1], ['1/10', '2.35', 4, 2], ['1/50', '1.19', 18, 10], ['Aberta', '0.42', 200, 20]], featured: true, likes: 842, rating: 4.8, reviews: 19, daysAgo: 1 },
+  { name: 'Emerald Ape #042', art: 'emerald', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/1', '4.80', 1, 1], ['1/10', '2.35', 4, 2], ['1/50', '1.19', 18, 10], ['Aberta', '0.42', 0, 20]], featured: true, likes: 842, rating: 4.8, reviews: 19, daysAgo: 1 },
   { name: 'Sage Nomad #009', art: 'sage', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/10', '1.69', 6, 2], ['1/50', '0.95', 22, 10]], featured: true, likes: 615, rating: 4.6, reviews: 12, daysAgo: 2 },
   { name: 'Neon Vessel #552', art: 'ivory', collection: 'Neon Vessels', category: 'colecionaveis', network: 'ethereum', editions: [['1/10', '1.99', 3, 2]], compareAt: '2.29', badge: 'raro', featured: true, likes: 1290, rating: 4.9, reviews: 31, daysAgo: 3 },
   { name: 'Cosmic Bloom #118', art: 'sage', collection: 'Cosmic Garden', category: 'generativa', network: 'polygon', editions: [['1/50', '1.29', 30, 10], ['Aberta', '0.29', 300, 20]], likes: 210, rating: 4.4, reviews: 8, daysAgo: 4 },

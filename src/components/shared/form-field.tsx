@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
  */
 export const FormField = forwardRef<
   HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement> & {
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix'> & {
     label: string
     error?: string
     hint?: string
