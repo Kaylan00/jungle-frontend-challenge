@@ -60,7 +60,8 @@ export function Header() {
   }, [searchOpen])
 
   return (
-    <header className="sticky top-0 z-40 bg-background">
+    // Mobile (Figma 414): sem cabeçalho; a navegação fica na barra inferior.
+    <header className="sticky top-0 z-40 bg-background max-md:hidden">
       <div className="container-page relative flex h-16 items-center justify-between gap-4 xl:h-[69px] xl:items-start xl:justify-start xl:gap-0">
         {/* Linha divisória (Figma: 1px em y=68, o sublinhado do item ativo passa por cima dela).
             Nos frames do Mercado (detalhe, carrinho, pagamento) o Figma não tem a linha. */}

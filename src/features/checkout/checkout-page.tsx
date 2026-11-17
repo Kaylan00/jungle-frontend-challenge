@@ -15,7 +15,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronLeft, Loader2, Wallet as WalletIcon } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronLeft, Loader2, MoreVertical, Wallet as WalletIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -51,6 +51,8 @@ const PROVIDER_LABEL: Record<WalletProvider, string> = {
   metamask: 'MetaMask',
   coinbase: 'Coinbase Wallet',
 }
+/** Ordem dos cartões de tipo de carteira no Figma mobile. */
+const PROVIDER_ORDER: WalletProvider[] = ['walletconnect', 'metamask', 'coinbase']
 const DRAFT_KEY = 'kurio.checkout.draft'
 
 type Connection = {
@@ -69,7 +71,8 @@ export function CheckoutPage() {
   if (recovering) return <RecoverAttempt attempt={recovering} onGiveUp={() => setRecovering(null)} />
 
   return (
-    <div className="container-page pt-4 md:pt-7">
+    // Mobile (Figma 414): margens de 28px e espaço no fim para o botão fixo "Confirmar compra".
+    <div className="container-page pt-4 max-md:px-7 max-md:pb-[124px] max-md:pt-8 md:pt-7">
       <nav aria-label="Trilha de navegação" className="mb-4 hidden text-[15px] font-bold leading-6 md:block lg:mb-6">
         <ol className="flex gap-[9px]">
           <li>
@@ -87,12 +90,15 @@ export function CheckoutPage() {
           <li aria-current="page">Pagamento</li>
         </ol>
       </nav>
-      <div className="mb-4 flex items-center gap-3 md:hidden">
-        <Link to="/carrinho" className="grid size-9 place-items-center rounded-full bg-card text-primary" aria-label="Voltar ao carrinho">
-          <ChevronLeft className="size-5" aria-hidden="true" />
+      <div className="mb-5 flex items-center md:hidden">
+        <Link
+          to="/carrinho"
+          className="grid size-[35px] shrink-0 place-items-center rounded-full border border-[#3c2218] bg-[#2f1d15] text-[#b09261] transition-colors hover:text-highlight"
+          aria-label="Voltar ao carrinho"
+        >
+          <ChevronLeft className="size-5" strokeWidth={1.75} aria-hidden="true" />
         </Link>
-        <h1 className="flex-1 text-center text-xl font-bold">Pagamento com carteira</h1>
-        <span className="size-9" />
+        <h1 className="flex-1 pl-[25px] text-[20px] font-bold leading-7">Pagamento com carteira</h1>
       </div>
       <h1 className="sr-only max-md:hidden">Pagamento com carteira</h1>
       <PendingOrdersBanner />
@@ -456,8 +462,8 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
         </section>
 
         {/* Resumo + carteira */}
-        <aside aria-label="Resumo e carteira" className="space-y-5 max-lg:order-1 lg:space-y-0">
-          <section aria-labelledby="seus-nfts">
+        <aside aria-label="Resumo e carteira" className="space-y-5 max-lg:order-1 max-md:flex max-md:flex-col max-md:gap-5 max-md:space-y-0 lg:space-y-0">
+          <section aria-labelledby="seus-nfts" className="max-md:order-3">
             <div className="mb-2 flex justify-between text-[14px] font-semibold lg:mb-3 lg:block lg:border-b lg:border-[#442c1b] lg:pb-2 lg:font-normal">
               <h2 id="seus-nfts" className="lg:text-[17px] lg:font-bold lg:leading-6">
                 Seus NFTs
@@ -491,19 +497,28 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
           </section>
 
           {showCoupon || cart.coupon ? (
-            <CouponForm cart={cart} />
+            <div className="max-md:order-4">
+              <CouponForm cart={cart} />
+            </div>
           ) : (
-            <button type="button" className="w-full text-center text-[13px] hover:text-primary lg:!mt-[7px] lg:text-[14px] lg:leading-6" onClick={() => setShowCoupon(true)}>
+            <button type="button" className="w-full text-center text-[13px] hover:text-primary max-md:order-4 lg:!mt-[7px] lg:text-[14px] lg:leading-6" onClick={() => setShowCoupon(true)}>
               Tem um código promocional? <span className="text-primary lg:text-inherit">Aplique aqui</span>
             </button>
           )}
 
-          <SummaryLines summary={cart.summary} coupon={cart.coupon} variant="checkout" className="lg:!mt-[7px]" />
-          <p className="-mt-2 text-[11px] text-muted-foreground lg:sr-only">A taxa de rede final depende da rede escolhida e é confirmada na revisão.</p>
+          <SummaryLines summary={cart.summary} coupon={cart.coupon} variant="checkout" className="max-md:order-5 lg:!mt-[7px]" />
+          <p className="-mt-2 text-[11px] text-muted-foreground max-md:order-6 max-md:-mt-3 lg:sr-only">A taxa de rede final depende da rede escolhida e é confirmada na revisão.</p>
 
-          <fieldset className="lg:!mt-[2px]">
-            <legend className="mb-2 text-center text-[15px] font-semibold lg:mb-[17px] lg:w-full lg:text-[17px] lg:font-bold lg:leading-6">Carteira e rede</legend>
-            <div role="radiogroup" aria-label="Carteira" className="space-y-2 lg:space-y-4">
+          <fieldset className="max-md:order-1 lg:!mt-[2px]">
+            <legend className="mb-2 text-center text-[15px] font-semibold max-md:sr-only lg:mb-[17px] lg:w-full lg:text-[17px] lg:font-bold lg:leading-6">Carteira e rede</legend>
+            {/* Mobile (Figma): "Carteira conectada" com o atalho para trocar a carteira. */}
+            <div className="mb-[13px] flex items-baseline justify-between md:hidden">
+              <p className="text-[16px] font-bold leading-6">Carteira conectada</p>
+              <Link to="/perfil/carteiras" className="text-[14px] font-bold text-highlight hover:underline">
+                Trocar carteira
+              </Link>
+            </div>
+            <div role="radiogroup" aria-label="Carteira" className="space-y-2 max-md:space-y-5 lg:space-y-4">
               {wallets.map((w) => {
                 const checked = w.id === walletId
                 return (
@@ -511,29 +526,48 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
                     key={w.id}
                     className={cn(
                       'flex cursor-pointer items-center gap-3 rounded-md border border-border bg-card p-3 text-[13px] lg:min-h-[45px] lg:gap-[11px] lg:rounded-[2px] lg:border-[#3f2319] lg:bg-transparent lg:py-[5px] lg:text-[15px]',
+                      // Mobile (Figma): cartão de 92px sem borda; o rádio mostra a escolha.
+                      'max-md:min-h-[92px] max-md:gap-5 max-md:rounded-[12px] max-md:border-0 max-md:py-2.5 max-md:pl-[19px] max-md:pr-3',
                       checked && 'border-primary lg:border-primary',
                     )}
                     data-testid="wallet-option"
                   >
                     <input type="radio" name="wallet" checked={checked} onChange={() => selectWallet(w)} className={RADIO} />
-                    <span className="flex-1">
-                      <span className="block font-bold lg:font-normal lg:leading-[18px]">{w.nickname}</span>
-                      <span className="block text-[12px] text-muted-foreground lg:text-[11px] lg:leading-[14px] lg:text-[#b39463]">
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold max-md:text-[16px] max-md:leading-6 lg:font-normal lg:leading-[18px]">{w.nickname}</span>
+                      <span className="block text-[12px] text-muted-foreground max-md:hidden lg:text-[11px] lg:leading-[14px] lg:text-[#b39463]">
                         {w.secondaryAddress ?? `${w.address.slice(0, 6)}…${w.address.slice(-4)}`} · Rede {NETWORK_LABEL[w.network]} · {PROVIDER_LABEL[w.provider]}
                       </span>
+                      <span className="mt-[3px] block truncate text-[14px] leading-[22px] text-muted-foreground md:hidden">
+                        {w.secondaryAddress ?? `${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                      </span>
+                      <span className="block text-[14px] leading-[22px] text-muted-foreground md:hidden">Rede {NETWORK_LABEL[w.network]}</span>
                     </span>
+                    <MoreVertical className="size-4 shrink-0 text-[#b19362] md:hidden" aria-hidden="true" />
                   </label>
                 )
               })}
             </div>
             {errors.walletId && <p className="mt-1 text-[12px] text-destructive">⚠ {errors.walletId.message}</p>}
 
-            {/* Mobile (Figma): tipo de carteira em cartões. No desktop é o select "Tipo de carteira". */}
-            <div role="radiogroup" aria-label="Tipo de carteira" className="mt-3 space-y-2 lg:hidden">
-              {WalletProvider.options.map((p) => (
-                <label key={p} className={cn('flex cursor-pointer items-center gap-3 rounded-xl bg-card p-3 text-[13px]', provider === p && 'ring-1 ring-primary')}>
-                  <span aria-hidden="true" className="grid size-8 place-items-center rounded-full border border-primary/40 text-[12px] font-bold text-primary">
-                    {PROVIDER_LABEL[p][0]}
+            {/* Mobile (Figma): tipo de carteira em cartões de 65px. No desktop é o select "Tipo de carteira". */}
+            <p aria-hidden="true" className="mt-3 text-[16px] font-bold leading-6 md:hidden">
+              Carteira e rede
+            </p>
+            <div role="radiogroup" aria-label="Tipo de carteira" className="mt-3 space-y-2 max-md:mt-[13px] max-md:space-y-4 lg:hidden">
+              {PROVIDER_ORDER.map((p) => (
+                <label
+                  key={p}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-3 rounded-xl bg-card p-3 text-[13px] max-md:h-[65px] max-md:gap-[11px] max-md:py-0 max-md:pl-[14px] max-md:pr-4 max-md:text-[14px]',
+                    provider === p && 'ring-1 ring-primary max-md:ring-0',
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="grid size-8 place-items-center rounded-full border border-primary/40 text-[12px] font-bold text-primary max-md:size-10 max-md:border-[#3f2319] max-md:bg-[#2f1d15] max-md:text-[13px] max-md:text-highlight"
+                  >
+                    {p === 'coinbase' ? <WalletIcon className="size-[18px]" strokeWidth={1.75} /> : PROVIDER_LABEL[p][0]}
                   </span>
                   <span className="flex-1">{PROVIDER_LABEL[p]}</span>
                   <input
@@ -544,14 +578,19 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
                       if (conn.status === 'connected') void disconnect()
                       form.setValue('provider', p)
                     }}
-                    className="size-4 accent-[var(--primary)]"
+                    className={cn('size-4 accent-[var(--primary)]', RADIO_MOBILE)}
                   />
                 </label>
               ))}
             </div>
+            {/* Mobile (Figma): total logo abaixo das carteiras (o resumo completo fica mais abaixo). */}
+            <p className="mt-[13px] flex items-baseline justify-end gap-8 text-[16px] font-bold leading-6 md:hidden">
+              Total:
+              <span className="text-[18px] text-highlight tabular-nums">{formatEth(cart.summary.total)}</span>
+            </p>
 
             <div
-              className="mt-3 rounded-md border border-border p-3 text-[13px] lg:mt-4 lg:rounded-[2px] lg:border-[#3f2319]"
+              className="mt-3 rounded-md border border-border p-3 text-[13px] max-md:mt-5 max-md:rounded-[12px] max-md:border-0 max-md:bg-card max-md:p-4 lg:mt-4 lg:rounded-[2px] lg:border-[#3f2319]"
               aria-live="polite"
               data-testid="wallet-connection"
               data-status={connected ? 'connected' : conn.status}
@@ -590,14 +629,22 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
           </fieldset>
         </aside>
 
-        <div className="max-lg:order-3 lg:col-start-2">
+        <div className="max-lg:order-3 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-[linear-gradient(transparent,var(--background)_16px)] max-md:px-7 max-md:pb-[27px] max-md:pt-4 lg:col-start-2">
           <Button
             type="submit"
-            className="h-11 w-full font-semibold max-lg:h-12 max-lg:rounded-full lg:h-[45px] lg:rounded-[4px] lg:text-[16px] lg:font-bold"
+            className="h-11 w-full font-semibold max-lg:h-12 max-lg:rounded-full max-md:h-[60px] max-md:bg-[linear-gradient(90deg,#d08a4c,#b77842)] max-md:text-[16px] max-md:font-bold max-md:hover:brightness-110 lg:h-[45px] lg:rounded-[4px] lg:text-[16px] lg:font-bold"
             disabled={quoting}
             data-testid="review-button"
+            aria-label={quoting ? undefined : 'Revisar e confirmar compra'}
           >
-            {quoting ? 'Gerando revisão…' : 'Revisar e confirmar compra'}
+            {quoting ? (
+              'Gerando revisão…'
+            ) : (
+              <>
+                <span className="max-md:hidden">Revisar e confirmar compra</span>
+                <span className="md:hidden">Confirmar compra</span>
+              </>
+            )}
           </Button>
         </div>
       </form>
@@ -680,9 +727,18 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
 const SELECT =
   'h-10 w-full rounded-md border border-input bg-card px-3 text-[13px] lg:appearance-none lg:rounded-[2px] lg:border-[#3f2319] lg:bg-transparent lg:pr-10 lg:text-[14px] [&>option]:bg-card'
 
+/**
+ * Rádio do Figma mobile: anel marrom (clareado para 3:1 de contraste) que fica laranja e ganha o miolo quando marcado.
+ * Fica sobre o cartão (#241612), por isso o recorte interno usa a cor do cartão.
+ */
+const RADIO_MOBILE =
+  'max-md:appearance-none max-md:rounded-full max-md:border-[1.5px] max-md:border-[#8c6a4c] max-md:checked:border-primary max-md:checked:bg-primary max-md:checked:shadow-[inset_0_0_0_2.5px_var(--card)]'
+
 /** Rádio do Figma: anel laranja; marcado, ganha o miolo preenchido. */
-const RADIO =
-  'size-4 shrink-0 accent-[var(--primary)] lg:appearance-none lg:rounded-full lg:border-[1.5px] lg:border-primary lg:checked:bg-primary lg:checked:shadow-[inset_0_0_0_2.5px_var(--background)]'
+const RADIO = cn(
+  'size-4 shrink-0 accent-[var(--primary)] lg:appearance-none lg:rounded-full lg:border-[1.5px] lg:border-primary lg:checked:bg-primary lg:checked:shadow-[inset_0_0_0_2.5px_var(--background)]',
+  RADIO_MOBILE,
+)
 
 function SelectChevron() {
   return <ChevronDown className="pointer-events-none absolute right-[28px] top-1/2 hidden size-5 -translate-y-1/2 text-[#b39463] lg:block" strokeWidth={1.5} aria-hidden="true" />

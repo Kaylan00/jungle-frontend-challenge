@@ -40,7 +40,7 @@ export default function ScenarioPanel() {
   }
 
   return (
-    <div className="fixed bottom-24 left-3 z-50 md:bottom-4">
+    <div className="fixed bottom-[116px] left-3 z-50 md:bottom-4">
       {open ? (
         <section
           aria-label="Painel de cenários da simulação"

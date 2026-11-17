@@ -80,13 +80,21 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
   const network = NETWORK_LABEL[nft.network]
 
   return (
-    <article className="container-page pb-28 pt-4 md:pb-0 md:pt-6 xl:pt-[30px]" aria-labelledby="nft-title">
-      {/* Mobile: topo com voltar e favoritar */}
-      <div className="mb-3 flex items-center justify-between md:hidden">
-        <button type="button" onClick={() => router.history.back()} className="grid size-9 place-items-center rounded-full bg-card" aria-label="Voltar">
-          <ChevronLeft className="size-5 text-primary" aria-hidden="true" />
+    <article
+      className="container-page pb-28 pt-4 max-md:bg-[linear-gradient(180deg,#251712,#2c1b15_395px,#241612_395px)] max-md:pb-[180px] max-md:pl-7 max-md:pr-[25px] max-md:pt-[23px] md:pb-0 md:pt-6 xl:pt-[30px]"
+      aria-labelledby="nft-title"
+    >
+      {/* Mobile (Figma 414): voltar e favoritar em círculos de 35px sobre o topo da arte */}
+      <div className="mb-2 flex items-center justify-between md:hidden">
+        <button
+          type="button"
+          onClick={() => router.history.back()}
+          className="grid size-[35px] place-items-center rounded-full border border-[#3c2218] bg-[#2f1d15] text-muted-foreground transition-colors hover:text-highlight"
+          aria-label="Voltar"
+        >
+          <ChevronLeft className="size-5" strokeWidth={1.75} aria-hidden="true" />
         </button>
-        <FavoriteButton nftId={nft.id} nftName={nft.name} size="sm" />
+        <FavoriteButton nftId={nft.id} nftName={nft.name} size="sm" className="size-[35px] border-[#3c2218] bg-[#2f1d15] text-highlight" />
       </div>
 
       <nav aria-label="Trilha de navegação" className="mb-3 hidden text-[13px] font-semibold md:block xl:mb-[10px] xl:text-[15px] xl:font-bold xl:leading-[22px]">
@@ -112,10 +120,10 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
         </ol>
       </nav>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[572px_minmax(0,1fr)] xl:gap-[33px]">
+      <div className="grid gap-0 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[572px_minmax(0,1fr)] xl:gap-[33px]">
         {/* Galeria */}
         <div className="grid gap-3 md:grid-cols-[100px_1fr] xl:grid-cols-[100px_444px] xl:gap-[28px]">
-          <ul className="order-2 flex gap-3 md:order-1 md:flex-col xl:-mt-0.5 xl:gap-4" aria-label="Imagens do NFT">
+          <ul className="order-2 flex gap-3 max-md:hidden md:order-1 md:flex-col xl:-mt-0.5 xl:gap-4" aria-label="Imagens do NFT">
             {nft.gallery.map((g, i) => (
               <li key={i}>
                 <button
@@ -130,19 +138,19 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
               </li>
             ))}
           </ul>
-          <div className="relative order-1 rounded-md bg-card p-3 md:order-2 md:p-5 xl:size-[444px] xl:rounded-[5px]">
+          <div className="relative order-1 rounded-md md:order-2 md:bg-card md:p-5 xl:size-[444px] xl:rounded-[5px]">
             <img
               src={nft.gallery[image]?.src ?? nft.image}
               alt={nft.gallery[image]?.alt ?? nft.name}
               width={430}
               height={430}
               fetchPriority="high"
-              className="aspect-square w-full rounded-xl object-cover xl:rounded-[24px]"
+              className="aspect-square w-full rounded-[20px] object-cover md:rounded-xl xl:rounded-[24px]"
             />
             <button
               type="button"
               onClick={() => setZoom(true)}
-              className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-background/80 hover:text-primary xl:right-3 xl:top-[13px] xl:size-[30px] xl:bg-[#2f1d15]"
+              className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-background/80 hover:text-primary max-md:hidden xl:right-3 xl:top-[13px] xl:size-[30px] xl:bg-[#2f1d15]"
               aria-label="Ampliar imagem"
             >
               <ZoomIn className="size-4 xl:hidden" aria-hidden="true" />
@@ -152,14 +160,15 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
         </div>
 
         {/* Informações e compra */}
-        <div className="space-y-4 xl:space-y-0">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <h1 id="nft-title" className="text-2xl font-bold md:text-[28px] xl:leading-[33px]">
+        <div className="relative z-10 space-y-4 max-md:-ml-7 max-md:-mr-[25px] max-md:-mt-[35px] max-md:space-y-0 max-md:rounded-t-[30px] max-md:bg-card max-md:pl-6 max-md:pr-[25px] max-md:pt-[31px] xl:space-y-0">
+          <div className="flex flex-wrap items-start justify-between gap-2 max-md:items-center">
+            <h1 id="nft-title" className="text-[20px] font-bold leading-[28px] md:text-[28px] md:leading-normal xl:leading-[33px]">
               {nft.name}
             </h1>
-            <p className="flex items-center gap-1 rounded-full border border-primary px-2 py-0.5 text-[12px] md:hidden">
-              <Star className="size-3 fill-primary text-primary" aria-hidden="true" /> {nft.rating.toFixed(1)}
-              <span className="text-muted-foreground">({nft.reviewsCount})</span>
+            <p className="flex h-[27px] items-center gap-[5px] rounded-full border border-primary pl-[6px] pr-2 text-[13px] md:hidden">
+              <Star className="size-3.5 fill-[#e3a44e] text-[#e3a44e]" aria-hidden="true" />
+              <span className="font-bold">{nft.rating.toFixed(1)}</span>
+              <span className="-ml-[5px] text-muted-foreground">({nft.reviewsCount})</span>
             </p>
           </div>
           <div className="hidden flex-wrap items-center justify-between gap-2 md:flex xl:mt-[11px] xl:w-[573px] xl:flex-nowrap xl:border-b xl:border-border xl:pb-[6px]">
@@ -187,19 +196,23 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
             </p>
           </div>
 
-          <section aria-labelledby="sobre" className="xl:mt-[11px]">
-            <h2 id="sobre" className="mb-1 text-[14px] font-bold xl:mb-[8px] xl:text-[15px] xl:leading-[22px]">
+          <section aria-labelledby="sobre" className="max-md:mt-3 xl:mt-[11px]">
+            <h2 id="sobre" className="mb-1 text-[14px] font-bold max-md:sr-only xl:mb-[8px] xl:text-[15px] xl:leading-[22px]">
               Sobre este NFT:
             </h2>
-            <p className="text-[13px] leading-relaxed text-muted-foreground xl:text-[14px] xl:leading-[24px] xl:text-[#cbaf89]">
+            {/* Mobile (Figma): texto curto com a edição escolhida. */}
+            <p className="text-[14px] leading-[24px] text-muted-foreground md:hidden">
+              Um colecionável digital {edition.name} finalizado à mão da coleção {nft.collection}, verificado na {network}.
+            </p>
+            <p className="text-[13px] leading-relaxed text-muted-foreground max-md:hidden xl:text-[14px] xl:leading-[24px] xl:text-[#cbaf89]">
               Um colecionável digital finalizado à mão da coleção {nft.collection}, verificado na {network}, com arte desbloqueável e acesso para colecionadores.
             </p>
           </section>
 
-          <fieldset className="xl:mt-[5px]">
-            <legend className="mb-2 text-[14px] font-bold xl:mb-[8px] xl:text-[15px] xl:leading-[22px]">Edição:</legend>
+          <fieldset className="max-md:mt-2 xl:mt-[5px]">
+            <legend className="mb-2 text-[14px] font-bold max-md:mb-[5px] max-md:text-[15px] max-md:leading-[22px] xl:mb-[8px] xl:text-[15px] xl:leading-[22px]">Edição:</legend>
             <div className="xl:flex xl:items-center xl:gap-4">
-              <div role="radiogroup" aria-label="Edição" className="flex flex-wrap gap-2 xl:gap-1.5">
+              <div role="radiogroup" aria-label="Edição" className="flex flex-wrap gap-2 max-md:gap-3 xl:gap-1.5">
                 {nft.editions.map((e) => {
                   const selected = e.id === edition.id
                   return (
@@ -211,8 +224,10 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
                       onClick={() => selectEdition(e.id)}
                       title={`${e.name} · ${formatEth(e.price)} · ${editionLabel(e)}`}
                       className={cn(
-                        'rounded-full border px-3 py-1 text-[12px] uppercase transition-colors xl:h-[29px] xl:px-[5px] xl:py-0 xl:text-[14px]',
-                        selected ? 'border-primary bg-primary/15 text-primary xl:bg-transparent xl:font-bold xl:text-highlight' : 'border-border hover:border-primary/60 xl:border-[#3f2319] xl:text-muted-foreground',
+                        'rounded-full border px-3 py-1 text-[12px] uppercase transition-colors max-md:h-7 max-md:px-[6px] max-md:py-0 max-md:text-[13px] xl:h-[29px] xl:px-[5px] xl:py-0 xl:text-[14px]',
+                        selected
+                          ? 'border-primary bg-primary/15 text-primary max-md:bg-transparent max-md:font-bold max-md:text-highlight xl:bg-transparent xl:font-bold xl:text-highlight'
+                          : 'border-border hover:border-primary/60 max-md:border-[#3f2319] max-md:text-[#c5a984] xl:border-[#3f2319] xl:text-muted-foreground',
                         e.status !== 'on_sale' && 'line-through decoration-1 text-[#b39463] xl:text-[#b39463]',
                       )}
                       data-testid="edition-option"
@@ -225,7 +240,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
                   )
                 })}
               </div>
-              <p className="mt-2 text-[12px] text-muted-foreground xl:mt-0 xl:text-[#b09161]" aria-live="polite" data-testid="edition-availability">
+              <p className="mt-2 text-[12px] text-muted-foreground max-md:sr-only xl:mt-0 xl:text-[#b09161]" aria-live="polite" data-testid="edition-availability">
                 {edition.status === 'on_sale' ? `${edition.available} de ${edition.supply} disponíveis · até ${edition.maxPerOrder} por pedido` : editionLabel(edition).replace(/^./, (c) => c.toUpperCase())}
               </p>
             </div>
@@ -256,21 +271,21 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
             </div>
           </div>
           {unavailableReason && (
-            <p role="status" className="text-[13px] text-warning xl:mt-2" data-testid="unavailable-reason">
+            <p role="status" className="text-[13px] text-warning max-md:mt-2 xl:mt-2" data-testid="unavailable-reason">
               {unavailableReason}
             </p>
           )}
 
-          <dl className="space-y-2 text-[13px] text-muted-foreground xl:mt-[13px] xl:space-y-[10px] xl:text-[15px] xl:leading-[22px] xl:text-[#b09161]">
-            <div className="flex gap-1 xl:gap-[9px]">
+          <dl className="space-y-2 text-[13px] text-muted-foreground max-md:mt-[11px] max-md:space-y-[10px] max-md:text-[15px] max-md:leading-[22px] max-md:text-[#b09161] xl:mt-[13px] xl:space-y-[10px] xl:text-[15px] xl:leading-[22px] xl:text-[#b09161]">
+            <div className="flex gap-1 max-md:gap-[9px] xl:gap-[9px]">
               <dt>ID do token:</dt>
               <dd>{nft.tokenId}</dd>
             </div>
-            <div className="flex gap-1 xl:gap-[9px]">
+            <div className="flex gap-1 max-md:gap-[9px] xl:gap-[9px]">
               <dt>Coleção:</dt>
               <dd>{nft.collection}</dd>
             </div>
-            <div className="flex gap-1 xl:gap-[9px]">
+            <div className="flex gap-1 max-md:gap-[9px] xl:gap-[9px]">
               <dt>Atributos:</dt>
               <dd>{nft.attributes.find((a) => a.trait === 'Atributos')?.value}</dd>
             </div>
@@ -353,20 +368,33 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
       <MoreFromCollection nft={nft} />
 
       {/* Mobile: barra fixa de compra (Figma) */}
-      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-border bg-card px-4 pb-4 pt-3 md:hidden" data-testid="mobile-buy-bar">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[13px]">
+      <div
+        className="fixed inset-x-0 bottom-0 z-50 h-[159px] rounded-t-[30px] bg-card pl-6 pr-[25px] pt-[21px] shadow-[0_-3px_6px_rgba(0,0,0,0.18)] md:hidden"
+        data-testid="mobile-buy-bar"
+      >
+        <div className="flex h-7 items-center justify-between">
+          <div className="flex items-center gap-[13px] text-[14px] text-muted-foreground">
             Qtd.
-            <QuantityStepper value={qty} max={Math.max(1, limit)} onChange={setQty} label="Quantidade" disabled={!!unavailableReason} />
+            <QuantityStepper value={qty} max={Math.max(1, limit)} onChange={setQty} label="Quantidade" disabled={!!unavailableReason} size="pill" />
           </div>
-          <p className="text-lg font-bold text-primary">{formatEth(edition.price)}</p>
+          <p className="text-[20px] font-bold leading-7 text-highlight">{formatEth(edition.price)}</p>
         </div>
-        <div className="mt-3 flex gap-3">
-          <Button className="h-12 flex-1 rounded-full text-[14px] font-semibold" onClick={() => buy(true)} disabled={!!unavailableReason || add.isPending}>
+        <div className="mt-[21px] flex gap-3">
+          <Button
+            className="h-[60px] w-[196px] rounded-full bg-[linear-gradient(90deg,#d08a4c,#b77842)] text-[16px] font-bold text-primary-foreground hover:brightness-110"
+            onClick={() => buy(true)}
+            disabled={!!unavailableReason || add.isPending}
+          >
             Comprar NFT
           </Button>
-          <Button variant="outline" className="size-12 rounded-full bg-transparent" onClick={() => buy(false)} disabled={!!unavailableReason || add.isPending} aria-label="Adicionar ao carrinho">
-            <ShoppingCart className="size-4" aria-hidden="true" />
+          <Button
+            variant="outline"
+            className="size-[60px] rounded-full border-[#3f2319] bg-[#2a1a14] text-[#b39463] hover:text-highlight dark:bg-[#2a1a14]"
+            onClick={() => buy(false)}
+            disabled={!!unavailableReason || add.isPending}
+            aria-label="Adicionar ao carrinho"
+          >
+            <CartFilledIcon />
           </Button>
         </div>
       </div>
@@ -382,6 +410,17 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
   )
 }
 
+/** Carrinho cheio do Figma mobile (botão redondo da barra de compra). */
+function CartFilledIcon() {
+  return (
+    <svg viewBox="0 0 20 18" width="20" height="18" fill="currentColor" aria-hidden="true">
+      <path d="M0 1a1 1 0 0 1 1-1h2.2a1 1 0 0 1 1 .8L4.5 2.6H19a1 1 0 0 1 .96 1.28l-2 6.8a1 1 0 0 1-.96.72H6.6l.3 1.4H17a1 1 0 1 1 0 2H6.1a1 1 0 0 1-1-.8L2.4 2H1a1 1 0 0 1-1-1z" />
+      <circle cx="7" cy="16.4" r="1.6" />
+      <circle cx="15.4" cy="16.4" r="1.6" />
+    </svg>
+  )
+}
+
 const PER_PAGE = 5
 
 function MoreFromCollection({ nft }: { nft: NftDetail }) {
@@ -392,7 +431,7 @@ function MoreFromCollection({ nft }: { nft: NftDetail }) {
   const pages = Math.ceil(items.length / PER_PAGE)
   const current = Math.min(page, pages - 1)
   return (
-    <section aria-labelledby="mais-colecao" className="mt-10 xl:mt-[93px]">
+    <section aria-labelledby="mais-colecao" className="mt-10 max-md:-ml-7 max-md:-mr-[25px] max-md:px-6 xl:mt-[93px]">
       <h2 id="mais-colecao" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary xl:mb-8 xl:pb-[6px] xl:text-[17px] xl:leading-6 xl:text-highlight">
         Mais desta coleção
       </h2>

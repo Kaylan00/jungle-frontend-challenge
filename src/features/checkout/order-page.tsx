@@ -197,8 +197,9 @@ function Receipt({ order }: { order: Order }) {
         </h1>
       </div>
 
-      <dl className="flex justify-center divide-x divide-primary border-y border-primary pb-[16px] pt-[13px] text-[14px] leading-[18px] text-[#cfb28c]">
-        <div className="px-[18px] first:pl-0 last:pr-0">
+      {/* Mobile (sem frame no Figma): os quatro dados em grade 2x2 para caber em 390px. */}
+      <dl className="flex justify-center divide-x divide-primary border-y border-primary pb-[16px] pt-[13px] text-[14px] leading-[18px] text-[#cfb28c] max-md:grid max-md:grid-cols-2 max-md:gap-y-3 max-md:divide-x-0 max-md:px-6">
+        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
           <dt className="font-bold">ID da transação</dt>
           <dd className="flex items-center gap-1 text-[15px]" data-testid="tx-hash">
             {order.txHash ? short(order.txHash) : '—'}
@@ -214,28 +215,28 @@ function Receipt({ order }: { order: Order }) {
             )}
           </dd>
         </div>
-        <div className="px-[18px] first:pl-0 last:pr-0">
+        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
           <dt className="font-bold">Data</dt>
           <dd className="text-[15px]">{receiptDate(order.updatedAt)}</dd>
         </div>
-        <div className="px-[18px] first:pl-0 last:pr-0">
+        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
           <dt className="font-bold">Total</dt>
           <dd className="text-[15px]">{formatEth(order.total)}</dd>
         </div>
-        <div className="px-[18px] first:pl-0 last:pr-0">
+        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
           <dt className="font-bold">Carteira</dt>
           <dd className="text-[15px]">{PROVIDER_LABEL[order.wallet.provider]}</dd>
         </div>
       </dl>
 
-      <div className="px-[44px] pb-[48px] pt-[17px]">
+      <div className="px-[44px] pb-[48px] pt-[17px] max-md:px-5 max-md:pb-8">
         <h2 className="text-[15px] font-bold leading-5">Detalhes da transação</h2>
         <table className="mt-2 w-full table-fixed">
           <caption className="sr-only">Itens do pedido {order.number}</caption>
           <colgroup>
             <col />
-            <col className="w-[92px]" />
-            <col className="w-[113px]" />
+            <col className="w-[56px] md:w-[92px]" />
+            <col className="w-[96px] md:w-[113px]" />
           </colgroup>
           <thead>
             <tr className="border-b border-[#503320] text-left text-[16px] leading-5 tracking-[-0.4px]">
@@ -255,20 +256,20 @@ function Receipt({ order }: { order: Order }) {
               <tr key={`${l.nftId}-${l.editionId}`} data-testid="receipt-line">
                 <td className="py-2">
                   <div className="flex items-center gap-3">
-                    <img src={l.image} alt="" width={66} height={66} className="size-[66px] shrink-0 rounded-[4px] object-cover" />
+                    <img src={l.image} alt="" width={66} height={66} className="size-12 shrink-0 rounded-[4px] object-cover md:size-[66px]" />
                     <div className="min-w-0 leading-[22px]">
-                      <p className="truncate text-[16px] font-semibold tracking-[-0.4px]">{l.name}</p>
-                      <p className="text-[14px] text-[#b09161]">Edição: {l.editionName}</p>
+                      <p className="truncate text-[14px] font-semibold tracking-[-0.4px] md:text-[16px]">{l.name}</p>
+                      <p className="text-[13px] text-[#b09161] md:text-[14px]">Edição: {l.editionName}</p>
                     </div>
                   </div>
                 </td>
                 <td className="py-2 text-center text-[13.5px] text-[#cfb28c]">(x {l.quantity})</td>
-                <td className="py-2 text-right text-[18px] font-bold tracking-[-0.3px] text-[#e89b55]">{formatEth(l.lineTotal)}</td>
+                <td className="py-2 text-right text-[16px] font-bold tracking-[-0.3px] text-[#e89b55] md:text-[18px]">{formatEth(l.lineTotal)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <dl className="ml-auto mt-[3px] w-[321px] [&_dd]:tracking-[-0.3px]">
+        <dl className="ml-auto mt-[3px] w-full md:w-[321px] [&_dd]:tracking-[-0.3px]">
           {order.discount !== '0' && (
             <div className="flex h-[30px] items-center justify-between">
               <dt className="text-[15px]">Desconto</dt>

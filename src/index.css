@@ -114,6 +114,6 @@
 
 @layer components {
   .container-page {
-    @apply mx-auto w-full max-w-[1200px] px-4 md:px-6 xl:px-0;
+    @apply mx-auto w-full max-w-[1200px] px-6 xl:px-0;
   }
 }

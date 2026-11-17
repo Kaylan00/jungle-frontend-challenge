@@ -53,7 +53,8 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
               // Telas altas: mesma posição do Figma (janela a 160px do topo); telas baixas: centralizada.
               isLogin ? '[@media(min-height:860px)]:md:top-[160px]' : '[@media(min-height:860px)]:md:top-[158px]',
               '[@media(min-height:860px)]:md:translate-y-0',
-              'max-md:inset-0 max-md:h-dvh max-md:w-auto max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-b-0',
+              // Mobile (Figma 414): tela cheia no fundo da página, sem a faixa laranja.
+              'max-md:inset-0 max-md:h-dvh max-md:w-auto max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:overflow-y-auto max-md:rounded-none max-md:border-b-0 max-md:bg-background',
             )}
             onOpenAutoFocus={(e) => {
               e.preventDefault()
@@ -64,9 +65,15 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
               <X className="size-[22px]" strokeWidth={1.5} aria-hidden="true" />
               <span className="sr-only">Fechar</span>
             </DialogClose>
-            <div className="flex flex-col px-6 pb-8 pt-[46px] max-md:justify-center max-md:pt-20 md:px-20">
-              <p className="mb-10 text-center text-2xl font-bold tracking-[0.12em] md:hidden">KURIO</p>
-              <nav aria-label="Entrar ou criar conta" className="flex items-center justify-center gap-2 text-[20px] leading-6">
+            <div className="flex flex-col px-6 pb-8 pt-[46px] max-md:px-7 max-md:pt-[127px] md:px-20">
+              {/* Mobile: marca grande e título da tela no lugar das abas e do texto de apoio. */}
+              <p aria-hidden="true" className="text-center text-[32px] font-bold leading-[44px] tracking-[0.11em] md:hidden">
+                KURIO
+              </p>
+              <p aria-hidden="true" className={cn('text-center font-bold leading-6 md:hidden', isLogin ? 'mt-[79px] text-[20px]' : 'mt-[80px] text-[18px]')}>
+                {isLogin ? 'Entrar' : 'Criar perfil de colecionador'}
+              </p>
+              <nav aria-label="Entrar ou criar conta" className="flex items-center justify-center gap-2 text-[20px] leading-6 max-md:hidden">
                 <Link
                   to="/login"
                   search={search}
@@ -88,7 +95,7 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
                 </Link>
               </nav>
               <DialogTitle className="sr-only">{isLogin ? 'Entrar na Kurio' : 'Criar conta na Kurio'}</DialogTitle>
-              <DialogDescription className="mt-[37px] text-center md:-mx-[36px] text-[13px] leading-4 text-[#f5f1eb]">
+              <DialogDescription className="mt-[37px] text-center text-[13px] leading-4 text-[#f5f1eb] max-md:sr-only md:-mx-[36px]">
                 {isLogin ? 'Entre para gerenciar sua carteira, coleção e perfil de criador.' : 'Crie seu perfil de colecionador e conecte uma carteira quando quiser.'}
               </DialogDescription>
               {search.reason === 'expired' && (
@@ -98,6 +105,12 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
               )}
               {isLogin ? <LoginForm onDone={() => void navigate({ to: target, replace: true })} /> : <SignupForm onDone={() => void navigate({ to: target, replace: true })} />}
               <SocialLogins roomy={!isLogin} />
+              <p className="mt-[41px] text-center text-[15px] leading-5 text-muted-foreground md:hidden">
+                {isLogin ? 'Novo na Kurio? ' : 'Já tem uma conta? '}
+                <Link to={isLogin ? '/cadastro' : '/login'} search={search} replace className="hover:text-highlight hover:underline">
+                  {isLogin ? 'Crie uma conta' : 'Entre'}
+                </Link>
+              </p>
             </div>
           </DialogPrimitive.Content>
         </DialogPortal>
@@ -107,8 +120,8 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
 }
 
 /** Campos e botões da janela de login/cadastro (Figma: 340px de largura, raio de 4px). */
-const authInput = 'rounded-[4px] pl-4'
-const authSubmit = 'h-[45px] rounded-[4px] bg-[#d28a4c] text-[16px] font-bold text-[#140d0a] hover:bg-[#dd9a60]'
+const authInput = 'rounded-[4px] pl-4 max-md:h-[50px] max-md:rounded-[10px]'
+const authSubmit = 'h-[45px] rounded-[4px] bg-[#d28a4c] text-[16px] font-bold text-[#140d0a] hover:bg-[#dd9a60] max-md:h-[60px] max-md:rounded-[10px]'
 
 function LoginForm({ onDone }: { onDone: () => void }) {
   const login = useLogin()
@@ -132,7 +145,7 @@ function LoginForm({ onDone }: { onDone: () => void }) {
   })
 
   return (
-    <form onSubmit={onSubmit} noValidate className="mt-[25px] flex flex-col" aria-label="Entrar">
+    <form onSubmit={onSubmit} noValidate className="mt-[25px] flex flex-col max-md:mt-[32px]" aria-label="Entrar">
       <div className="flex flex-col gap-3">
         <FormField id="login-email" label="E-mail" hideLabel type="email" autoComplete="email" placeholder="contato@email.com" className={authInput} error={errors.email?.message} {...form.register('email')} />
         <FormField
@@ -160,15 +173,9 @@ function LoginForm({ onDone }: { onDone: () => void }) {
           {formError}
         </p>
       )}
-      <Button type="submit" disabled={isSubmitting} className={cn('mt-[22px]', authSubmit)}>
+      <Button type="submit" disabled={isSubmitting} className={cn('mt-[22px] max-md:mt-[38px]', authSubmit)}>
         {isSubmitting ? 'Entrando…' : 'Entrar'}
       </Button>
-      <p className="mt-4 text-center text-[13px] text-muted-foreground md:hidden">
-        Novo na Kurio?{' '}
-        <Link to="/cadastro" className="text-primary">
-          Crie uma conta
-        </Link>
-      </p>
     </form>
   )
 }
@@ -195,7 +202,7 @@ function SignupForm({ onDone }: { onDone: () => void }) {
   })
 
   return (
-    <form onSubmit={onSubmit} noValidate className="mt-[25px] flex flex-col" aria-label="Criar conta">
+    <form onSubmit={onSubmit} noValidate className="mt-[25px] flex flex-col max-md:mt-[34px]" aria-label="Criar conta">
       <div className="flex flex-col gap-3">
         <FormField id="signup-username" label="Nome de usuário" hideLabel autoComplete="username" placeholder="Nome de usuário" className={authInput} error={errors.username?.message} {...form.register('username')} />
         <FormField id="signup-email" label="E-mail" hideLabel type="email" autoComplete="email" placeholder="Digite seu e-mail" className={authInput} error={errors.email?.message} {...form.register('email')} />
@@ -218,8 +225,8 @@ function SignupForm({ onDone }: { onDone: () => void }) {
           type="password"
           autoComplete="new-password"
           placeholder="Confirmar senha"
-          className={cn(authInput, 'pr-4')}
-          toggleClassName="hidden"
+          className={cn(authInput, 'md:pr-4')}
+          toggleClassName="right-[7px] md:hidden"
           error={errors.confirmPassword?.message}
           {...form.register('confirmPassword')}
         />
@@ -229,8 +236,16 @@ function SignupForm({ onDone }: { onDone: () => void }) {
           {formError}
         </p>
       )}
-      <Button type="submit" disabled={isSubmitting} className={cn('mt-6', authSubmit)}>
-        {isSubmitting ? 'Criando conta…' : 'Criar conta'}
+      {/* Mobile: o Figma escreve "Criar perfil"; o nome acessível continua "Criar conta". */}
+      <Button type="submit" disabled={isSubmitting} className={cn('mt-6 max-md:mt-10', authSubmit)} aria-label={isSubmitting ? undefined : 'Criar conta'}>
+        {isSubmitting ? (
+          'Criando conta…'
+        ) : (
+          <>
+            <span className="max-md:hidden">Criar conta</span>
+            <span className="md:hidden">Criar perfil</span>
+          </>
+        )}
       </Button>
     </form>
   )
@@ -238,15 +253,16 @@ function SignupForm({ onDone }: { onDone: () => void }) {
 
 function SocialLogins({ roomy }: { roomy?: boolean }) {
   const notAvailable = () => toast.info('Login social não faz parte desta demonstração. Use e-mail e senha.')
-  const social = 'flex h-10 items-center justify-center gap-3 rounded-[4px] border border-[#3f2319] text-[13px] text-[#cfb28c] hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+  const social =
+    'flex h-10 items-center justify-center gap-3 rounded-[4px] border border-[#3f2319] text-[13px] text-[#cfb28c] hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring max-md:bg-[#170e0b] max-md:pr-[17px]'
   return (
-    <div className="mt-6">
-      <div className="-mx-6 flex items-center gap-3 text-[13px] leading-4 text-[#f5f1eb] md:-mx-20">
+    <div className="mt-6 max-md:mt-[41px]">
+      <div className="-mx-6 flex items-center gap-3 text-[13px] leading-4 text-[#f5f1eb] max-md:mx-0 md:-mx-20">
         <span aria-hidden="true" className="h-px flex-1 bg-[#3f2319]" />
         Ou continue com
         <span aria-hidden="true" className="h-px flex-1 bg-[#3f2319]" />
       </div>
-      <div className={cn('flex flex-col', roomy ? 'mt-4 gap-4' : 'mt-3 gap-3')}>
+      <div className={cn('flex flex-col max-md:mt-[11px] max-md:gap-4', roomy ? 'mt-4 gap-4' : 'mt-3 gap-3')}>
         <button type="button" onClick={notAvailable} className={social}>
           <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
             <path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z" />

@@ -6,6 +6,13 @@ import { featuredQuery } from '@/api/queries'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
+/** Fundo do cartão mobile do Figma: elipse clara, círculo grande em gradiente e cantos escuros. */
+const MOBILE_HERO_BG = [
+  'radial-gradient(ellipse 40px 100px at 126px 95px, rgba(200, 140, 90, 0.2) 0 98%, transparent 100%)',
+  'radial-gradient(circle 238px at 70px 150px, transparent 0 99.6%, #2e1e13 100%)',
+  'linear-gradient(180deg, #7e5635, #432d19)',
+].join(', ')
+
 /** Destaques: NFTs marcados como featured pela API, alternados pelos pontos do carrossel. */
 export function Hero() {
   const { data, isPending } = useQuery(featuredQuery)
@@ -54,33 +61,31 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Mobile (Figma: cartão compacto com duas artes sobrepostas) */}
-      <div className="relative mt-3 overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_70%_30%,#6b4128,#3a2214_70%)] p-4 md:hidden">
-        <div className="grid grid-cols-[1fr_120px] gap-3">
-          <div>
-            <p className="text-[11px] font-medium">Bem-vindo à Kurio</p>
-            <h1 className="mt-1 text-lg font-bold uppercase leading-snug">Seja dono da cultura digital</h1>
-            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">Descubra NFTs selecionados de criadores do mundo todo.</p>
-            <Link to="/" hash="catalogo" className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold uppercase text-primary">
-              Explorar <ArrowRight className="size-3.5" aria-hidden="true" />
-            </Link>
-          </div>
-          <div className="relative h-[120px]">
-            {current ? (
-              <img src={current.image} alt="" width={120} height={120} className="size-[120px] rounded-xl object-cover" />
-            ) : (
-              <Skeleton className="size-[120px] rounded-xl" />
-            )}
-            {items[1] && <img src={items[1].image} alt="" width={52} height={52} className="absolute -bottom-2 left-0 size-[52px] rounded-lg border-2 border-[#3a2214] object-cover" />}
-          </div>
+      {/* Mobile (Figma 414: cartão de 366x190, raio de 28px, gradiente marrom com círculos; duas artes sobrepostas) */}
+      <div className="relative mt-4 h-[190px] overflow-hidden rounded-[28px] md:hidden" style={{ background: MOBILE_HERO_BG }}>
+        <div className="absolute left-4 top-[5px] w-[190px]">
+          <p className="text-[12px] leading-4">Bem-vindo à Kurio</p>
+          <h1 className="mt-[6px] text-[18px] font-bold uppercase leading-[29px]">Seja dono da cultura digital</h1>
+          <p className="mt-[6px] text-[12px] leading-[18px] text-muted-foreground">Descubra NFTs selecionados de criadores do mundo todo.</p>
+          <Link to="/" hash="catalogo" className="mt-px flex w-fit items-center gap-[9px] text-[12px] font-semibold uppercase leading-4 text-highlight hover:underline">
+            Explorar <ArrowRight className="size-4" strokeWidth={2} aria-hidden="true" />
+          </Link>
         </div>
-        <Dots count={items.length || 3} index={index} onSelect={setIndex} className="mt-3 justify-center" />
+        {current ? (
+          <img src={current.image} alt="" width={138} height={139} className="absolute right-4 top-[10px] h-[139px] w-[138px] rounded-[16px] object-cover" />
+        ) : (
+          <Skeleton className="absolute right-4 top-[10px] h-[139px] w-[138px] rounded-[16px]" />
+        )}
+        {items[1] && (
+          <img src={items[1].image} alt="" width={57} height={57} className="absolute left-[226px] top-[99px] size-[57px] rounded-[12px] object-cover shadow-[0_2px_6px_rgba(0,0,0,0.35)]" />
+        )}
+        <Dots count={items.length || 3} index={index} onSelect={setIndex} small className="absolute bottom-[-2px] left-1/2 -translate-x-1/2" />
       </div>
     </section>
   )
 }
 
-function Dots({ count, index, onSelect, className }: { count: number; index: number; onSelect: (i: number) => void; className?: string }) {
+function Dots({ count, index, onSelect, small, className }: { count: number; index: number; onSelect: (i: number) => void; small?: boolean; className?: string }) {
   return (
     <div className={cn('flex', className)} role="group" aria-label="Destaques">
       {Array.from({ length: count }, (_, i) => (
@@ -92,7 +97,7 @@ function Dots({ count, index, onSelect, className }: { count: number; index: num
           aria-current={i === index ? 'true' : undefined}
           className="grid h-6 w-4 place-items-center"
         >
-          <span className="size-2 rounded-full bg-primary" />
+          <span className={cn('rounded-full bg-primary', small ? 'size-[7px]' : 'size-2')} />
         </button>
       ))}
     </div>

@@ -6,7 +6,9 @@ import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
 import { LiveAnnouncer } from '@/components/layout/live-announcer'
 import { MobileNav } from '@/components/layout/mobile-nav'
+import { hasMobileNav } from '@/components/layout/mobile-nav-routes'
 import { RealtimeBadge } from '@/components/layout/realtime-badge'
+import { cn } from '@/lib/utils'
 
 // Painel de cenários só existe com mocks ligados (não entra no bundle sem eles).
 const ScenarioPanel = import.meta.env.VITE_ENABLE_MOCKS === 'true' ? lazy(() => import('@/mocks/scenario-panel')) : null
@@ -38,7 +40,7 @@ function RootLayout() {
         Pular para o conteúdo
       </a>
       <Header />
-      <main id="conteudo" ref={mainRef} tabIndex={-1} className="min-h-dvh flex-1 pb-24 outline-none md:pb-0">
+      <main id="conteudo" ref={mainRef} tabIndex={-1} className={cn('min-h-dvh flex-1 outline-none', hasMobileNav(pathname) && 'max-md:pb-24')}>
         <Outlet />
       </main>
       <Footer />

@@ -13,10 +13,12 @@ import { useApplyCoupon, useRemoveCoupon } from './hooks'
  */
 export function SummaryLines({ summary, coupon, className, variant = 'default' }: { summary: Summary; coupon: Coupon | null; className?: string; variant?: 'default' | 'cart' | 'checkout' }) {
   const figma = variant !== 'default'
+  // Carrinho no mobile (Figma 414): linhas de 15px a cada 32px, total sem divisória.
+  const cartMobile = variant === 'cart' && 'max-md:space-y-2 max-md:text-[15px] max-md:leading-6'
   const row = cn('flex justify-between', figma && 'lg:items-baseline lg:leading-6')
   const big = figma && 'lg:text-[18px]'
   return (
-    <dl className={cn('space-y-2.5 text-[14px]', figma && 'lg:space-y-2 lg:text-[15px]', variant === 'checkout' && 'lg:relative', className)} data-testid="cart-summary">
+    <dl className={cn('space-y-2.5 text-[14px]', cartMobile, figma && 'lg:space-y-2 lg:text-[15px]', variant === 'checkout' && 'lg:relative', className)} data-testid="cart-summary">
       <div className={row}>
         <dt>Subtotal</dt>
         <dd className={cn('tabular-nums', big)} data-testid="summary-subtotal">
@@ -36,6 +38,7 @@ export function SummaryLines({ summary, coupon, className, variant = 'default' }
           <span
             className={cn(
               'block text-[11px] text-primary',
+              variant === 'cart' && 'max-md:text-[12px] max-md:leading-4',
               variant === 'cart' && 'lg:absolute lg:right-0 lg:top-[34px] lg:whitespace-nowrap lg:text-[12px] lg:leading-4',
               variant === 'checkout' && 'lg:absolute lg:inset-x-0 lg:top-[98px] lg:text-center lg:text-[12px] lg:leading-4',
             )}
@@ -47,13 +50,13 @@ export function SummaryLines({ summary, coupon, className, variant = 'default' }
       <div
         className={cn(
           'flex justify-between border-t border-border pt-3 font-bold',
-          variant === 'cart' && 'lg:!mt-[44px] lg:border-t-0 lg:pt-0',
+          variant === 'cart' && 'max-md:!mt-1 max-md:border-t-0 max-md:pt-0 lg:!mt-[44px] lg:border-t-0 lg:pt-0',
           variant === 'checkout' && 'lg:!mt-[35px] lg:border-[#442c1b] lg:px-[42px] lg:pt-[6px]',
           figma && 'lg:items-baseline lg:leading-6',
         )}
       >
-        <dt className={cn(figma && 'lg:text-[16px]')}>Total</dt>
-        <dd className={cn('text-lg text-primary tabular-nums', figma && 'lg:text-[18px] lg:text-[#e89b55]')} data-testid="summary-total">
+        <dt className={cn(figma && 'lg:text-[16px]', variant === 'cart' && 'max-md:text-[16px]')}>Total</dt>
+        <dd className={cn('text-lg text-primary tabular-nums', variant === 'cart' && 'max-md:text-highlight', figma && 'lg:text-[18px] lg:text-[#e89b55]')} data-testid="summary-total">
           {formatEth(summary.total)}
         </dd>
       </div>
@@ -115,7 +118,12 @@ export function CouponForm({ cart, compact }: { cart: Cart; compact?: boolean })
       <label htmlFor="coupon" className={cn('mb-2 block text-[13px] font-semibold max-lg:sr-only', compact ? 'sr-only' : 'lg:mb-[5px] lg:text-[14px] lg:font-bold lg:leading-5 lg:tracking-[0.4px]')}>
         Código promocional
       </label>
-      <div className={cn('flex overflow-hidden border border-input max-lg:rounded-full', compact ? 'rounded-full' : 'rounded-md lg:h-10 lg:rounded-[3px] lg:border-[#d28a4c]')}>
+      <div
+        className={cn(
+          'flex overflow-hidden border border-input max-lg:rounded-full',
+          compact ? 'rounded-full' : 'rounded-md max-md:h-[50px] max-md:border-0 max-md:shadow-[inset_0_0_0_1px_#3f2319] lg:h-10 lg:rounded-[3px] lg:border-[#d28a4c]',
+        )}
+      >
         <input
           id="coupon"
           value={code}
@@ -128,7 +136,7 @@ export function CouponForm({ cart, compact }: { cart: Cart; compact?: boolean })
           aria-describedby={error ? 'coupon-error' : undefined}
           className={cn(
             'h-10 min-w-0 flex-1 bg-transparent px-3 text-[13px] uppercase placeholder:normal-case placeholder:text-subtle-foreground',
-            !compact && 'lg:h-[38px] lg:pl-[8px] lg:text-[12px] lg:tracking-[0.15px] lg:placeholder:text-[#b39463]',
+            !compact && 'max-md:h-[50px] max-md:pl-4 max-md:placeholder:text-[#b39463] lg:h-[38px] lg:pl-[8px] lg:text-[12px] lg:tracking-[0.15px] lg:placeholder:text-[#b39463]',
           )}
           autoComplete="off"
         />
@@ -137,7 +145,9 @@ export function CouponForm({ cart, compact }: { cart: Cart; compact?: boolean })
           disabled={apply.isPending || !code.trim()}
           className={cn(
             'bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60 max-lg:rounded-full',
-            compact ? 'rounded-full' : 'lg:w-[102px] lg:px-0 lg:text-[14px] lg:font-bold lg:disabled:opacity-100',
+            compact
+              ? 'rounded-full'
+              : 'max-md:w-[97px] max-md:bg-[linear-gradient(90deg,#855632,#965f35)] max-md:px-0 max-md:text-[15px] max-md:font-bold max-md:text-foreground max-md:shadow-[-2px_0_6px_rgba(0,0,0,0.25)] max-md:disabled:opacity-100 lg:w-[102px] lg:px-0 lg:text-[14px] lg:font-bold lg:disabled:opacity-100',
           )}
         >
           {apply.isPending ? 'Aplicando…' : 'Aplicar'}

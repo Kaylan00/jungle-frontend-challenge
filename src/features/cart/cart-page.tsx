@@ -20,13 +20,19 @@ export function CartPage() {
   const router = useRouter()
 
   return (
-    <div className="container-page pt-4 md:pt-7">
-      <div className="mb-4 flex items-center gap-3 md:hidden">
-        <button type="button" onClick={() => router.history.back()} className="grid size-9 place-items-center rounded-full bg-card" aria-label="Voltar">
-          <ChevronLeft className="size-5 text-primary" aria-hidden="true" />
+    // Mobile (Figma 414): margens de 28px, resumo num painel que vai até o fim da tela.
+    <div className="container-page pt-4 max-md:flex max-md:min-h-dvh max-md:flex-col max-md:px-7 max-md:pt-8 md:pt-7">
+      <div className="mb-[21px] flex items-center md:hidden">
+        <button
+          type="button"
+          onClick={() => router.history.back()}
+          className="grid size-[35px] shrink-0 place-items-center rounded-full border border-[#3c2218] bg-[#2f1d15] text-[#b09261] transition-colors hover:text-highlight"
+          aria-label="Voltar"
+        >
+          <ChevronLeft className="size-5" strokeWidth={1.75} aria-hidden="true" />
         </button>
-        <h1 className="flex-1 text-center text-xl font-bold">Carrinho de NFTs</h1>
-        <span className="size-9" />
+        <h1 className="flex-1 pl-[25px] text-center text-[20px] font-bold leading-7">Carrinho de NFTs</h1>
+        <span className="size-[35px] shrink-0" />
       </div>
       <nav aria-label="Trilha de navegação" className="hidden text-[15px] font-bold leading-6 md:block">
         <ol className="flex gap-[9px]">
@@ -72,9 +78,12 @@ export function CartPage() {
 
 function CartLayout({ list, summary, busy }: { list: React.ReactNode; summary: React.ReactNode; busy?: boolean }) {
   return (
-    <div className="grid gap-8 md:mt-[4px] lg:grid-cols-[minmax(0,1fr)_332px] lg:gap-12 xl:gap-[86px]" aria-busy={busy}>
+    <div className="grid gap-8 max-md:flex max-md:flex-1 max-md:flex-col max-md:gap-1 md:mt-[4px] lg:grid-cols-[minmax(0,1fr)_332px] lg:gap-12 xl:gap-[86px]" aria-busy={busy}>
       <section aria-label="Itens do carrinho">{list}</section>
-      <aside aria-labelledby="resumo-title" className="rounded-2xl bg-card p-4 lg:rounded-none lg:bg-transparent lg:p-0">
+      <aside
+        aria-labelledby="resumo-title"
+        className="rounded-2xl bg-card p-4 max-md:-mx-7 max-md:mt-auto max-md:rounded-b-none max-md:rounded-t-[30px] max-md:px-6 max-md:pb-8 max-md:pt-6 lg:rounded-none lg:bg-transparent lg:p-0"
+      >
         <h2 id="resumo-title" className="mb-[23px] hidden border-b border-[#442c1b] pb-[7px] text-[18px] font-semibold leading-6 lg:block">
           Resumo da carteira
         </h2>
@@ -214,36 +223,36 @@ function CartItems({ cart }: { cart: Cart }) {
         </tbody>
       </table>
 
-      {/* Mobile: cartões (Figma) */}
-      <ul className="space-y-3 md:hidden">
+      {/* Mobile: cartões de 100px com a arte à esquerda e o seletor de quantidade à direita (Figma 414) */}
+      <ul className="space-y-5 md:hidden">
         {cart.items.map((item) => (
-          <li key={item.id} className="flex gap-3 overflow-hidden rounded-xl bg-card" data-testid="cart-item-mobile">
-            <img src={item.image} alt="" width={80} height={80} className="size-20 shrink-0 object-cover" />
-            <div className="flex flex-1 items-center gap-2 py-2 pr-3">
+          <li key={item.id} className="relative flex min-h-[100px] overflow-hidden rounded-[12px] bg-card" data-testid="cart-item-mobile">
+            <img src={item.image} alt="" width={100} height={100} className="w-[100px] shrink-0 self-stretch object-cover" />
+            <div className="min-w-0 flex-1 pb-2 pl-[10px] pr-4 pt-3">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-bold">{item.name}</p>
-                <p className="text-[12px] text-muted-foreground">Edição: {item.editionName}</p>
-                <p className="mt-1 font-bold text-primary">{formatEth(item.lineTotal)}</p>
+                <p className="truncate text-[15px] font-bold leading-5">{item.name}</p>
+                <p className="mt-px text-[14px] leading-5 text-muted-foreground">Edição: {item.editionName}</p>
+                <p className="mt-3 text-[18px] font-bold leading-6 text-highlight">{formatEth(item.lineTotal)}</p>
                 {item.issue && <p className="text-[11px] text-warning">⚠ {issueText(item)}</p>}
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <QuantityStepper
-                  value={item.quantity}
-                  max={Math.max(item.quantity, Math.min(item.available, item.maxPerOrder))}
-                  onChange={(q) => update.mutate({ itemId: item.id, quantity: q })}
-                  label={`Quantidade de ${item.name}`}
-                  disabled={update.isPending || item.issue === 'sold_out'}
-                />
-                <button
-                  type="button"
-                  onClick={() => remove.mutate({ itemId: item.id, name: item.name })}
-                  className="text-[12px] text-primary underline-offset-2 hover:underline"
-                  aria-label={`Remover ${item.name} do carrinho`}
-                >
-                  Remover
-                </button>
-              </div>
+              <QuantityStepper
+                value={item.quantity}
+                max={Math.max(item.quantity, Math.min(item.available, item.maxPerOrder))}
+                onChange={(q) => update.mutate({ itemId: item.id, quantity: q })}
+                label={`Quantidade de ${item.name}`}
+                disabled={update.isPending || item.issue === 'sold_out'}
+                className="absolute right-4 top-[38px]"
+              />
             </div>
+            {/* Remover: lixeira discreta no canto (o Figma mostra a lixeira junto do seletor). */}
+            <button
+              type="button"
+              onClick={() => remove.mutate({ itemId: item.id, name: item.name })}
+              className="absolute bottom-1.5 right-3 grid size-7 place-items-center rounded text-[#b39463] hover:text-highlight"
+              aria-label={`Remover ${item.name} do carrinho`}
+            >
+              <TrashIcon className="size-4" />
+            </button>
           </li>
         ))}
       </ul>
@@ -252,9 +261,9 @@ function CartItems({ cart }: { cart: Cart }) {
 }
 
 /** Lixeira do Figma (contorno simples, sem as linhas internas do ícone do Lucide). */
-function TrashIcon() {
+function TrashIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="size-[22px] text-[#b39463]" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className={cn('size-[22px] text-[#b39463]', className)} aria-hidden="true">
       <path d="M3 6h18" />
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
       <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -267,23 +276,23 @@ function CartSummaryPanel({ cart }: { cart: Cart }) {
   const { user } = useSession()
   const blocking = cart.items.filter((i) => i.issue === 'sold_out' || i.issue === 'insufficient_stock')
   return (
-    <div className="space-y-5 lg:space-y-0">
+    <div className="space-y-5 max-md:space-y-0 lg:space-y-0">
       <CouponForm cart={cart} />
-      <SummaryLines summary={cart.summary} coupon={cart.coupon} variant="cart" className="lg:!mt-5" />
+      <SummaryLines summary={cart.summary} coupon={cart.coupon} variant="cart" className="max-md:!mt-[9px] lg:!mt-5" />
       {blocking.length > 0 && (
-        <p role="status" className="text-[12px] text-destructive lg:!mt-3">
+        <p role="status" className="text-[12px] text-destructive max-md:mt-3 lg:!mt-3">
           Ajuste ou remova os itens marcados para continuar.
         </p>
       )}
       <Button
-        className="h-11 w-full rounded-md font-semibold max-lg:rounded-full lg:!mt-[18px] lg:h-10 lg:rounded-[2px] lg:text-[15px] lg:font-bold"
+        className="h-11 w-full rounded-md font-semibold max-lg:rounded-full max-md:!mt-7 max-md:h-[60px] max-md:bg-[linear-gradient(90deg,#d08a4c,#b77842)] max-md:text-[16px] max-md:font-bold max-md:hover:brightness-110 lg:!mt-[18px] lg:h-10 lg:rounded-[2px] lg:text-[15px] lg:font-bold"
         disabled={blocking.length > 0}
         onClick={() => void navigate(user ? { to: '/pagamento' } : { to: '/login', search: { redirect: '/pagamento' } })}
         data-testid="checkout-button"
       >
         Conectar e finalizar
       </Button>
-      <Link to="/" hash="catalogo" className="block text-center text-[13px] text-primary hover:underline lg:!mt-[10px] lg:text-[15px] lg:leading-6 lg:text-[#e89b55]">
+      <Link to="/" hash="catalogo" className="block text-center text-[13px] text-primary hover:underline max-md:hidden lg:!mt-[10px] lg:text-[15px] lg:leading-6 lg:text-[#e89b55]">
         Continuar explorando
       </Link>
     </div>

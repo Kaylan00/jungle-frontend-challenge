@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { ArrowRight, ChevronLeft, ChevronRight, Search, SlidersHorizontal } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { SortOption } from '@/api/contracts'
 import { featuredQuery, nftListQuery } from '@/api/queries'
@@ -23,11 +23,111 @@ const TABS: Array<{ label: string; sort: SortOption | undefined }> = [
 export function HomePage({ search }: { search: CatalogSearch }) {
   return (
     <>
+      <MobileCatalogBar search={search} />
       <Hero />
       <Catalog search={search} />
       <PromoBanners />
       <Journal />
     </>
+  )
+}
+
+/** Atualiza a URL do catálogo. Qualquer filtro novo volta para a página 1. */
+function useCatalogUpdate() {
+  const navigate = useNavigate()
+  return (patch: Partial<CatalogSearch>, opts: { keepPage?: boolean } = {}) =>
+    navigate({
+      to: '/',
+      search: (prev) => ({ ...prev, ...patch, page: opts.keepPage ? patch.page : undefined }),
+      hash: 'catalogo',
+      resetScroll: false,
+    })
+}
+
+/** Termo de busca com debounce: digitar não dispara uma requisição por tecla. */
+function useSearchTerm(search: CatalogSearch, update: ReturnType<typeof useCatalogUpdate>) {
+  const [term, setTerm] = useState(search.q ?? '')
+  useEffect(() => setTerm(search.q ?? ''), [search.q])
+  useEffect(() => {
+    if ((search.q ?? '') === term.trim()) return
+    const t = setTimeout(() => void update({ q: term.trim() || undefined }), 350)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [term])
+  return [term, setTerm] as const
+}
+
+const countActiveFilters = (search: CatalogSearch) =>
+  (search.category?.length ?? 0) + (search.network?.length ?? 0) + (search.minPrice || search.maxPrice ? 1 : 0) + (search.onlyAvailable ? 1 : 0)
+
+/** Ícone de filtros do Figma mobile: duas linhas com um círculo em cada ponta. */
+function FiltersIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+      <circle cx="5" cy="5.5" r="2.6" />
+      <path d="M10 5.5h8" />
+      <circle cx="15" cy="14.5" r="2.6" />
+      <path d="M2 14.5h8" />
+    </svg>
+  )
+}
+
+/** Mobile (Figma 414): busca "Explorar coleções" e botão de filtros no topo, acima do destaque. */
+function MobileCatalogBar({ search }: { search: CatalogSearch }) {
+  const update = useCatalogUpdate()
+  const [term, setTerm] = useSearchTerm(search, update)
+  // Mesma consulta do catálogo (mesma chave = mesmo cache): só para as contagens dos filtros.
+  const list = useQuery(nftListQuery(toListParams(search)))
+  const activeFilters = countActiveFilters(search)
+  return (
+    <div className="container-page flex items-center gap-2 pt-10 md:hidden">
+      <label className="relative flex-1">
+        <span className="sr-only">Buscar coleções e NFTs</span>
+        <svg
+          viewBox="0 0 22 22"
+          width="22"
+          height="22"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          aria-hidden="true"
+          className="pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2 text-[#b39463]"
+        >
+          <circle cx="10" cy="10" r="8.2" />
+          <path d="M16 16l4.4 4.4" />
+        </svg>
+        <input
+          type="search"
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="Explorar coleções"
+          className="h-[45px] w-full rounded-[8px] bg-card pl-[42px] pr-3 text-[14px] font-medium placeholder:text-[#b39463]"
+        />
+      </label>
+      <Sheet>
+        <SheetTrigger asChild>
+          <button
+            type="button"
+            className="relative grid size-[45px] shrink-0 place-items-center rounded-[10px] bg-[linear-gradient(135deg,#8a5a32,#bb7b45)] text-[#2a1a10] transition-[filter] hover:brightness-110"
+            aria-label={`Filtros${activeFilters ? `, ${activeFilters} ativos` : ''}`}
+          >
+            <FiltersIcon />
+            {activeFilters > 0 && (
+              <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-foreground text-[10px] text-background">{activeFilters}</span>
+            )}
+          </button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-card p-5">
+          <SheetHeader className="p-0">
+            <SheetTitle>Filtros</SheetTitle>
+            <SheetDescription>Os filtros se combinam e atualizam a lista na hora.</SheetDescription>
+          </SheetHeader>
+          <CatalogFilters search={search} facets={list.data?.facets} onChange={(p) => void update(p)} idPrefix="m" />
+          <SortSelect value={search.sort} onChange={(sort) => void update({ sort })} className="mt-6 flex w-full" />
+        </SheetContent>
+      </Sheet>
+    </div>
   )
 }
 
@@ -39,65 +139,17 @@ function Catalog({ search }: { search: CatalogSearch }) {
   const list = useQuery(nftListQuery(params))
   const page = list.data?.page ?? params.page ?? 1
   const totalPages = list.data?.totalPages ?? 1
-
-  /** Atualiza a URL. Qualquer filtro novo volta para a página 1. */
-  const update = (patch: Partial<CatalogSearch>, opts: { keepPage?: boolean } = {}) =>
-    navigate({
-      to: '/',
-      search: (prev) => ({ ...prev, ...patch, page: opts.keepPage ? patch.page : undefined }),
-      hash: 'catalogo',
-      resetScroll: false,
-    })
-
-  const [term, setTerm] = useState(search.q ?? '')
-  useEffect(() => setTerm(search.q ?? ''), [search.q])
-  // Busca com debounce: digitar não dispara uma requisição por tecla.
-  useEffect(() => {
-    if ((search.q ?? '') === term.trim()) return
-    const t = setTimeout(() => void update({ q: term.trim() || undefined }), 350)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [term])
+  const update = useCatalogUpdate()
+  const [term, setTerm] = useSearchTerm(search, update)
 
   const activeTab = TABS.findIndex((t) => t.sort === search.sort)
-  const activeFilters = (search.category?.length ?? 0) + (search.network?.length ?? 0) + (search.minPrice || search.maxPrice ? 1 : 0) + (search.onlyAvailable ? 1 : 0)
+  const activeFilters = countActiveFilters(search)
 
   return (
-    <section id="catalogo" aria-labelledby="catalogo-title" className="container-page mt-10 scroll-mt-20 md:mt-24">
+    <section id="catalogo" aria-labelledby="catalogo-title" className="container-page mt-[14px] scroll-mt-20 md:mt-24">
       <h2 id="catalogo-title" className="sr-only">
         Catálogo de NFTs
       </h2>
-
-      {/* Busca + filtros (mobile: barra de busca e botão de filtros como no Figma) */}
-      <div className="mb-5 flex items-center gap-2 md:hidden">
-        <label className="relative flex-1">
-          <span className="sr-only">Buscar coleções e NFTs</span>
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <input
-            type="search"
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            placeholder="Explorar coleções"
-            className="h-10 w-full rounded-lg bg-card pl-9 pr-3 text-sm"
-          />
-        </label>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button size="icon" className="relative size-10" aria-label={`Filtros${activeFilters ? `, ${activeFilters} ativos` : ''}`}>
-              <SlidersHorizontal className="size-4" aria-hidden="true" />
-              {activeFilters > 0 && <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-foreground text-[10px] text-background">{activeFilters}</span>}
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-card p-5">
-            <SheetHeader className="p-0">
-              <SheetTitle>Filtros</SheetTitle>
-              <SheetDescription>Os filtros se combinam e atualizam a lista na hora.</SheetDescription>
-            </SheetHeader>
-            <CatalogFilters search={search} facets={list.data?.facets} onChange={(p) => void update(p)} idPrefix="m" />
-            <SortSelect value={search.sort} onChange={(sort) => void update({ sort })} className="mt-6 w-full" />
-          </SheetContent>
-        </Sheet>
-      </div>
 
       <div className="grid gap-10 md:grid-cols-[240px_1fr] xl:grid-cols-[310px_1fr] xl:gap-12">
         <aside className="hidden md:block" aria-label="Filtros do catálogo">
@@ -126,8 +178,8 @@ function Catalog({ search }: { search: CatalogSearch }) {
         </aside>
 
         <div>
-          <div className="mb-[26px] flex flex-wrap items-start justify-between gap-3">
-            <div role="tablist" aria-label="Seleção do catálogo" className="flex gap-4 overflow-x-auto text-[15px] leading-5 md:gap-[21px]">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3 md:mb-[26px]">
+            <div role="tablist" aria-label="Seleção do catálogo" className="flex gap-[10px] overflow-x-auto text-[14px] leading-5 md:gap-[21px] md:text-[15px]">
               {TABS.map((t, i) => {
                 const selected = i === (activeTab === -1 ? (search.sort ? -1 : 0) : activeTab)
                 return (
@@ -135,7 +187,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
                     key={t.label}
                     role="tab"
                     aria-selected={selected}
-                    className={cn('shrink-0 border-b-2 border-transparent pb-0.5 transition-colors hover:text-highlight', selected && 'border-primary text-highlight')}
+                    className={cn('shrink-0 border-b-2 border-transparent transition-colors hover:text-highlight md:pb-0.5', selected && 'border-primary text-highlight max-md:font-semibold')}
                     onClick={() => void update({ sort: t.sort })}
                   >
                     {t.label}
@@ -179,7 +231,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
                 <ErrorState className="mb-4 py-4" title="Falha ao atualizar a lista" message={list.error.message} onRetry={() => void list.refetch()} retrying={list.isFetching} />
               )}
               <ul
-                className={cn('grid grid-cols-2 gap-x-4 gap-y-8 transition-opacity lg:grid-cols-3 lg:gap-x-7 xl:gap-x-[34px] xl:gap-y-[66px]', list.isPlaceholderData && 'opacity-60')}
+                className={cn('grid grid-cols-2 gap-x-4 gap-y-[22px] pb-8 transition-opacity max-md:[&>li:nth-child(even)]:translate-y-8 md:gap-y-8 md:pb-0 lg:grid-cols-3 lg:gap-x-7 xl:gap-x-[34px] xl:gap-y-[66px]', list.isPlaceholderData && 'opacity-60')}
                 aria-busy={list.isFetching}
                 data-testid="catalog-grid"
               >
