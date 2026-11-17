@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @import "@fontsource-variable/roboto-mono";
 
+/*
+ * Senha mascarada com asteriscos, como no Figma. O navegador esconde a senha desenhando "•"
+ * (U+2022; o Firefox usa "●" U+25CF) na fonte do campo. Esta fonte de 1 glifo, gerada a partir
+ * do asterisco da Roboto Mono, só cobre esses caracteres (unicode-range): o campo continua sendo
+ * type="password" de verdade (gerenciador de senhas, leitor de tela e cursor funcionam).
+ */
+@font-face {
+  font-family: "Kurio Password Mask";
+  src: url("/fonts/password-mask.woff2") format("woff2");
+  font-display: block;
+  unicode-range: U+2022, U+2219, U+25CF;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /*
@@ -105,6 +118,9 @@
   button:disabled,
   [aria-disabled='true'] {
     cursor: not-allowed;
+  }
+  input[type='password'] {
+    font-family: "Kurio Password Mask", var(--font-sans);
   }
   html {
     color-scheme: dark;
