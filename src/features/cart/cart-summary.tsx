@@ -15,10 +15,13 @@ export function SummaryLines({ summary, coupon, className, variant = 'default' }
   const figma = variant !== 'default'
   // Carrinho no mobile (Figma 414): linhas de 15px a cada 32px, total sem divisória.
   const cartMobile = variant === 'cart' && 'max-md:space-y-2 max-md:text-[15px] max-md:leading-6'
-  const row = cn('flex justify-between', figma && 'lg:items-baseline lg:leading-6')
-  const big = figma && 'lg:text-[18px]'
+  // Carrinho no desktop (Figma, Fees): linhas de 15px com altura automática (20) a cada 12px, alinhadas no topo;
+  // valores de 18px com lh 16.
+  const cartLg = variant === 'cart'
+  const row = cn('flex justify-between', figma && 'lg:items-baseline lg:leading-6', cartLg && 'lg:items-start lg:leading-5')
+  const big = cn(figma && 'lg:text-[18px]', cartLg && 'lg:leading-4')
   return (
-    <dl className={cn('space-y-2.5 text-[14px]', cartMobile, figma && 'lg:space-y-2 lg:text-[15px]', variant === 'checkout' && 'lg:relative', className)} data-testid="cart-summary">
+    <dl className={cn('space-y-2.5 text-[14px]', cartMobile, figma && 'lg:space-y-2 lg:text-[15px]', cartLg && 'lg:space-y-3', variant === 'checkout' && 'lg:relative', className)} data-testid="cart-summary">
       <div className={row}>
         <dt>Subtotal</dt>
         <dd className={cn('tabular-nums', big)} data-testid="summary-subtotal">
@@ -39,7 +42,7 @@ export function SummaryLines({ summary, coupon, className, variant = 'default' }
             className={cn(
               'block text-[11px] text-primary',
               variant === 'cart' && 'max-md:text-[12px] max-md:leading-4',
-              variant === 'cart' && 'lg:absolute lg:right-0 lg:top-[34px] lg:whitespace-nowrap lg:text-[12px] lg:leading-4',
+              variant === 'cart' && 'lg:absolute lg:right-0 lg:top-8 lg:whitespace-nowrap lg:text-[12px] lg:leading-4 lg:text-highlight',
               variant === 'checkout' && 'lg:absolute lg:inset-x-0 lg:top-[98px] lg:text-center lg:text-[12px] lg:leading-4',
             )}
           >
@@ -50,13 +53,14 @@ export function SummaryLines({ summary, coupon, className, variant = 'default' }
       <div
         className={cn(
           'flex justify-between border-t border-border pt-3 font-bold',
-          variant === 'cart' && 'max-md:!mt-1 max-md:border-t-0 max-md:pt-0 lg:!mt-[44px] lg:border-t-0 lg:pt-0',
+          variant === 'cart' && 'max-md:!mt-1 max-md:border-t-0 max-md:pt-0 lg:!mt-[52px] lg:border-t-0 lg:pt-0',
           variant === 'checkout' && 'lg:!mt-[35px] lg:border-[#442c1b] lg:px-[42px] lg:pt-[6px]',
           figma && 'lg:items-baseline lg:leading-6',
+          cartLg && 'lg:items-start lg:leading-4',
         )}
       >
         <dt className={cn(figma && 'lg:text-[16px]', variant === 'cart' && 'max-md:text-[16px]')}>Total</dt>
-        <dd className={cn('text-lg text-primary tabular-nums', variant === 'cart' && 'max-md:text-highlight', figma && 'lg:text-[18px] lg:text-[#e89b55]')} data-testid="summary-total">
+        <dd className={cn('text-lg text-primary tabular-nums', variant === 'cart' && 'max-md:text-highlight', figma && 'lg:text-[18px] lg:text-[#e89b55]', cartLg && 'lg:leading-4')} data-testid="summary-total">
           {formatEth(summary.total)}
         </dd>
       </div>
@@ -81,7 +85,9 @@ export function SummarySkeleton() {
   )
 }
 
-export function CouponForm({ cart, compact }: { cart: Cart; compact?: boolean }) {
+export function CouponForm({ cart, compact, variant }: { cart: Cart; compact?: boolean; variant?: 'cart' }) {
+  // Carrinho no desktop (Figma, Promo Code): rótulo 14/16 bold, 8px até o campo; Aplicar 15/16 bold.
+  const cartLg = variant === 'cart'
   const apply = useApplyCoupon()
   const remove = useRemoveCoupon()
   const [code, setCode] = useState('')
@@ -115,7 +121,7 @@ export function CouponForm({ cart, compact }: { cart: Cart; compact?: boolean })
       }}
       noValidate
     >
-      <label htmlFor="coupon" className={cn('mb-2 block text-[13px] font-semibold max-lg:sr-only', compact ? 'sr-only' : 'lg:mb-[5px] lg:text-[14px] lg:font-bold lg:leading-5 lg:tracking-[0.4px]')}>
+      <label htmlFor="coupon" className={cn('mb-2 block text-[13px] font-semibold max-lg:sr-only', compact ? 'sr-only' : 'lg:mb-[5px] lg:text-[14px] lg:font-bold lg:leading-5 lg:tracking-[0.4px]', cartLg && 'lg:mb-2 lg:leading-4 lg:tracking-normal')}>
         Código promocional
       </label>
       <div
@@ -137,6 +143,7 @@ export function CouponForm({ cart, compact }: { cart: Cart; compact?: boolean })
           className={cn(
             'h-10 min-w-0 flex-1 bg-transparent px-3 text-[13px] uppercase placeholder:normal-case placeholder:text-subtle-foreground',
             !compact && 'max-md:h-[50px] max-md:pl-4 max-md:placeholder:text-[#b39463] lg:h-[38px] lg:pl-[8px] lg:text-[12px] lg:tracking-[0.15px] lg:placeholder:text-[#b39463]',
+            cartLg && 'lg:pr-0 lg:leading-4 lg:tracking-normal',
           )}
           autoComplete="off"
         />
@@ -148,6 +155,7 @@ export function CouponForm({ cart, compact }: { cart: Cart; compact?: boolean })
             compact
               ? 'rounded-full'
               : 'max-md:w-[97px] max-md:bg-[linear-gradient(90deg,#855632,#965f35)] max-md:px-0 max-md:text-[15px] max-md:font-bold max-md:text-foreground max-md:shadow-[-2px_0_6px_rgba(0,0,0,0.25)] max-md:disabled:opacity-100 lg:w-[102px] lg:px-0 lg:text-[14px] lg:font-bold lg:disabled:opacity-100',
+            cartLg && 'lg:text-[15px] lg:leading-4',
           )}
         >
           {apply.isPending ? 'Aplicando…' : 'Aplicar'}

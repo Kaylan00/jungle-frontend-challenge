@@ -5,14 +5,27 @@ import { FavoriteButton } from '@/features/favorites/favorite-button'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
 
-export function NftCard({ nft, priority = false, className }: { nft: NftSummary; priority?: boolean; className?: string }) {
+/**
+ * variant: "detail" e "cart" são os cards das vitrines "Mais desta coleção" e "Colecionadores também viram"
+ * (Figma desktop: caixa 219x255 e textos de 15/16px), que só valem a partir de xl.
+ */
+export function NftCard({ nft, priority = false, className, variant = 'catalog' }: { nft: NftSummary; priority?: boolean; className?: string; variant?: 'catalog' | 'detail' | 'cart' }) {
   const soldOut = nft.available === 0
+  const detail = variant === 'detail'
+  const cart = variant === 'cart'
   return (
     <article className={cn('group relative', className)} data-testid="nft-card" data-nft-id={nft.id}>
       {/* Figma: caixa marrom 258x300 com a arte 250x250 centrada (cantos de 12px).
           Mobile (Figma 414): caixa de 175x200 com raio de 18px; a arte fica 12px abaixo do topo na coluna
           da esquerda e 20px na da direita (a coluna da direita desce 32px na grade). */}
-      <div className="relative overflow-hidden bg-card px-1 pb-5 pt-3 max-md:rounded-[18px] max-md:bg-[#271813] max-md:[li:nth-child(even)_&]:pb-3 max-md:[li:nth-child(even)_&]:pt-5 md:py-[25px]">
+      <div
+        className={cn(
+          'relative overflow-hidden bg-card px-1 pb-5 pt-3 max-md:rounded-[18px] max-md:bg-[#271813] max-md:[li:nth-child(even)_&]:pb-3 max-md:[li:nth-child(even)_&]:pt-5 md:py-[25px]',
+          // Detalhe: Frame 197 (255 de altura, padding 16/4/28/4). Carrinho: Artwork 219x255 com a arte 212 centrada.
+          detail && 'xl:h-[255px] xl:pb-[28px] xl:pt-4',
+          cart && 'xl:flex xl:h-[255px] xl:items-center xl:justify-center xl:p-0',
+        )}
+      >
         {nft.badge === 'raro' && <span className="sr-only">Raro.</span>}
         {nft.badge === 'raro' && (
           <span aria-hidden="true" className="absolute left-0 top-3 z-10 flex h-[31px] w-[68px] items-center bg-primary pl-2 text-[13px] font-medium uppercase text-primary-foreground md:hidden [li:nth-child(even)_&]:top-5">
@@ -35,16 +48,22 @@ export function NftCard({ nft, priority = false, className }: { nft: NftSummary;
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : 'auto'}
           decoding="async"
-          className={cn('aspect-square w-full rounded-xl object-cover transition-transform max-md:rounded-[14px] duration-300 group-hover:scale-[1.02]', soldOut && 'opacity-60')}
+          className={cn(
+            'aspect-square w-full rounded-xl object-cover transition-transform max-md:rounded-[14px] duration-300 group-hover:scale-[1.02]',
+            detail && 'xl:rounded-[13px]',
+            cart && 'xl:size-[212px] xl:rounded-[17px]',
+            soldOut && 'opacity-60',
+          )}
         />
       </div>
-      <h3 className="mt-[10px] truncate text-[15px] leading-[18px] max-md:px-2 md:mt-2 md:text-base md:leading-6">
+      {/* Nome: 15px com altura automática (20); preço: 16px bold, lh 16. Espaços: 12/0 no detalhe, 8/8 no carrinho. */}
+      <h3 className={cn('mt-[10px] truncate text-[15px] leading-[18px] max-md:px-2 md:mt-2 md:text-base md:leading-6', (detail || cart) && 'xl:text-[15px] xl:leading-5', detail && 'xl:mt-3')}>
         {/* O link cobre o card inteiro (área de clique grande), mantendo um único item focável. */}
         <Link to="/nft/$nftId" params={{ nftId: nft.id }} className="outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-ring">
           {nft.name}
         </Link>
       </h3>
-      <p className="text-[16px] font-bold leading-[18px] text-highlight max-md:px-2 md:mt-1 md:text-lg md:leading-6">
+      <p className={cn('text-[16px] font-bold leading-[18px] text-highlight max-md:px-2 md:mt-1 md:text-lg md:leading-6', (detail || cart) && 'xl:text-[16px] xl:leading-4', detail && 'xl:mt-0', cart && 'xl:mt-2')}>
         <span data-testid="nft-price">{formatEth(nft.price, { maxDecimals: 4 })}</span>
         {nft.compareAtPrice && (
           <s className="ml-[11px] font-normal text-[#b39463] no-underline">

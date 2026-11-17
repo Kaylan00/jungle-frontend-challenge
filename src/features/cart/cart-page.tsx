@@ -21,7 +21,7 @@ export function CartPage() {
 
   return (
     // Mobile (Figma 414): margens de 28px, resumo num painel que vai até o fim da tela.
-    <div className="container-page pt-4 max-md:flex max-md:min-h-dvh max-md:flex-col max-md:px-7 max-md:pt-8 md:pt-7">
+    <div className="container-page pt-4 max-md:flex max-md:min-h-dvh max-md:flex-col max-md:px-7 max-md:pt-8 md:pt-7 xl:pb-4 xl:pt-8">
       <div className="mb-[21px] flex items-center md:hidden">
         <button
           type="button"
@@ -34,7 +34,7 @@ export function CartPage() {
         <h1 className="flex-1 pl-[25px] text-center text-[20px] font-bold leading-7">Carrinho de NFTs</h1>
         <span className="size-[35px] shrink-0" />
       </div>
-      <nav aria-label="Trilha de navegação" className="hidden text-[15px] font-bold leading-6 md:block">
+      <nav aria-label="Trilha de navegação" className="hidden text-[15px] font-bold leading-6 md:block xl:leading-4">
         <ol className="flex gap-[9px]">
           <li>
             <Link to="/" className="hover:text-primary">
@@ -78,13 +78,13 @@ export function CartPage() {
 
 function CartLayout({ list, summary, busy }: { list: React.ReactNode; summary: React.ReactNode; busy?: boolean }) {
   return (
-    <div className="grid gap-8 max-md:flex max-md:flex-1 max-md:flex-col max-md:gap-1 md:mt-[4px] lg:grid-cols-[minmax(0,1fr)_332px] lg:gap-12 xl:gap-[86px]" aria-busy={busy}>
+    <div className="grid gap-8 max-md:flex max-md:flex-1 max-md:flex-col max-md:gap-1 md:mt-[4px] lg:grid-cols-[minmax(0,1fr)_332px] lg:gap-12 xl:mt-[11px] xl:gap-[86px]" aria-busy={busy}>
       <section aria-label="Itens do carrinho">{list}</section>
       <aside
         aria-labelledby="resumo-title"
         className="rounded-2xl bg-card p-4 max-md:-mx-7 max-md:mt-auto max-md:rounded-b-none max-md:rounded-t-[30px] max-md:px-6 max-md:pb-8 max-md:pt-6 lg:rounded-none lg:bg-transparent lg:p-0"
       >
-        <h2 id="resumo-title" className="mb-[23px] hidden border-b border-[#442c1b] pb-[7px] text-[18px] font-semibold leading-6 lg:block">
+        <h2 id="resumo-title" className="mb-6 hidden border-b border-[#442c1b] pb-3 text-[18px] font-bold leading-4 lg:block">
           Resumo da carteira
         </h2>
         {summary}
@@ -150,20 +150,20 @@ function CartItems({ cart }: { cart: Cart }) {
           <col />
         </colgroup>
         <thead>
-          <tr className="text-left leading-6">
-            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium">
+          <tr className="text-left leading-6 xl:text-[16px] xl:leading-4">
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium xl:pb-3">
               NFTs
             </th>
-            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium">
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium xl:pb-3">
               Preço
             </th>
-            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium">
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium xl:pb-3">
               Edições
             </th>
-            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium">
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium xl:pb-3">
               Total
             </th>
-            <th scope="col" className="border-b border-[#442c1b] pb-[7px]">
+            <th scope="col" className="border-b border-[#442c1b] pb-[7px] xl:pb-3">
               <span className="sr-only">Remover</span>
             </th>
           </tr>
@@ -179,11 +179,11 @@ function CartItems({ cart }: { cart: Cart }) {
                       to="/nft/$nftId"
                       params={{ nftId: item.nftId }}
                       search={{ edicao: item.editionId }}
-                      className="block truncate text-[15px] font-bold leading-[22px] tracking-[0.5px] hover:text-primary"
+                      className="block truncate text-[15px] font-bold leading-[22px] tracking-[0.5px] hover:text-primary xl:text-[16px] xl:leading-4 xl:tracking-normal"
                     >
                       {item.name}
                     </Link>
-                    <p className="text-[13px] leading-5 tracking-[0.3px] text-[#ae8f60]">Edição: {item.editionName}</p>
+                    <p className="text-[13px] leading-5 tracking-[0.3px] text-[#ae8f60] xl:mt-1.5 xl:text-[14px] xl:leading-4 xl:tracking-normal xl:text-[#b39463]">Edição: {item.editionName}</p>
                     {item.issue && (
                       <p className={cn('mt-0.5 text-[12px]', item.issue === 'price_changed' ? 'text-warning' : 'text-destructive')} data-testid="item-issue">
                         ⚠ {issueText(item)}
@@ -192,7 +192,7 @@ function CartItems({ cart }: { cart: Cart }) {
                   </div>
                 </div>
               </td>
-              <td className="font-semibold tracking-[0.6px] text-[#cfb28c]" data-testid="item-unit-price">
+              <td className="font-semibold tracking-[0.6px] text-[#cfb28c] xl:text-[16px] xl:tracking-normal" data-testid="item-unit-price">
                 {formatEth(item.unitPrice)}
               </td>
               <td>
@@ -204,7 +204,7 @@ function CartItems({ cart }: { cart: Cart }) {
                   disabled={update.isPending || item.issue === 'sold_out'}
                 />
               </td>
-              <td className="font-bold tracking-[0.6px] text-[#e89b55]" data-testid="item-line-total">
+              <td className="font-bold tracking-[0.6px] text-[#e89b55] xl:text-[16px] xl:tracking-normal" data-testid="item-line-total">
                 {formatEth(item.lineTotal)}
               </td>
               <td className="p-0">
@@ -277,22 +277,22 @@ function CartSummaryPanel({ cart }: { cart: Cart }) {
   const blocking = cart.items.filter((i) => i.issue === 'sold_out' || i.issue === 'insufficient_stock')
   return (
     <div className="space-y-5 max-md:space-y-0 lg:space-y-0">
-      <CouponForm cart={cart} />
-      <SummaryLines summary={cart.summary} coupon={cart.coupon} variant="cart" className="max-md:!mt-[9px] lg:!mt-5" />
+      <CouponForm cart={cart} variant="cart" />
+      <SummaryLines summary={cart.summary} coupon={cart.coupon} variant="cart" className="max-md:!mt-[9px] lg:!mt-6" />
       {blocking.length > 0 && (
         <p role="status" className="text-[12px] text-destructive max-md:mt-3 lg:!mt-3">
           Ajuste ou remova os itens marcados para continuar.
         </p>
       )}
       <Button
-        className="h-11 w-full rounded-md font-semibold max-lg:rounded-full max-md:!mt-7 max-md:h-[60px] max-md:bg-[linear-gradient(90deg,#d08a4c,#b77842)] max-md:text-[16px] max-md:font-bold max-md:hover:brightness-110 lg:!mt-[18px] lg:h-10 lg:rounded-[2px] lg:text-[15px] lg:font-bold"
+        className="h-11 w-full rounded-md font-semibold max-lg:rounded-full max-md:!mt-7 max-md:h-[60px] max-md:bg-[linear-gradient(90deg,#d08a4c,#b77842)] max-md:text-[16px] max-md:font-bold max-md:hover:brightness-110 lg:!mt-6 lg:h-10 lg:rounded-[3px] lg:text-[15px] lg:font-bold lg:leading-4"
         disabled={blocking.length > 0}
         onClick={() => void navigate(user ? { to: '/pagamento' } : { to: '/login', search: { redirect: '/pagamento' } })}
         data-testid="checkout-button"
       >
         Conectar e finalizar
       </Button>
-      <Link to="/" hash="catalogo" className="block text-center text-[13px] text-primary hover:underline max-md:hidden lg:!mt-[10px] lg:text-[15px] lg:leading-6 lg:text-[#e89b55]">
+      <Link to="/" hash="catalogo" className="block text-center text-[13px] text-primary hover:underline max-md:hidden lg:!mt-3 lg:text-[15px] lg:leading-5 lg:text-[#e89b55]">
         Continuar explorando
       </Link>
     </div>
@@ -309,19 +309,19 @@ function AlsoViewed() {
   const pages = Math.ceil(items.length / PER_PAGE)
   const current = Math.min(page, pages - 1)
   return (
-    <section aria-labelledby="tambem-viram" className="mt-14 hidden md:block lg:mt-[91px]">
-      <h2 id="tambem-viram" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary lg:mb-8 lg:border-[#442c1b] lg:pb-[6px] lg:text-[17px] lg:leading-6 lg:text-[#e89b55]">
+    <section aria-labelledby="tambem-viram" className="mt-14 hidden md:block lg:mt-24">
+      <h2 id="tambem-viram" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary lg:mb-8 lg:border-[#442c1b] lg:pb-[11px] lg:text-[17px] lg:font-bold lg:leading-4 lg:text-[#e89b55]">
         Colecionadores também viram
       </h2>
       <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5 lg:gap-[26px]" aria-live="polite">
         {items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE).map((n) => (
           <li key={n.id}>
-            <NftCard nft={n} />
+            <NftCard nft={n} variant="cart" />
           </li>
         ))}
       </ul>
       {pages > 1 && (
-        <div className="mt-[30px] flex justify-center gap-2" role="group" aria-label="Páginas de sugestões">
+        <div className="mt-[30px] flex justify-center gap-2 xl:mt-8" role="group" aria-label="Páginas de sugestões">
           {Array.from({ length: pages }, (_, i) => (
             <button
               key={i}
@@ -329,7 +329,7 @@ function AlsoViewed() {
               onClick={() => setPage(i)}
               aria-label={`Página ${i + 1} de ${pages}`}
               aria-current={i === current ? 'true' : undefined}
-              className={cn('size-3 rounded-full border border-primary transition-colors hover:bg-primary/60', i === current && 'bg-primary')}
+              className={cn('size-3 rounded-full border border-primary transition-colors hover:bg-primary/60 xl:border-[1.3px]', i === current && 'bg-primary')}
             />
           ))}
         </div>
