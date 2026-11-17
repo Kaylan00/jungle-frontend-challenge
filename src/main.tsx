@@ -10,6 +10,8 @@ import './index.css'
  *     módulo é carregado. Se o app fosse importado antes, ele pegaria o WebSocket original e o
  *     MSW não conseguiria interceptar a conexão. Por isso o app é importado dinamicamente depois.
  * Com mocks desligados, nada do MSW entra no bundle principal.
+ * Alternativas medidas no Lighthouse (paralelo, renderizar antes, socket sob demanda) pioraram
+ * o TBT no mobile; os números estão no ARCHITECTURE.md.
  */
 async function bootstrap() {
   if (import.meta.env.VITE_ENABLE_MOCKS === 'true') {

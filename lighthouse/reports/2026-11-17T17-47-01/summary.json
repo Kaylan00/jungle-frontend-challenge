@@ -1,0 +1,220 @@
+{
+  "date": "2026-11-17T17:47:02.047Z",
+  "baseUrl": "http://localhost:4175",
+  "runs": 3,
+  "environment": {
+    "lighthouse": "13.6.0",
+    "node": "v22.23.5",
+    "chrome": "/home/kaylan/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome",
+    "os": "linux 6.18.58.1-microsoft-standard-WSL2",
+    "cpus": "4x 13th Gen Intel(R) Core(TM) i5-13450HX",
+    "memoryGb": 8,
+    "conditions": "Build de produção (vite build) servido por vite preview; cenário padrão dos mocks (latência normal 150–400 ms); perfil mobile = throttling simulado padrão do Lighthouse (Moto G Power, 4G lento, CPU 4x); desktop = preset desktop do Lighthouse."
+  },
+  "results": [
+    {
+      "page": "/",
+      "profile": "mobile",
+      "median": {
+        "performance": 71,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100,
+        "lcpMs": 4234,
+        "cls": 0,
+        "tbtMs": 601
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 75,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 4234,
+          "cls": 0,
+          "tbtMs": 450,
+          "fcpMs": 866
+        },
+        {
+          "scores": {
+            "performance": 71,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 4138,
+          "cls": 0,
+          "tbtMs": 601,
+          "fcpMs": 863
+        },
+        {
+          "scores": {
+            "performance": 65,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 4417,
+          "cls": 0,
+          "tbtMs": 804,
+          "fcpMs": 879
+        }
+      ]
+    },
+    {
+      "page": "/",
+      "profile": "desktop",
+      "median": {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100,
+        "lcpMs": 1193,
+        "cls": 0,
+        "tbtMs": 6
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 97,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 1276,
+          "cls": 0,
+          "tbtMs": 4,
+          "fcpMs": 333
+        },
+        {
+          "scores": {
+            "performance": 98,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 1193,
+          "cls": 0,
+          "tbtMs": 8,
+          "fcpMs": 310
+        },
+        {
+          "scores": {
+            "performance": 98,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 1140,
+          "cls": 0,
+          "tbtMs": 6,
+          "fcpMs": 291
+        }
+      ]
+    },
+    {
+      "page": "/nft/nft-01",
+      "profile": "mobile",
+      "median": {
+        "performance": 76,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100,
+        "lcpMs": 4052,
+        "cls": 0,
+        "tbtMs": 444
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 76,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 4052,
+          "cls": 0,
+          "tbtMs": 444,
+          "fcpMs": 856
+        },
+        {
+          "scores": {
+            "performance": 79,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 3983,
+          "cls": 0,
+          "tbtMs": 349,
+          "fcpMs": 838
+        },
+        {
+          "scores": {
+            "performance": 72,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 4384,
+          "cls": 0,
+          "tbtMs": 507,
+          "fcpMs": 854
+        }
+      ]
+    },
+    {
+      "page": "/nft/nft-01",
+      "profile": "desktop",
+      "median": {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100,
+        "lcpMs": 1114,
+        "cls": 0,
+        "tbtMs": 0
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 98,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 1087,
+          "cls": 0,
+          "tbtMs": 3,
+          "fcpMs": 284
+        },
+        {
+          "scores": {
+            "performance": 98,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 1159,
+          "cls": 0,
+          "tbtMs": 0,
+          "fcpMs": 303
+        },
+        {
+          "scores": {
+            "performance": 98,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 1114,
+          "cls": 0,
+          "tbtMs": 0,
+          "fcpMs": 290
+        }
+      ]
+    }
+  ]
+}

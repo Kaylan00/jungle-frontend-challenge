@@ -37,7 +37,7 @@ function RootLayout() {
         Pular para o conteúdo
       </a>
       <Header />
-      <main id="conteudo" ref={mainRef} tabIndex={-1} className="flex-1 pb-24 outline-none md:pb-0">
+      <main id="conteudo" ref={mainRef} tabIndex={-1} className="min-h-dvh flex-1 pb-24 outline-none md:pb-0">
         <Outlet />
       </main>
       <Footer />
