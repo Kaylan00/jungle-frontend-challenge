@@ -23,7 +23,7 @@ export function SessionSync({ router }: { router: ReturnType<typeof createAppRou
       queryClient.setQueryData(qk.session, null)
       if (reason === 'expired') {
         const message = 'Sua sessão expirou. Entre novamente para continuar de onde parou.'
-        toast.warning(message)
+        toast.warning(message, { id: 'session-expired' })
         announce(message, 'assertive')
         const href = router.state.location.href
         if (!href.startsWith('/login')) {

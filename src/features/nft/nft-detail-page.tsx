@@ -314,7 +314,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
       <MoreFromCollection nft={nft} />
 
       {/* Mobile: barra fixa de compra (Figma) */}
-      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-border bg-card px-4 pb-4 pt-3 md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-border bg-card px-4 pb-4 pt-3 md:hidden" data-testid="mobile-buy-bar">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-[13px]">
             Qtd.

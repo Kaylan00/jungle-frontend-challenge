@@ -175,9 +175,11 @@ export class RealtimeClient {
 
     // Carrinho: o servidor recalcula totais e avisos; buscamos de novo se o item estiver nele.
     const owner = this.userId ?? 'guest'
-    const cart = this.queryClient.getQueryData<{ items: Array<{ nftId: string }> }>(qk.cart(owner))
-    if (cart?.items.some((i) => i.nftId === nftId)) {
+    const cart = this.queryClient.getQueryData<{ items: Array<{ nftId: string; name: string }> }>(qk.cart(owner))
+    const inCart = cart?.items.find((i) => i.nftId === nftId)
+    if (inCart) {
       void this.queryClient.invalidateQueries({ queryKey: qk.cart(owner) })
+      announce(`Preço ou disponibilidade de ${inCart.name} mudou. O resumo do carrinho foi atualizado.`)
     }
   }
 

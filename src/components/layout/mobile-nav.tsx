@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 export function MobileNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const count = useCartCount()
+  // Telas com barra de ação própria no Figma mobile (detalhe, carrinho, pagamento) não mostram a navegação.
+  if (/^\/(nft|carrinho|pagamento)/.test(pathname)) return null
   const item = (active: boolean) => cn('flex size-11 flex-col items-center justify-center rounded-full text-foreground/80', active && 'text-primary')
   return (
     <nav aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-40 md:hidden">

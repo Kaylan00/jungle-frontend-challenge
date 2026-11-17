@@ -4,5 +4,9 @@ import { authSearchSchema } from '@/features/auth/auth-search'
 
 export const Route = createFileRoute('/login')({
   validateSearch: authSearchSchema,
-  component: () => <AuthScreen mode="login" search={Route.useSearch()} />,
+  component: LoginRoute,
 })
+
+function LoginRoute() {
+  return <AuthScreen mode="login" search={Route.useSearch()} />
+}

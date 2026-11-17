@@ -4,5 +4,9 @@ import { authSearchSchema } from '@/features/auth/auth-search'
 
 export const Route = createFileRoute('/cadastro')({
   validateSearch: authSearchSchema,
-  component: () => <AuthScreen mode="signup" search={Route.useSearch()} />,
+  component: CadastroRoute,
 })
+
+function CadastroRoute() {
+  return <AuthScreen mode="signup" search={Route.useSearch()} />
+}
