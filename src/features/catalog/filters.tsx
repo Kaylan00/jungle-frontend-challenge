@@ -143,7 +143,7 @@ function FilterRow({
       checked={checked}
       onCheckedChange={onToggle}
       className={cn(
-        'flex h-10 w-full cursor-pointer items-center justify-between rounded-[4px] pl-3 text-left text-[15px] text-muted-foreground transition-colors hover:text-foreground data-[state=checked]:text-highlight',
+        'flex h-10 w-full cursor-pointer items-center justify-between rounded-[4px] pl-3 text-left text-[15px] text-muted-foreground transition-[color,background-color,scale] duration-200 hover:bg-primary/10 hover:text-foreground active:scale-[0.98] data-[state=checked]:text-highlight',
         className,
       )}
     >

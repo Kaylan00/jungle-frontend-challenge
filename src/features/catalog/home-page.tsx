@@ -8,11 +8,16 @@ import { EmptyState, ErrorState } from '@/components/shared/error-state'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { CatalogFilters } from './filters'
 import { Hero } from './hero'
 import { NftCard, NftCardSkeleton } from './nft-card'
 import { PAGE_SIZE, SORT_LABEL, toListParams, type CatalogSearch } from './search-params'
+
+/** Grade do catálogo (lista e skeleton). Mobile (Figma 414): duas colunas, a da direita 32px mais baixa. */
+const CATALOG_GRID =
+  'grid grid-cols-2 gap-x-4 gap-y-[22px] pb-8 max-md:[&>li:nth-child(even)]:translate-y-8 md:gap-y-8 md:pb-0 lg:grid-cols-3 lg:gap-x-7 xl:grid-cols-[repeat(auto-fill,minmax(257px,1fr))] xl:gap-x-[34px] xl:gap-y-[66px]'
 
 const TABS: Array<{ label: string; sort: SortOption | undefined }> = [
   { label: 'Todos os NFTs', sort: undefined },
@@ -178,8 +183,16 @@ function Catalog({ search }: { search: CatalogSearch }) {
         </aside>
 
         <div>
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3 md:mb-[26px]">
-            <div role="tablist" aria-label="Seleção do catálogo" className="flex gap-[10px] overflow-x-auto text-[14px] leading-5 md:gap-[21px] md:text-[15px]">
+          {/* Mobile (Figma 414): abas de 14px, a ativa em #E89B55 com sublinhado laranja, 6px abaixo do texto
+              (o espaço extra sai da margem de baixo: a grade fica no mesmo lugar). Abaixo de 390px as três
+              não cabem em 14px: vão para 13px; se ainda faltar espaço (fonte do sistema aumentada), a
+              fileira rola de lado sem barra visível. */}
+          <div className="mb-[10px] flex flex-wrap items-start justify-between gap-3 md:mb-[26px]">
+            <div
+              role="tablist"
+              aria-label="Seleção do catálogo"
+              className="flex max-w-full gap-[10px] overflow-x-auto text-[13px] leading-5 [scrollbar-width:none] min-[390px]:text-[14px] md:gap-[21px] md:text-[15px] [&::-webkit-scrollbar]:hidden"
+            >
               {TABS.map((t, i) => {
                 const selected = i === (activeTab === -1 ? (search.sort ? -1 : 0) : activeTab)
                 return (
@@ -187,7 +200,10 @@ function Catalog({ search }: { search: CatalogSearch }) {
                     key={t.label}
                     role="tab"
                     aria-selected={selected}
-                    className={cn('shrink-0 border-b-2 border-transparent transition-colors hover:text-highlight md:pb-0.5', selected && 'border-primary text-highlight max-md:font-semibold')}
+                    className={cn(
+                      'shrink-0 whitespace-nowrap border-b-2 border-transparent pb-[6px] transition-colors duration-200 hover:border-primary/40 hover:text-highlight md:pb-0.5',
+                      selected && 'border-primary text-highlight hover:border-primary max-md:font-semibold',
+                    )}
                     onClick={() => void update({ sort: t.sort })}
                   >
                     {t.label}
@@ -210,11 +226,14 @@ function Catalog({ search }: { search: CatalogSearch }) {
               retrying={list.isFetching}
             />
           ) : list.isPending ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3 lg:gap-x-7 xl:grid-cols-[repeat(auto-fill,minmax(257px,1fr))] xl:gap-x-[34px] xl:gap-y-[66px]" aria-busy="true" aria-label="Carregando NFTs" data-testid="catalog-loading">
+            // Mesma grade da lista (inclusive a coluna da direita 32px abaixo no mobile): sem pulo ao carregar.
+            <ul className={CATALOG_GRID} aria-busy="true" aria-label="Carregando NFTs" data-testid="catalog-loading">
               {Array.from({ length: PAGE_SIZE }, (_, i) => (
-                <NftCardSkeleton key={i} />
+                <li key={i}>
+                  <NftCardSkeleton />
+                </li>
               ))}
-            </div>
+            </ul>
           ) : list.data.items.length === 0 ? (
             <EmptyState
               title="Nenhum NFT encontrado"
@@ -230,11 +249,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
               {list.isError && (
                 <ErrorState className="mb-4 py-4" title="Falha ao atualizar a lista" message={list.error.message} onRetry={() => void list.refetch()} retrying={list.isFetching} />
               )}
-              <ul
-                className={cn('grid grid-cols-2 gap-x-4 gap-y-[22px] pb-8 transition-opacity max-md:[&>li:nth-child(even)]:translate-y-8 md:gap-y-8 md:pb-0 lg:grid-cols-3 lg:gap-x-7 xl:grid-cols-[repeat(auto-fill,minmax(257px,1fr))] xl:gap-x-[34px] xl:gap-y-[66px]', list.isPlaceholderData && 'opacity-60')}
-                aria-busy={list.isFetching}
-                data-testid="catalog-grid"
-              >
+              <ul className={cn(CATALOG_GRID, 'transition-opacity', list.isPlaceholderData && 'opacity-60')} aria-busy={list.isFetching} data-testid="catalog-grid" data-reveal-group>
                 {list.data.items.map((nft, i) => (
                   <li key={nft.id}>
                     <NftCard nft={nft} priority={i < 3} />
@@ -244,6 +259,14 @@ function Catalog({ search }: { search: CatalogSearch }) {
             </>
           )}
 
+          {/* Enquanto a primeira página carrega, a paginação já ocupa o seu lugar (o catálogo tem várias páginas). */}
+          {list.isPending && !list.isError && (
+            <div aria-hidden="true" className="mt-[76px] flex justify-end gap-2">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Skeleton key={i} className="size-[35px] rounded-[4px]" />
+              ))}
+            </div>
+          )}
           {totalPages > 1 && (
             <nav aria-label="Paginação do catálogo" className="mt-[76px] flex justify-end gap-2">
               {/* Figma: na primeira página não há botão de voltar. */}
@@ -277,8 +300,8 @@ function PageButton({ children, current, disabled, onClick, label }: { children:
       aria-label={label}
       aria-current={current ? 'page' : undefined}
       className={cn(
-        'grid size-[35px] place-items-center rounded-[4px] border border-[#3f2319] text-xl transition-colors hover:border-primary disabled:opacity-40',
-        current && 'border-primary bg-primary text-primary-foreground',
+        'grid size-[35px] place-items-center rounded-[4px] border border-[#3f2319] text-xl transition-[color,background-color,border-color,scale] duration-200 hover:border-primary hover:bg-primary/15 hover:text-highlight disabled:opacity-40 disabled:hover:border-[#3f2319] disabled:hover:bg-transparent',
+        current && 'border-primary bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground',
       )}
     >
       {children}
@@ -314,11 +337,18 @@ function FeaturedBox() {
       <p className="pl-[19px] pt-6 text-2xl font-bold uppercase leading-8 text-highlight">NFT em destaque</p>
       <p className="mt-2.5 text-center text-[22px] font-bold uppercase leading-7">Oferta limitada</p>
       {nft ? (
-        <Link to="/nft/$nftId" params={{ nftId: nft.id }} className="mt-2.5 block" aria-label={`NFT em destaque: ${nft.name}`}>
-          <img src={nft.image} alt="" width={310} height={366} loading="lazy" className="aspect-[310/366] w-full rounded-[18px] object-cover" />
+        <Link to="/nft/$nftId" params={{ nftId: nft.id }} className="group mt-2.5 block overflow-hidden rounded-[18px]" aria-label={`NFT em destaque: ${nft.name}`}>
+          <img
+            src={nft.image}
+            alt=""
+            width={310}
+            height={366}
+            loading="lazy"
+            className="aspect-[310/366] w-full rounded-[18px] object-cover transition-[scale,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03] group-hover:brightness-110"
+          />
         </Link>
       ) : (
-        <div className="mt-2.5 aspect-[310/366] w-full" />
+        <Skeleton className="mt-2.5 aspect-[310/366] w-full rounded-[18px]" />
       )}
     </div>
   )
@@ -342,15 +372,24 @@ function PromoBanners() {
     },
   ]
   return (
-    <section aria-label="Destaques da Kurio" className="container-page mt-16 grid gap-6 md:mt-24 md:grid-cols-2 xl:gap-[30px]">
+    // Mobile: cada cartão cresce com o texto (16px no título, 13px no texto) e o botão fica inteiro no pé do
+    // cartão; a arte tem 160px como no Figma 414 e encolhe até 124px em 360. A partir de md, as medidas do Figma desktop.
+    <section aria-label="Destaques da Kurio" className="container-page mt-16 grid gap-6 md:mt-24 md:grid-cols-2 xl:gap-[30px]" data-reveal-group>
       {banners.map((b) => (
-        <article key={b.title[0]} className="grid h-[250px] grid-cols-[160px_1fr] md:grid-cols-[130px_1fr] lg:grid-cols-[200px_1fr] xl:grid-cols-[max(286px,48.8%)_1fr]">
+        <article
+          key={b.title[0]}
+          className="grid min-h-[250px] grid-cols-[clamp(124px,calc(100%_-_206px),160px)_1fr] md:h-[250px] md:grid-cols-[130px_1fr] lg:grid-cols-[200px_1fr] xl:grid-cols-[max(286px,48.8%)_1fr]"
+        >
           {/* A arte tem cantos de 12px e fica por cima da caixa marrom (os cantos da esquerda mostram o fundo da página). */}
           <div className="relative z-10 h-full overflow-hidden rounded-xl bg-secondary">
-            {b.nft && <img src={b.nft.image} alt="" width={286} height={250} loading="lazy" className="size-full object-cover" />}
+            {b.nft ? (
+              <img src={b.nft.image} alt="" width={286} height={250} loading="lazy" className="size-full object-cover" />
+            ) : (
+              <Skeleton className="size-full rounded-none" />
+            )}
           </div>
-          <div className={cn('-ml-3 flex flex-col items-end rounded-r-[4px] bg-card pl-4 pt-[37px] text-right', b.pad)}>
-            <h2 className="text-lg font-bold leading-6">
+          <div className={cn('-ml-3 flex flex-col items-end rounded-r-[4px] bg-card pb-5 pl-4 pt-5 text-right md:pb-0 md:pt-[37px]', b.pad)}>
+            <h2 className="text-[16px] font-bold leading-[22px] md:text-lg md:leading-6">
               {b.title.map((line, i) => (
                 <span key={line} className="xl:block xl:whitespace-nowrap">
                   {line}
@@ -358,7 +397,7 @@ function PromoBanners() {
                 </span>
               ))}
             </h2>
-            <p className="mt-[9px] leading-6 text-muted-foreground">
+            <p className="mb-4 mt-2 text-[13px] leading-5 text-muted-foreground md:mb-0 md:mt-[9px] md:text-sm md:leading-6">
               {b.text.map((line, i) => (
                 <span key={line} className="xl:block xl:whitespace-nowrap">
                   {line}
@@ -370,7 +409,7 @@ function PromoBanners() {
               to="/"
               hash="catalogo"
               search={{ sort: 'recent' }}
-              className="-mt-0.5 inline-flex h-10 w-[140px] shrink-0 items-center justify-center gap-1 rounded-[4px] bg-primary text-sm text-primary-foreground transition-colors hover:bg-primary-hover"
+              className="mt-auto inline-flex h-10 w-[124px] shrink-0 items-center justify-center gap-1 rounded-[4px] bg-primary text-sm text-primary-foreground transition-[background-color,box-shadow,scale,gap] duration-200 hover:gap-2 hover:bg-primary-hover hover:shadow-[0_6px_20px_-8px_rgba(223,154,94,0.75)] active:scale-[0.97] md:-mt-0.5 md:w-[140px]"
             >
               Explorar <ArrowRight className="size-5" strokeWidth={1.75} aria-hidden="true" />
             </Link>
@@ -398,7 +437,7 @@ function Journal() {
       <p className="mt-[11px] text-center leading-5 text-muted-foreground">Histórias, guias e insights para colecionadores sobre o universo da propriedade digital.</p>
       {/* Figma: 4 cards de 268px com 24px entre eles, alinhados à esquerda do container (sobram 56px à
           direita em 1200). Em telas maiores os cards crescem na mesma proporção. */}
-      <div className="mt-[39px] grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6 xl:max-[1441px]:grid-cols-[repeat(4,max(268px,calc((100%_-_128px)_/_4)))]">
+      <div data-reveal-group className="mt-[39px] grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6 xl:max-[1441px]:grid-cols-[repeat(4,max(268px,calc((100%_-_128px)_/_4)))]">
         {ARTICLES.map((a) => (
           <article key={a.title} className="overflow-hidden rounded-md bg-card">
             <img src={a.img} alt="" width={268} height={195} loading="lazy" className="aspect-[268/195] w-full object-cover" />

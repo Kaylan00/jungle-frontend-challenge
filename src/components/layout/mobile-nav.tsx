@@ -90,8 +90,12 @@ export function MobileNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const count = useCartCount()
   if (!hasMobileNav(pathname)) return null
-  const item = (active: boolean) =>
-    cn('absolute top-[34px] grid size-11 -translate-x-1/2 place-items-center rounded-full text-muted-foreground transition-colors hover:text-highlight', active && 'text-highlight')
+  const active = pathname === '/' ? 'home' : pathname === '/perfil/favoritos' ? 'favorites' : pathname.startsWith('/perfil') ? 'profile' : null
+  const item = (on: boolean) =>
+    cn(
+      'absolute top-[34px] grid size-11 -translate-x-1/2 place-items-center rounded-full text-muted-foreground transition-[color,scale] duration-200 hover:text-highlight active:scale-90',
+      on && 'text-highlight',
+    )
   return (
     <nav aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-40 h-24 md:hidden">
       <div aria-hidden="true" className="absolute inset-0 flex drop-shadow-[0_-8px_24px_rgba(0,0,0,0.25)]">
@@ -99,39 +103,57 @@ export function MobileNav() {
         <NotchPiece />
         <div className="flex-1 rounded-tr-[40px] bg-card" />
       </div>
-      <Link to="/" className={cn(item(pathname === '/'), 'left-[calc(50%-161px)]')} aria-label="Início" aria-current={pathname === '/' ? 'page' : undefined}>
+      {/* Indicador do item ativo: um ponto laranja que desliza até o ícone da página atual. */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          'pointer-events-none absolute left-1/2 top-[76px] size-[5px] rounded-full bg-highlight shadow-[0_0_8px_rgba(232,155,85,0.8)] transition-[translate,opacity] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
+          !active && 'opacity-0',
+        )}
+        style={{ translate: `${INDICATOR_X[active ?? 'home'] - 2.5}px 0` }}
+      />
+      <Link to="/" className={cn(item(active === 'home'), 'left-[calc(50%-161px)]')} aria-label="Início" aria-current={active === 'home' ? 'page' : undefined}>
         <HomeIcon />
       </Link>
-      <Link to="/perfil/favoritos" className={cn(item(pathname === '/perfil/favoritos'), 'left-[calc(50%-89px)]')} aria-label="Favoritos">
+      <Link
+        to="/perfil/favoritos"
+        className={cn(item(active === 'favorites'), 'left-[calc(50%-89px)]')}
+        aria-label="Favoritos"
+        aria-current={active === 'favorites' ? 'page' : undefined}
+      >
         <HeartIcon />
       </Link>
       <Link
         to="/"
         hash="catalogo"
-        className="absolute -top-[25px] left-1/2 grid size-16 -translate-x-1/2 place-items-center rounded-full bg-[linear-gradient(180deg,#70492a,#c78349)] text-foreground transition-[filter] hover:brightness-110"
+        className="absolute -top-[25px] left-1/2 grid size-16 -translate-x-1/2 place-items-center rounded-full bg-[linear-gradient(180deg,#70492a,#c78349)] text-foreground transition-[filter,scale] duration-200 hover:brightness-115 active:scale-90"
         aria-label="Explorar catálogo"
       >
         <ScanIcon />
       </Link>
       <Link
         to="/carrinho"
-        className={cn(item(pathname === '/carrinho'), 'left-[calc(50%+95px)]')}
+        className={cn(item(false), 'left-[calc(50%+95px)]')}
         aria-label={`Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}`}
       >
         <CartIcon />
         {count > 0 && (
-          <span className="absolute right-0 top-0.5 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
+          <span className="absolute right-0 top-0.5 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground" data-bump="cart">
             {count}
           </span>
         )}
       </Link>
       <Link
         to="/perfil"
-        className={cn(item(pathname.startsWith('/perfil') && pathname !== '/perfil/favoritos'), 'left-[calc(50%+157px)]')}
+        className={cn(item(active === 'profile'), 'left-[calc(50%+157px)]')}
         aria-label="Perfil"
+        aria-current={active === 'profile' ? 'page' : undefined}
       >
         <UserIcon />
       </Link>
     </nav>
   )
 }
+
+/** Posição (a partir do centro da barra) de cada ícone que pode estar ativo. */
+const INDICATOR_X = { home: -161, favorites: -89, profile: 157 } as const

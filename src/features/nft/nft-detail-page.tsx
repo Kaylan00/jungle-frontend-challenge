@@ -18,6 +18,7 @@ import { NETWORK_LABEL } from '@/features/catalog/search-params'
 import { FavoriteButton } from '@/features/favorites/favorite-button'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
+import { SkeletonLine, VitrineCardSkeleton, VitrineDotsSkeleton } from './vitrine-skeleton'
 
 export function NftDetailPage({ nftId, editionId }: { nftId: string; editionId?: string }) {
   const query = useQuery(nftDetailQuery(nftId))
@@ -132,7 +133,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
                   onClick={() => setImage(i)}
                   aria-label={`Ver imagem ${i + 1} de ${nft.gallery.length}`}
                   aria-current={i === image ? 'true' : undefined}
-                  className={cn('block overflow-hidden rounded-sm border-2 border-transparent xl:rounded-lg xl:border', i === image && 'border-primary')}
+                  className={cn('block overflow-hidden rounded-sm border-2 border-transparent transition-colors duration-200 hover:border-primary/50 xl:rounded-lg xl:border', i === image && 'border-primary')}
                 >
                   <img src={g.src} alt="" width={100} height={100} loading="lazy" className="aspect-square w-16 object-cover md:w-[100px] xl:w-[98px]" />
                 </button>
@@ -228,7 +229,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
                         'rounded-full border px-3 py-1 text-[12px] uppercase transition-colors max-md:h-7 max-md:px-[6px] max-md:py-0 max-md:text-[13px] xl:h-[28px] xl:px-[5px] xl:py-0 xl:text-[14px]',
                         selected
                           ? 'border-primary bg-primary/15 text-primary max-md:bg-transparent max-md:font-bold max-md:text-highlight xl:bg-transparent xl:font-bold xl:text-highlight'
-                          : 'border-border hover:border-primary/60 max-md:border-[#3f2319] max-md:text-[#c5a984] xl:border-[#3f2319] xl:text-muted-foreground',
+                          : 'border-border hover:border-primary/60 hover:text-highlight max-md:hover:text-highlight xl:hover:text-highlight max-md:border-[#3f2319] max-md:text-[#c5a984] xl:border-[#3f2319] xl:text-muted-foreground',
                         e.status !== 'on_sale' && 'line-through decoration-1 text-[#b39463] xl:text-[#b39463]',
                       )}
                       data-testid="edition-option"
@@ -330,7 +331,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
               aria-controls={`panel-${id}`}
               onClick={() => setTab(id)}
               className={cn(
-                '-mb-px border-b-2 border-transparent pb-2 xl:border-b-[3px] xl:pb-[9px] xl:pr-2',
+                '-mb-px border-b-2 border-transparent pb-2 transition-colors duration-200 hover:text-highlight xl:border-b-[3px] xl:pb-[9px] xl:pr-2',
                 tab === id && 'border-primary text-primary xl:font-semibold xl:text-highlight',
               )}
             >
@@ -372,6 +373,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
       <div
         className="fixed inset-x-0 bottom-0 z-50 h-[159px] rounded-t-[30px] bg-card pl-6 pr-[25px] pt-[21px] shadow-[0_-3px_6px_rgba(0,0,0,0.18)] md:hidden"
         data-testid="mobile-buy-bar"
+        data-motion-fixed
       >
         <div className="flex h-7 items-center justify-between">
           <div className="flex items-center gap-[13px] text-[14px] text-muted-foreground">
@@ -425,9 +427,10 @@ function CartFilledIcon() {
 const PER_PAGE = 5
 
 function MoreFromCollection({ nft }: { nft: NftDetail }) {
-  const { data } = useQuery(nftListQuery({ q: nft.collection, pageSize: PER_PAGE * 3 + 1, page: 1 }))
+  const { data, isPending } = useQuery(nftListQuery({ q: nft.collection, pageSize: PER_PAGE * 3 + 1, page: 1 }))
   const [page, setPage] = useState(0)
   const items = data?.items.filter((i) => i.id !== nft.id).slice(0, PER_PAGE * 3) ?? []
+  if (isPending) return <CollectionSkeleton />
   if (!items.length) return null
   const pages = Math.ceil(items.length / PER_PAGE)
   const current = Math.min(page, pages - 1)
@@ -436,7 +439,7 @@ function MoreFromCollection({ nft }: { nft: NftDetail }) {
       <h2 id="mais-colecao" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary xl:mb-8 xl:pb-[11px] xl:text-[17px] xl:font-bold xl:leading-4 xl:text-highlight">
         Mais desta coleção
       </h2>
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:gap-[26px]" aria-live="polite">
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:gap-[26px]" aria-live="polite" data-reveal-group>
         {items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE).map((n) => (
           <li key={n.id}>
             <NftCard nft={n} variant="detail" />
@@ -461,28 +464,147 @@ function MoreFromCollection({ nft }: { nft: NftDetail }) {
   )
 }
 
+/** "Mais desta coleção" enquanto a lista da coleção carrega (mesmo título, grade e pontos). */
+function CollectionSkeleton() {
+  return (
+    <section aria-labelledby="mais-colecao" aria-busy="true" className="mt-10 max-md:-ml-7 max-md:-mr-[25px] max-md:px-6 xl:mt-24" data-testid="collection-loading">
+      <h2 id="mais-colecao" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary xl:mb-8 xl:pb-[11px] xl:text-[17px] xl:font-bold xl:leading-4 xl:text-highlight">
+        Mais desta coleção
+      </h2>
+      <p className="sr-only">Carregando NFTs da coleção…</p>
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:gap-[26px]" aria-hidden="true">
+        {Array.from({ length: PER_PAGE }, (_, i) => (
+          <li key={i}>
+            <VitrineCardSkeleton variant="detail" />
+          </li>
+        ))}
+      </ul>
+      <VitrineDotsSkeleton className="mt-[28px] xl:mt-8" />
+    </section>
+  )
+}
+
+/**
+ * Detalhe em carregamento: mesma estrutura e as mesmas classes de layout do DetailView (galeria,
+ * cartão de informações, abas, vitrine e, no celular, a barra fixa de compra), com cada texto
+ * trocado por uma barra da altura da sua linha. Sem pulo de layout quando os dados chegam.
+ */
 function DetailSkeleton() {
   return (
-    <div className="container-page pt-6" aria-busy="true" aria-label="Carregando NFT" data-testid="detail-loading">
-      <Skeleton className="mb-3 hidden h-4 w-40 md:block" />
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
-        <div className="grid gap-3 md:grid-cols-[100px_1fr]">
-          <div className="order-2 flex gap-3 md:order-1 md:flex-col">
-            {Array.from({ length: 4 }, (_, i) => (
-              <Skeleton key={i} className="aspect-square w-16 md:w-[100px]" />
-            ))}
+    <div
+      className="container-page pb-28 pt-4 max-md:bg-[linear-gradient(180deg,#251712,#2c1b15_395px,#241612_395px)] max-md:pb-[180px] max-md:pl-7 max-md:pr-[25px] max-md:pt-[23px] md:pb-0 md:pt-6 xl:pb-4 xl:pt-8"
+      aria-busy="true"
+      aria-label="Carregando NFT"
+      data-testid="detail-loading"
+    >
+      <p className="sr-only">Carregando NFT…</p>
+      <div aria-hidden="true">
+        {/* Mobile: voltar e favoritar */}
+        <div className="mb-2 flex items-center justify-between md:hidden">
+          <Skeleton className="size-[35px] rounded-full" />
+          <Skeleton className="size-[35px] rounded-full" />
+        </div>
+        {/* Trilha (13px no md, 15/16 no xl) */}
+        <SkeletonLine className="mb-3 hidden h-[19.5px] w-[150px] md:flex xl:h-4" />
+
+        <div className="grid gap-0 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[max(572px,47.6%)_minmax(0,1fr)] xl:gap-[33px]">
+          <div className="grid gap-3 md:grid-cols-[100px_1fr] xl:min-h-[448px] xl:grid-cols-[100px_minmax(0,1fr)] xl:self-start xl:items-center xl:gap-[28px]">
+            <div className="order-2 flex gap-3 max-md:hidden md:order-1 md:flex-col xl:gap-4">
+              {Array.from({ length: 4 }, (_, i) => (
+                <Skeleton key={i} className="size-[104px] rounded-sm xl:size-[100px] xl:rounded-lg" />
+              ))}
+            </div>
+            <div className="relative order-1 rounded-md md:order-2 md:bg-card md:p-5 xl:flex xl:aspect-square xl:w-full xl:items-center xl:justify-center xl:rounded-[6px] xl:p-4">
+              <Skeleton className="aspect-square w-full rounded-[20px] md:rounded-xl xl:w-[calc(100%_-_8px)] xl:rounded-[24px]" />
+            </div>
           </div>
-          <div className="order-1 rounded-md bg-card p-3 md:order-2 md:p-5">
-            <Skeleton className="aspect-square w-full rounded-xl" />
+
+          <div className="relative z-10 space-y-4 max-md:-ml-7 max-md:-mr-[25px] max-md:-mt-[35px] max-md:space-y-0 max-md:rounded-t-[30px] max-md:bg-card max-md:pl-6 max-md:pr-[25px] max-md:pt-[31px] xl:space-y-0">
+            <div className="flex items-center justify-between gap-2 md:items-start">
+              <SkeletonLine className="h-7 w-[58%] md:h-[37px] md:w-[270px]" />
+              <Skeleton className="h-[27px] w-[78px] rounded-full md:hidden" />
+            </div>
+            <div className="hidden items-center justify-between gap-2 md:flex xl:mt-[9px] xl:w-[calc(100%_-_22px)] xl:border-b xl:border-border xl:pb-[6px]">
+              <SkeletonLine className="h-7 w-[104px]" />
+              <SkeletonLine className="h-[19.5px] w-[300px] xl:-mr-[21px] xl:h-[22.5px] xl:w-[372px]" />
+            </div>
+
+            <div className="max-md:mt-3 xl:mt-[13px]">
+              <SkeletonLine className="mb-1 hidden h-[21px] w-[130px] md:flex xl:mb-3 xl:h-4" />
+              {/* Texto "sobre": 3 linhas de 24px no celular e no xl (13px, lh 1.625 no md). */}
+              <SkeletonLine className="h-6 md:h-[21px] xl:h-6" />
+              <SkeletonLine className="h-6 md:h-[21px] xl:h-6" />
+              <SkeletonLine className="h-6 w-[45%] md:h-[21px] xl:h-6" />
+            </div>
+
+            <div className="max-md:mt-2 xl:mt-2">
+              <SkeletonLine className="mb-2 h-[21px] w-[64px] max-md:mb-[5px] max-md:h-[22px] xl:mb-3 xl:h-4" />
+              <div className="xl:flex xl:items-center xl:gap-4">
+                <div className="flex gap-2 max-md:gap-3 xl:gap-1.5">
+                  {[40, 48, 52, 64].map((w) => (
+                    <Skeleton key={w} className="h-7 rounded-full" style={{ width: w }} />
+                  ))}
+                </div>
+                <SkeletonLine className="mt-2 h-[18px] w-[280px] max-md:hidden xl:mt-0" />
+              </div>
+            </div>
+
+            <div className="hidden items-start justify-between gap-4 md:flex xl:mt-[13px]">
+              <Skeleton className="h-[49.5px] w-[103px] rounded-full" />
+              <div className="flex gap-3 xl:gap-2">
+                <Skeleton className="h-9 w-10 xl:h-10 xl:rounded-[5px]" />
+                <Skeleton className="h-9 w-[110px] xl:h-10 xl:w-[130px] xl:rounded-[5px]" />
+                <Skeleton className="h-9 w-[110px] xl:h-10 xl:w-[130px] xl:rounded-[5px]" />
+              </div>
+            </div>
+
+            <div className="space-y-2 max-md:mt-[11px] max-md:space-y-[10px] xl:mt-[13.5px] xl:space-y-3">
+              {['w-[170px]', 'w-[200px]', 'w-[300px]'].map((w) => (
+                <SkeletonLine key={w} className={cn('h-[19.5px] max-md:h-[22px] xl:h-5', w)} />
+              ))}
+            </div>
+            <SkeletonLine className="hidden h-[19.5px] w-[230px] md:flex xl:mt-[9px] xl:h-[22px] xl:w-[270px]" />
           </div>
         </div>
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-2/3" />
-          <Skeleton className="h-6 w-1/4" />
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-20 w-1/2" />
+
+        {/* Abas e texto dos detalhes (só a partir do md) */}
+        <div className="mt-12 hidden md:block xl:mt-24">
+          <div className="flex gap-6 border-b border-border pb-[9px] xl:gap-8 xl:pb-[11px]">
+            <SkeletonLine className="h-[21px] w-[130px] xl:h-4 xl:w-[150px]" />
+            <SkeletonLine className="h-[21px] w-[260px] xl:h-4 xl:w-[330px]" />
+          </div>
+          <div className="space-y-3 py-4 xl:space-y-[12px] xl:pb-0 xl:pt-[12px]">
+            <div className="space-y-3 xl:space-y-6">
+              <div>
+                <SkeletonLine className="h-[21px] xl:h-6" />
+                <SkeletonLine className="h-[21px] w-1/2 xl:h-6" />
+              </div>
+              <div>
+                <SkeletonLine className="h-[21px] xl:h-6" />
+                <SkeletonLine className="h-[21px] w-2/5 xl:h-6" />
+              </div>
+            </div>
+            {['w-[55%]', 'w-[45%]', 'w-[55%]'].map((w, i) => (
+              <div key={i}>
+                <SkeletonLine className="h-[21px] w-[150px] xl:h-6" />
+                <SkeletonLine className={cn('h-[21px] xl:h-6', w)} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <CollectionSkeleton />
+
+        {/* Mobile: barra fixa de compra */}
+        <div className="fixed inset-x-0 bottom-0 z-50 h-[159px] rounded-t-[30px] bg-card pl-6 pr-[25px] pt-[21px] shadow-[0_-3px_6px_rgba(0,0,0,0.18)] md:hidden" data-motion-fixed>
+          <div className="flex h-7 items-center justify-between">
+            <Skeleton className="h-7 w-[110px] rounded-full" />
+            <SkeletonLine className="h-7 w-[96px]" />
+          </div>
+          <div className="mt-[21px] flex gap-3">
+            <Skeleton className="h-[60px] w-[196px] rounded-full" />
+            <Skeleton className="size-[60px] rounded-full" />
+          </div>
         </div>
       </div>
     </div>

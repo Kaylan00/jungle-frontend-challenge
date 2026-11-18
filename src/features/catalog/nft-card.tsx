@@ -14,13 +14,14 @@ export function NftCard({ nft, priority = false, className, variant = 'catalog' 
   const detail = variant === 'detail'
   const cart = variant === 'cart'
   return (
-    <article className={cn('group relative', className)} data-testid="nft-card" data-nft-id={nft.id}>
+    // Hover: a arte cresce um pouco, a caixa ganha borda e brilho laranja e o nome acende. Toque: o card "afunda".
+    <article className={cn('group relative transition-[scale] duration-150 active:scale-[0.98]', className)} data-testid="nft-card" data-nft-id={nft.id}>
       {/* Figma: caixa marrom 258x300 com a arte 250x250 centrada (cantos de 12px).
           Mobile (Figma 414): caixa de 175x200 com raio de 18px; a arte fica 12px abaixo do topo na coluna
           da esquerda e 20px na da direita (a coluna da direita desce 32px na grade). */}
       <div
         className={cn(
-          'relative overflow-hidden bg-card px-1 pb-5 pt-3 max-md:rounded-[18px] max-md:bg-[#271813] max-md:[li:nth-child(even)_&]:pb-3 max-md:[li:nth-child(even)_&]:pt-5 md:py-[25px]',
+          'relative overflow-hidden bg-card px-1 pb-5 pt-3 transition-shadow duration-300 group-hover:shadow-[inset_0_0_0_1px_rgba(210,138,76,0.6),0_16px_34px_-16px_rgba(232,155,85,0.6)] max-md:rounded-[18px] max-md:bg-[#271813] max-md:[li:nth-child(even)_&]:pb-3 max-md:[li:nth-child(even)_&]:pt-5 md:py-[25px]',
           // Detalhe: Frame 197 (255 de altura, padding 16/4/28/4). Carrinho: Artwork 219x255 com a arte 212 centrada.
           // Acima de 1440 os cards ficam mais largos: a altura acompanha a arte (mesmos respiros do Figma).
           detail && 'xl:h-[255px] xl:pb-[28px] xl:pt-4 min-[1441px]:h-auto!',
@@ -50,7 +51,7 @@ export function NftCard({ nft, priority = false, className, variant = 'catalog' 
           fetchPriority={priority ? 'high' : 'auto'}
           decoding="async"
           className={cn(
-            'aspect-square w-full rounded-xl object-cover transition-transform max-md:rounded-[14px] duration-300 group-hover:scale-[1.02]',
+            'aspect-square w-full rounded-xl object-cover transition-transform max-md:rounded-[14px] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]',
             detail && 'xl:rounded-[13px]',
             cart && 'xl:size-[212px] xl:rounded-[17px] min-[1441px]:h-auto! min-[1441px]:w-[96.7%]!',
             soldOut && 'opacity-60',
@@ -58,7 +59,7 @@ export function NftCard({ nft, priority = false, className, variant = 'catalog' 
         />
       </div>
       {/* Nome: 15px com altura automática (20); preço: 16px bold, lh 16. Espaços: 12/0 no detalhe, 8/8 no carrinho. */}
-      <h3 className={cn('mt-[10px] truncate text-[15px] leading-[18px] max-md:px-2 md:mt-2 md:text-base md:leading-6', (detail || cart) && 'xl:text-[15px] xl:leading-5', detail && 'xl:mt-3')}>
+      <h3 className={cn('mt-[10px] truncate text-[15px] leading-[18px] transition-colors duration-200 group-hover:text-highlight max-md:px-2 md:mt-2 md:text-base md:leading-6', (detail || cart) && 'xl:text-[15px] xl:leading-5', detail && 'xl:mt-3')}>
         {/* O link cobre o card inteiro (área de clique grande), mantendo um único item focável. */}
         <Link to="/nft/$nftId" params={{ nftId: nft.id }} className="outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-ring">
           {nft.name}
@@ -77,14 +78,22 @@ export function NftCard({ nft, priority = false, className, variant = 'catalog' 
   )
 }
 
+/**
+ * Mesmas medidas do card do catálogo (caixa, arte e as duas linhas de texto: 18 px no mobile, 24 px no
+ * desktop), inclusive a troca de respiro da coluna da direita no mobile: trocar skeleton por card não mexe no layout.
+ */
 export function NftCardSkeleton() {
   return (
     <div aria-hidden="true">
-      <div className="bg-card px-1 pb-5 pt-3 max-md:rounded-[18px] md:py-[25px]">
-        <Skeleton className="aspect-square w-full rounded-xl" />
+      <div className="bg-card px-1 pb-5 pt-3 max-md:rounded-[18px] max-md:bg-[#271813] max-md:[li:nth-child(even)_&]:pb-3 max-md:[li:nth-child(even)_&]:pt-5 md:py-[25px]">
+        <Skeleton className="aspect-square w-full rounded-xl max-md:rounded-[14px]" />
       </div>
-      <Skeleton className="mt-2 h-6 w-3/4" />
-      <Skeleton className="mt-1 h-6 w-1/3" />
+      <div className="mt-[10px] flex h-[18px] items-center max-md:px-2 md:mt-2 md:h-6">
+        <Skeleton className="h-[13px] w-3/4 md:h-4" />
+      </div>
+      <div className="flex h-[18px] items-center max-md:px-2 md:mt-1 md:h-6">
+        <Skeleton className="h-[13px] w-1/3 md:h-4" />
+      </div>
     </div>
   )
 }

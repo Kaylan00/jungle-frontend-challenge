@@ -25,7 +25,7 @@ export function QuantityStepper({
   const lg = size === 'lg'
   const pill = size === 'pill'
   const btn = cn(
-    'grid place-items-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-35',
+    'grid place-items-center rounded-full bg-primary text-primary-foreground transition-[opacity,background-color,filter,scale] duration-200 enabled:hover:brightness-110 disabled:opacity-35',
     lg
       ? 'h-[49.5px] w-[33px] border border-[#140d0a] text-[#020101] shadow-[0_6.6px_19.8px_-3.3px_rgba(20,13,10,0.149)]'
       : pill

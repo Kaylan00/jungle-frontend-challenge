@@ -14,7 +14,7 @@ import { useForm } from 'react-hook-form'
 import { PasswordChangeInput, ProfileInput, type User } from '@/api/contracts'
 import { ApiError } from '@/api/http'
 import { ErrorState } from '@/components/shared/error-state'
-import { applyApiFieldErrors, FormField } from '@/components/shared/form-field'
+import { applyApiFieldErrors, FormField, RequiredMark } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -360,28 +360,51 @@ function PasswordForm() {
 const passwordField = 'gap-3'
 const passwordToggle = 'right-[11px] [&_svg]:h-[13px] [&_svg]:w-4'
 
+/**
+ * Campo em carregamento: o rótulo (fixo) aparece com o mesmo espaço até o campo, e o campo vira um
+ * bloco de 40px com shimmer. gap: o mesmo do campo real (perfil 17px, senha 12px, carteiras 3px).
+ */
+export function FieldSkeleton({ label, required = true, hideLabel, className }: { label: string; required?: boolean; hideLabel?: boolean; className?: string }) {
+  return (
+    <div className={cn('flex flex-col gap-2', className)}>
+      <p className={cn('text-[14px] leading-4 text-foreground', hideLabel && 'sr-only')}>
+        {label}
+        {required && <RequiredMark />}
+      </p>
+      <Skeleton className="h-10 w-full rounded-[2px]" />
+    </div>
+  )
+}
+
+/** Perfil em carregamento: mesmos títulos, grade, avatar, troca de senha e botão do formulário carregado. */
 function ProfileSkeleton() {
   return (
-    <div aria-busy="true" aria-live="polite">
+    <div aria-busy="true" aria-live="polite" data-testid="profile-loading">
       <p className="sr-only">Carregando perfil…</p>
-      <Skeleton className="mb-5 h-5 w-48" />
-      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="flex flex-col gap-1.5">
-            <Skeleton className="h-[19px] w-32" />
-            <Skeleton className="h-10 w-full" />
+      <div className="flex flex-col" aria-hidden="true">
+        <p className="mb-[38px] text-[16px] font-bold leading-4 text-[#f5f1eb]">Perfil do colecionador</p>
+        <div className="grid gap-x-7 gap-y-[30px] md:grid-cols-2">
+          {['Nome de exibição', 'Nome de usuário', 'E-mail', 'Nome ENS', 'Apelido da carteira'].map((label) => (
+            <FieldSkeleton key={label} label={label} className={profileField} />
+          ))}
+          <div className="flex flex-col gap-2.5 md:-mt-[7px]">
+            <span className="text-[14px] leading-4 text-foreground">Avatar</span>
+            <div className="flex min-h-[50px] items-center">
+              <Skeleton className="size-[50px] rounded-full" />
+              <Skeleton className="ml-6 h-10 w-[99px] rounded-[2px]" />
+              <Skeleton className="ml-5 h-3.5 w-[59px] rounded-sm" />
+            </div>
           </div>
-        ))}
-      </div>
-      <Skeleton className="mt-6 h-10 w-32" />
-      <Skeleton className="mb-5 mt-10 h-5 w-36" />
-      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
-        {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className={i === 1 ? 'flex flex-col gap-1.5 md:col-start-1' : 'flex flex-col gap-1.5'}>
-            <Skeleton className="h-[19px] w-32" />
-            <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="mt-8 md:w-[calc(50%-14px)]">
+          <p className="mb-[23px] text-[16px] font-bold leading-4 text-[#f5f1eb]">Alterar senha</p>
+          <div className="flex flex-col gap-[23px]">
+            {['Senha atual', 'Nova senha', 'Confirmar nova senha'].map((label) => (
+              <FieldSkeleton key={label} label={label} required={false} className={passwordField} />
+            ))}
           </div>
-        ))}
+        </div>
+        <Skeleton className="mt-8 h-10 w-[131px] self-start rounded-[2px]" />
       </div>
     </div>
   )

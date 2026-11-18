@@ -27,6 +27,8 @@ export default defineConfig({
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
     serviceWorkers: 'allow',
+    // Sem animações (GSAP, rolagem suave, troca automática do destaque): os testes nunca esperam movimento.
+    reducedMotion: 'reduce',
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },

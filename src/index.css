@@ -125,6 +125,52 @@
   html {
     color-scheme: dark;
     -webkit-text-size-adjust: 100%;
+    /* Barra de rolagem no tema: polegar no laranja/marrom da marca, trilho escuro. */
+    scrollbar-color: #8a5a32 #1c120d;
+  }
+  /* Listas roláveis por dentro (filtros, menus, diálogos) usam a versão fina. */
+  * {
+    scrollbar-width: thin;
+  }
+  html {
+    scrollbar-width: auto;
+  }
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #1c120d;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid #1c120d;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #b77842, #8a5a32);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #d28a4c, #a0673a);
+  }
+  ::-webkit-scrollbar-corner {
+    background: #1c120d;
+  }
+  /* Toque: sem o retângulo azul do Android; o retorno visual vem do :active de cada elemento. */
+  a,
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='slider'],
+  label {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /*
+   * Retorno de "pressionado" em tudo que é botão (mouse e toque). Usa a propriedade scale, que não
+   * mexe em layout (CLS 0) nem briga com translate/transform dos componentes.
+   */
+  :where(button, [role='button'], [role='tab'], [role='radio'], summary):not(:disabled, [aria-disabled='true']):active {
+    scale: 0.96;
+  }
+  :where(button, [role='button'], [role='tab'], [role='radio'], summary) {
+    transition: scale 120ms ease-out;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
@@ -163,6 +209,100 @@
 :root {
   --page-x: max(clamp(24px, (100% - 1200px) / 2, 120px), (100% - 1680px) / 2);
   --band-m: min(var(--page-x), max(0px, 120px - (100% - 1440px) * 0.75));
+}
+
+/* Rolagem suave (Lenis, só no desktop com mouse; ver components/layout/motion-layer.tsx). */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/*
+ * Abertura e fechamento de diálogos, gavetas e menus (o Radix espera a animação de saída terminar
+ * antes de desmontar). Só transform e opacity; nada com movimento reduzido.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot='dialog-overlay'][data-state='open'],
+  [data-slot='sheet-overlay'][data-state='open'] {
+    animation: kurio-fade-in 220ms ease-out;
+  }
+  [data-slot='dialog-overlay'][data-state='closed'],
+  [data-slot='sheet-overlay'][data-state='closed'] {
+    animation: kurio-fade-out 160ms ease-in forwards;
+  }
+  [data-slot='dialog-content'][data-state='open'] {
+    animation: kurio-pop-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-slot='dialog-content'][data-state='closed'] {
+    animation: kurio-pop-out 160ms ease-in forwards;
+  }
+  [data-slot='sheet-content'][data-state='open'] {
+    animation: kurio-sheet-in 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-slot='sheet-content'][data-state='closed'] {
+    animation: kurio-sheet-out 220ms ease-in forwards;
+  }
+  [data-slot='dropdown-menu-content'][data-state='open'],
+  [data-slot='select-content'][data-state='open'],
+  [data-slot='tooltip-content']:not([data-state='closed']) {
+    animation: kurio-menu-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-slot='dropdown-menu-content'][data-state='closed'] {
+    animation: kurio-fade-out 120ms ease-in forwards;
+  }
+}
+[data-slot='sheet-content'] {
+  --sheet-from: translate3d(100%, 0, 0);
+}
+[data-slot='sheet-content'][data-side='left'] {
+  --sheet-from: translate3d(-100%, 0, 0);
+}
+[data-slot='sheet-content'][data-side='top'] {
+  --sheet-from: translate3d(0, -100%, 0);
+}
+[data-slot='sheet-content'][data-side='bottom'] {
+  --sheet-from: translate3d(0, 100%, 0);
+}
+@keyframes kurio-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes kurio-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes kurio-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+}
+@keyframes kurio-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+@keyframes kurio-sheet-in {
+  from {
+    transform: var(--sheet-from);
+  }
+}
+@keyframes kurio-sheet-out {
+  to {
+    transform: var(--sheet-from);
+  }
+}
+@keyframes kurio-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
 }
 
 @layer components {

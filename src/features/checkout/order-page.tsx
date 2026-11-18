@@ -23,6 +23,7 @@ import { useSession } from '@/features/auth/use-session'
 import { NETWORK_LABEL } from '@/features/catalog/search-params'
 import { announce } from '@/lib/announcer'
 import { formatEth } from '@/lib/eth'
+import { cn } from '@/lib/utils'
 import { useRealtimeClient } from '@/realtime/provider'
 import { rememberPendingOrder } from './order-attempt'
 
@@ -64,8 +65,9 @@ export function OrderPage({ orderId }: { orderId: string }) {
   }
   if (query.isPending) {
     return (
-      <div className="container-page flex justify-center py-10" aria-busy="true" aria-label="Carregando pedido">
-        <Skeleton className="h-[520px] w-full max-w-[520px]" />
+      <div className="container-page flex justify-center py-6 md:pb-[97px] md:pt-[97px]" aria-busy="true" aria-label="Carregando pedido" data-testid="order-loading">
+        <p className="sr-only">Carregando pedido…</p>
+        <ReceiptSkeleton />
       </div>
     )
   }
@@ -180,6 +182,103 @@ function ThankYouIcon() {
         YOU
       </text>
     </svg>
+  )
+}
+
+/** Barra de texto dentro de uma caixa com a altura da linha final. */
+function Line({ className, bar }: { className?: string; bar?: string }) {
+  return (
+    <div className={cn('flex items-center', className)}>
+      <Skeleton className={cn('h-[65%] w-full rounded-sm', bar)} />
+    </div>
+  )
+}
+
+/**
+ * Pedido em carregamento: o status só chega com a API, então o skeleton tem o formato do recibo
+ * (o caso mais comum ao abrir/recarregar um pedido): mesma caixa, mesmas faixas e alturas.
+ * Rótulos fixos aparecem; valores, itens e o texto da rede viram barras. Mostra 1 item.
+ */
+function ReceiptSkeleton() {
+  return (
+    <div className="relative w-full max-w-[578px] bg-card" aria-hidden="true">
+      <div className="px-6 pb-[18px] pt-[19px] text-center">
+        <Skeleton className="mx-auto h-[86px] w-[72px] rounded-lg" />
+        <Line className="mt-[9px] h-6" bar="mx-auto w-[300px] max-w-full" />
+      </div>
+      <dl className="flex justify-center divide-x divide-primary border-y border-primary pb-[16px] pt-[13px] text-[14px] leading-[18px] text-[#cfb28c] max-md:grid max-md:grid-cols-2 max-md:gap-y-3 max-md:divide-x-0 max-md:px-6">
+        {[
+          ['ID da transação', 'w-[120px]'],
+          ['Data', 'w-[100px]'],
+          ['Total', 'w-[80px]'],
+          ['Carteira', 'w-[80px]'],
+        ].map(([label, w]) => (
+          <div key={label} className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
+            <dt className="font-bold">{label}</dt>
+            <dd className="text-[15px]">
+              <Line className="h-[18px]" bar={w} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className="px-[44px] pb-[48px] pt-[17px] max-md:px-5 max-md:pb-8">
+        <p className="text-[15px] font-bold leading-5">Detalhes da transação</p>
+        <table className="mt-2 w-full table-fixed">
+          <colgroup>
+            <col />
+            <col className="w-[56px] md:w-[92px]" />
+            <col className="w-[96px] md:w-[113px]" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-[#503320] text-left text-[16px] leading-5 tracking-[-0.4px]">
+              <th className="pb-[10px] font-medium">NFTs</th>
+              <th className="pb-[10px] text-center font-medium">Edições</th>
+              <th className="pb-[10px] text-right font-medium">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="py-2 pt-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-12 shrink-0 rounded-[4px] md:size-[66px]" />
+                  <div className="min-w-0 flex-1">
+                    <Line className="h-[22px]" bar="w-[150px] max-w-full" />
+                    <Line className="h-[22px]" bar="w-[100px] max-w-full" />
+                  </div>
+                </div>
+              </td>
+              <td className="py-2 pt-3">
+                <Line className="h-5" bar="mx-auto w-9" />
+              </td>
+              <td className="py-2 pt-3">
+                <Line className="h-6 md:h-[27px]" bar="ml-auto w-[80px]" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <dl className="ml-auto mt-[3px] w-full md:w-[321px]">
+          {['Taxa de rede', 'Total'].map((label) => (
+            <div key={label} className={cn('flex h-[30px] items-center justify-between', label === 'Total' && 'font-bold')}>
+              <dt className="text-[15px]">{label}</dt>
+              <dd>
+                <Skeleton className="h-[15px] w-[90px] rounded-sm" />
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-[4px] border-t border-[#503320] pt-[12px]">
+          <div className="mx-auto max-w-[470px]">
+            <Line className="h-[22px]" />
+            <Line className="h-[22px]" bar="mx-auto w-3/4" />
+            <Line className="h-[22px]" bar="mx-auto w-1/2" />
+          </div>
+        </div>
+        <div className="mt-[20px] flex justify-center">
+          <Skeleton className="h-12 w-[186px] rounded-[4px]" />
+        </div>
+      </div>
+      <div className="h-[10px] bg-primary" />
+    </div>
   )
 }
 

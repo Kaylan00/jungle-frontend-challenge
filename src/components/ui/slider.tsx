@@ -54,7 +54,9 @@ function Slider({
           data-slot="slider-thumb"
           key={index}
           aria-label={thumbLabels?.[index]}
-          className="block size-[19px] shrink-0 rounded-full border-2 border-background bg-primary shadow-sm ring-ring/50 transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+          // Foco: anel redondo (box-shadow segue o rounded-full) só no foco por teclado; nunca o outline
+          // retangular do navegador nem o realce de toque do Android.
+          className="block size-[19px] shrink-0 cursor-grab rounded-full border-2 border-background bg-primary shadow-sm outline-none transition-[box-shadow,scale] duration-200 [-webkit-tap-highlight-color:transparent] hover:ring-4 hover:ring-primary/25 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/50 active:scale-110 active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50"
         />
       ))}
     </SliderPrimitive.Root>

@@ -6,6 +6,7 @@ import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
 import { LiveAnnouncer } from '@/components/layout/live-announcer'
 import { MobileNav } from '@/components/layout/mobile-nav'
+import { MotionBoot } from '@/components/layout/motion-boot'
 import { hasMobileNav } from '@/components/layout/mobile-nav-routes'
 import { RealtimeBadge } from '@/components/layout/realtime-badge'
 import { cn } from '@/lib/utils'
@@ -47,6 +48,7 @@ function RootLayout() {
       <MobileNav />
       <RealtimeBadge />
       <LiveAnnouncer />
+      <MotionBoot />
       <Toaster
         theme="dark"
         position="top-center"

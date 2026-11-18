@@ -133,6 +133,7 @@ export function Header() {
               <span
                 className="absolute left-4 top-px grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground"
                 data-testid="cart-count"
+                data-bump="cart"
               >
                 {count}
               </span>

@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from '@/features/auth/use-session'
 import { cn } from '@/lib/utils'
 import { notifyError, notifySuccess, useSaveWallet, useWallets } from './hooks'
-import { EnsSuffix, primaryButton } from './profile-page'
+import { EnsSuffix, FieldSkeleton, primaryButton } from './profile-page'
 import { ProfileLayout } from './profile-layout'
 
 type Role = Wallet['role']
@@ -362,26 +362,51 @@ const SelectField = forwardRef<
   )
 })
 
-function WalletsSkeleton() {
-  const fields = (n: number) => (
-    <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
-      {Array.from({ length: n }, (_, i) => (
-        <div key={i} className="flex flex-col gap-1.5">
-          <Skeleton className="h-[19px] w-32" />
-          <Skeleton className="h-10 w-full" />
-        </div>
+
+/** Os 10 campos do WalletForm em carregamento (rótulos fixos; o campo secundário não tem rótulo visível). */
+function WalletFieldsSkeleton() {
+  return (
+    <div className="grid gap-x-7 gap-y-[29px] md:grid-cols-2">
+      {['Nome de exibição', 'Apelido da carteira', 'Rede', 'Nome do perfil', 'Endereço da carteira'].map((label) => (
+        <FieldSkeleton key={label} label={label} className={walletField} />
+      ))}
+      <FieldSkeleton label="ENS ou carteira secundária (opcional)" hideLabel required={false} className={cn(walletField, 'md:pt-5')} />
+      {['Tipo de carteira', 'Código de indicação', 'E-mail', 'Nome ENS'].map((label) => (
+        <FieldSkeleton key={label} label={label} className={walletField} />
       ))}
     </div>
   )
+}
+
+/**
+ * Carteiras em carregamento: as duas seções com os mesmos títulos, textos e grades do formulário
+ * carregado (com carteira principal e secundária, o caso da conta de demonstração).
+ */
+function WalletsSkeleton() {
   return (
-    <div aria-busy="true" aria-live="polite">
+    <div aria-busy="true" aria-live="polite" data-testid="wallets-loading">
       <p className="sr-only">Carregando carteiras…</p>
-      <Skeleton className="h-5 w-40" />
-      <Skeleton className="mb-5 mt-2 h-4 w-full max-w-md" />
-      {fields(10)}
-      <Skeleton className="mt-6 h-10 w-36" />
-      <Skeleton className="mb-5 mt-10 h-5 w-44" />
-      <Skeleton className="h-[66px] w-full" />
+      <div className="flex flex-col" aria-hidden="true">
+        <div>
+          <div className="mb-[37px]">
+            <p className={sectionTitle}>Carteira principal</p>
+            <p className="mt-2 text-[14px] leading-4 tracking-[-0.01em] text-[#cfb28c]">Estas carteiras ficam disponíveis no pagamento e para receber NFTs comprados.</p>
+          </div>
+          <WalletFieldsSkeleton />
+          <Skeleton className="mt-8 h-10 w-[131px] rounded-[2px]" />
+        </div>
+        <div className="mt-[31px]">
+          <div className="mb-[37px] flex items-start justify-between gap-4">
+            <p className={sectionTitle}>Carteira secundária</p>
+            <div className="flex items-center gap-[9px]">
+              <Skeleton className="size-4 rounded-full" />
+              <span className="text-[14px] leading-4 text-[#f5f1eb]">Igual à carteira principal</span>
+            </div>
+          </div>
+          <WalletFieldsSkeleton />
+          <Skeleton className="mt-8 h-10 w-[131px] rounded-[2px]" />
+        </div>
+      </div>
     </div>
   )
 }

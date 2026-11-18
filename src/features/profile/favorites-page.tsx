@@ -62,7 +62,7 @@ export function FavoritesPage() {
         />
       ) : (
         <>
-          <ul className={gridClass} data-testid="favorites-grid" aria-busy={loadingCount > 0 || undefined}>
+          <ul className={gridClass} data-testid="favorites-grid" aria-busy={loadingCount > 0 || undefined} data-reveal-group>
             {loaded.map((nft) => (
               <li key={nft.id}>
                 <NftCard nft={nft} />

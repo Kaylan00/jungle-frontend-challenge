@@ -12,7 +12,8 @@ import { useSession } from '@/features/auth/use-session'
 import { NftCard } from '@/features/catalog/nft-card'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
-import { CouponForm, SummaryLines, SummarySkeleton } from './cart-summary'
+import { VitrineCardSkeleton, VitrineDotsSkeleton } from '@/features/nft/vitrine-skeleton'
+import { CouponForm, CouponSkeleton, SummaryLines } from './cart-summary'
 import { useAcknowledgePrices, useCart, useRemoveCartItem, useUpdateCartItem } from './hooks'
 
 export function CartPage() {
@@ -56,7 +57,7 @@ export function CartPage() {
       {cart.isError && !cart.data ? (
         <ErrorState title="Não foi possível carregar o carrinho" message={cart.error.message} onRetry={() => void cart.refetch()} retrying={cart.isFetching} />
       ) : cart.isPending ? (
-        <CartLayout list={<ListSkeleton />} summary={<SummarySkeleton />} busy />
+        <CartLayout list={<ListSkeleton />} summary={<SummaryPanelSkeleton />} busy />
       ) : cart.data.items.length === 0 ? (
         <EmptyState
           title="Seu carrinho está vazio"
@@ -93,17 +94,96 @@ function CartLayout({ list, summary, busy }: { list: React.ReactNode; summary: R
   )
 }
 
-function ListSkeleton() {
+/** Barra de texto dentro de uma caixa com a altura da linha final. */
+function Line({ className, bar }: { className?: string; bar?: string }) {
   return (
-    <ul className="space-y-3" aria-hidden="true">
-      {Array.from({ length: 3 }, (_, i) => (
-        <li key={i} className="flex items-center gap-4 rounded-md bg-card p-2">
-          <Skeleton className="size-16 shrink-0 md:size-12" />
-          <Skeleton className="h-5 flex-1" />
-          <Skeleton className="h-5 w-20" />
-        </li>
-      ))}
-    </ul>
+    <div className={cn('flex items-center', className)}>
+      <Skeleton className={cn('h-[65%] w-full rounded-sm', bar)} />
+    </div>
+  )
+}
+
+/**
+ * Itens em carregamento: no desktop a mesma tabela (cabeçalho e linhas de 70px com 12px entre elas),
+ * no celular os mesmos cartões de 100px. Mostra 2 itens (a quantidade real só chega com o carrinho).
+ */
+function ListSkeleton() {
+  const rows = [0, 1]
+  return (
+    <div aria-hidden="true">
+      <p className="sr-only">Carregando itens do carrinho…</p>
+      <table className="-mt-3 hidden w-full table-fixed border-separate border-spacing-x-0 border-spacing-y-3 text-[15px] md:table">
+        <colgroup>
+          <col className="w-[39.9%]" />
+          <col className="w-[17.65%]" />
+          <col className="w-[17.4%]" />
+          <col className="w-[19.3%]" />
+          <col />
+        </colgroup>
+        <thead>
+          <tr className="text-left leading-6 xl:text-[16px] xl:leading-4">
+            {['NFTs', 'Preço', 'Edições', 'Total', ''].map((h) => (
+              <th key={h} scope="col" className="border-b border-[#442c1b] pb-[7px] font-medium xl:pb-3">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((i) => (
+            <tr key={i} className="bg-[#241612]">
+              <td className="h-[70px] p-0">
+                <div className="flex items-center gap-[17px]">
+                  <Skeleton className="size-[70px] shrink-0 rounded-[4px]" />
+                  <div className="min-w-0 flex-1">
+                    <Line className="h-[22px] xl:h-4" bar="w-[150px]" />
+                    <Line className="h-5 xl:mt-1.5 xl:h-4" bar="w-[100px]" />
+                  </div>
+                </div>
+              </td>
+              <td>
+                <Line className="h-6" bar="w-[72px]" />
+              </td>
+              <td>
+                <Skeleton className="h-7 w-[74px] rounded-full" />
+              </td>
+              <td>
+                <Line className="h-6" bar="w-[80px]" />
+              </td>
+              <td className="p-0">
+                <Skeleton className="-ml-[7px] size-8 rounded" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <ul className="space-y-5 md:hidden">
+        {rows.map((i) => (
+          <li key={i} className="relative flex min-h-[100px] overflow-hidden rounded-[12px] bg-card">
+            <Skeleton className="w-[100px] shrink-0 self-stretch rounded-none" />
+            <div className="min-w-0 flex-1 pb-2 pl-[10px] pr-4 pt-3">
+              <Line className="h-5" bar="w-[130px]" />
+              <Line className="mt-px h-5" bar="w-[90px]" />
+              <Line className="mt-3 h-6" bar="w-[80px]" />
+            </div>
+            <Skeleton className="absolute right-4 top-[38px] h-6 w-[73px] rounded-full" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** Resumo em carregamento: mesmo cupom, linhas de valores (rótulos reais), botão e link do resumo carregado. */
+function SummaryPanelSkeleton() {
+  return (
+    <div className="space-y-5 max-md:space-y-0 lg:space-y-0">
+      <CouponSkeleton variant="cart" />
+      <SummaryLines summary={null} coupon={null} variant="cart" className="max-md:!mt-[9px] lg:!mt-6" />
+      <Skeleton className="h-11 w-full rounded-full max-md:!mt-7 max-md:h-[60px] lg:!mt-6 lg:h-10 lg:rounded-[3px]" />
+      <Line className="h-[19.5px] max-md:hidden lg:!mt-3 lg:h-5" bar="mx-auto w-[170px]" />
+    </div>
   )
 }
 
@@ -302,9 +382,10 @@ function CartSummaryPanel({ cart }: { cart: Cart }) {
 const PER_PAGE = 5
 
 function AlsoViewed() {
-  const { data } = useQuery(nftListQuery({ sort: 'popular', page: 1, pageSize: PER_PAGE * 3 }))
+  const { data, isPending } = useQuery(nftListQuery({ sort: 'popular', page: 1, pageSize: PER_PAGE * 3 }))
   const [page, setPage] = useState(0)
   const items = data?.items ?? []
+  if (isPending) return <AlsoViewedSkeleton />
   if (!items.length) return null
   const pages = Math.ceil(items.length / PER_PAGE)
   const current = Math.min(page, pages - 1)
@@ -313,7 +394,7 @@ function AlsoViewed() {
       <h2 id="tambem-viram" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary lg:mb-8 lg:border-[#442c1b] lg:pb-[11px] lg:text-[17px] lg:font-bold lg:leading-4 lg:text-[#e89b55]">
         Colecionadores também viram
       </h2>
-      <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5 lg:gap-[26px]" aria-live="polite">
+      <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5 lg:gap-[26px]" aria-live="polite" data-reveal-group>
         {items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE).map((n) => (
           <li key={n.id}>
             <NftCard nft={n} variant="cart" />
@@ -334,6 +415,26 @@ function AlsoViewed() {
           ))}
         </div>
       )}
+    </section>
+  )
+}
+
+/** "Colecionadores também viram" em carregamento: mesmo título, 5 cards e os pontos das 3 páginas. */
+function AlsoViewedSkeleton() {
+  return (
+    <section aria-labelledby="tambem-viram" aria-busy="true" className="mt-14 hidden md:block lg:mt-24">
+      <h2 id="tambem-viram" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary lg:mb-8 lg:border-[#442c1b] lg:pb-[11px] lg:text-[17px] lg:font-bold lg:leading-4 lg:text-[#e89b55]">
+        Colecionadores também viram
+      </h2>
+      <p className="sr-only">Carregando sugestões…</p>
+      <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5 lg:gap-[26px]" aria-hidden="true">
+        {Array.from({ length: PER_PAGE }, (_, i) => (
+          <li key={i}>
+            <VitrineCardSkeleton variant="cart" />
+          </li>
+        ))}
+      </ul>
+      <VitrineDotsSkeleton className="mt-[30px] xl:mt-8" />
     </section>
   )
 }

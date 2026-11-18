@@ -11,8 +11,18 @@ import { useApplyCoupon, useRemoveCoupon } from './hooks'
  * Linhas de valores: tudo vem calculado da API (o front só formata).
  * variant: "cart" e "checkout" seguem o Figma no desktop (lg); "default" é o compacto (revisão, mobile).
  */
-export function SummaryLines({ summary, coupon, className, variant = 'default' }: { summary: Summary; coupon: Coupon | null; className?: string; variant?: 'default' | 'cart' | 'checkout' }) {
+/** Valor em carregamento: barra inline (a linha mantém a altura do texto final). */
+function ValueSkeleton({ className }: { className?: string }) {
+  return <Skeleton className={cn('inline-block h-[0.72em] w-[72px] rounded-sm align-baseline', className)} />
+}
+
+/**
+ * summary = null: carregando. Os rótulos (fixos) aparecem e só os valores viram barras com shimmer,
+ * então o bloco tem exatamente a mesma altura do resumo carregado.
+ */
+export function SummaryLines({ summary, coupon, className, variant = 'default' }: { summary: Summary | null; coupon: Coupon | null; className?: string; variant?: 'default' | 'cart' | 'checkout' }) {
   const figma = variant !== 'default'
+  const loading = summary === null
   // Carrinho no mobile (Figma 414): linhas de 15px a cada 32px, total sem divisória.
   const cartMobile = variant === 'cart' && 'max-md:space-y-2 max-md:text-[15px] max-md:leading-6'
   // Carrinho no desktop (Figma, Fees): linhas de 15px com altura automática (20) a cada 12px, alinhadas no topo;
@@ -21,23 +31,27 @@ export function SummaryLines({ summary, coupon, className, variant = 'default' }
   const row = cn('flex justify-between', figma && 'lg:items-baseline lg:leading-6', cartLg && 'lg:items-start lg:leading-5')
   const big = cn(figma && 'lg:text-[18px]', cartLg && 'lg:leading-4')
   return (
-    <dl className={cn('space-y-2.5 text-[14px]', cartMobile, figma && 'lg:space-y-2 lg:text-[15px]', cartLg && 'lg:space-y-3', variant === 'checkout' && 'lg:relative', className)} data-testid="cart-summary">
+    <dl
+      className={cn('space-y-2.5 text-[14px]', cartMobile, figma && 'lg:space-y-2 lg:text-[15px]', cartLg && 'lg:space-y-3', variant === 'checkout' && 'lg:relative', className)}
+      data-testid={loading ? 'summary-loading' : 'cart-summary'}
+      aria-hidden={loading || undefined}
+    >
       <div className={row}>
         <dt>Subtotal</dt>
-        <dd className={cn('tabular-nums', big)} data-testid="summary-subtotal">
-          {formatEth(summary.subtotal)}
+        <dd className={cn('tabular-nums', big)} data-testid={loading ? undefined : 'summary-subtotal'}>
+          {loading ? <ValueSkeleton /> : formatEth(summary.subtotal)}
         </dd>
       </div>
       <div className={row}>
         <dt>{coupon ? `Desconto (${coupon.code})` : 'Desconto do lançamento'}</dt>
-        <dd className="tabular-nums" data-testid="summary-discount">
-          (-) {isZero(summary.discount) ? '0.00' : formatEth(summary.discount)}
+        <dd className="tabular-nums" data-testid={loading ? undefined : 'summary-discount'}>
+          {loading ? <ValueSkeleton className="w-[64px]" /> : <>(-) {isZero(summary.discount) ? '0.00' : formatEth(summary.discount)}</>}
         </dd>
       </div>
       <div className={row}>
         <dt>Taxa de rede</dt>
-        <dd className={cn('text-right tabular-nums', big, variant === 'cart' && 'lg:relative')} data-testid="summary-fee">
-          {formatEth(summary.networkFee)}
+        <dd className={cn('text-right tabular-nums', big, variant === 'cart' && 'lg:relative')} data-testid={loading ? undefined : 'summary-fee'}>
+          {loading ? <ValueSkeleton className="w-[80px]" /> : formatEth(summary.networkFee)}
           <span
             className={cn(
               'block text-[11px] text-primary',
@@ -60,27 +74,24 @@ export function SummaryLines({ summary, coupon, className, variant = 'default' }
         )}
       >
         <dt className={cn(figma && 'lg:text-[16px]', variant === 'cart' && 'max-md:text-[16px]')}>Total</dt>
-        <dd className={cn('text-lg text-primary tabular-nums', variant === 'cart' && 'max-md:text-highlight', figma && 'lg:text-[18px] lg:text-[#e89b55]', cartLg && 'lg:leading-4')} data-testid="summary-total">
-          {formatEth(summary.total)}
+        <dd className={cn('text-lg text-primary tabular-nums', variant === 'cart' && 'max-md:text-highlight', figma && 'lg:text-[18px] lg:text-[#e89b55]', cartLg && 'lg:leading-4')} data-testid={loading ? undefined : 'summary-total'}>
+          {loading ? <ValueSkeleton className="w-[96px]" /> : formatEth(summary.total)}
         </dd>
       </div>
     </dl>
   )
 }
 
-export function SummarySkeleton() {
+/** Campo de cupom em carregamento, com a mesma caixa do CouponForm (variante do carrinho/pagamento). */
+export function CouponSkeleton({ variant }: { variant?: 'cart' }) {
+  const cartLg = variant === 'cart'
   return (
-    <div className="space-y-3" aria-hidden="true" data-testid="summary-loading">
-      {Array.from({ length: 3 }, (_, i) => (
-        <div key={i} className="flex justify-between">
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-5 w-20" />
-        </div>
-      ))}
-      <div className="flex justify-between border-t border-border pt-3">
-        <Skeleton className="h-6 w-16" />
-        <Skeleton className="h-6 w-24" />
+    <div aria-hidden="true">
+      {/* Rótulo "Código promocional" (só no lg) */}
+      <div className={cn('mb-2 hidden h-5 items-center lg:flex', cartLg ? 'lg:h-4' : 'lg:mb-[5px]')}>
+        <Skeleton className="h-[70%] w-[130px] rounded-sm" />
       </div>
+      <Skeleton className="h-[50px] w-full rounded-full md:h-[42px] lg:h-10 lg:rounded-[3px]" />
     </div>
   )
 }
