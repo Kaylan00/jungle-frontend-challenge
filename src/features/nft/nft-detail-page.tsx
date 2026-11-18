@@ -120,9 +120,10 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
         </ol>
       </nav>
 
-      <div className="grid gap-0 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[573px_minmax(0,1fr)] xl:gap-8">
+      {/* Em 1440 a galeria tem 572 px + 33 de respiro (Figma); acima disso cresce na mesma proporção (arte quadrada). */}
+      <div className="grid gap-0 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[max(572px,47.6%)_minmax(0,1fr)] xl:gap-[33px]">
         {/* Galeria */}
-        <div className="grid gap-3 md:grid-cols-[100px_1fr] xl:h-[448px] xl:grid-cols-[100px_444px] xl:items-center xl:gap-[28px]">
+        <div className="grid gap-3 md:grid-cols-[100px_1fr] xl:min-h-[448px] xl:grid-cols-[100px_minmax(0,1fr)] xl:self-start xl:items-center xl:gap-[28px]">
           <ul className="order-2 flex gap-3 max-md:hidden md:order-1 md:flex-col xl:gap-4" aria-label="Imagens do NFT">
             {nft.gallery.map((g, i) => (
               <li key={i}>
@@ -138,14 +139,14 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
               </li>
             ))}
           </ul>
-          <div className="relative order-1 rounded-md md:order-2 md:bg-card md:p-5 xl:grid xl:size-[444px] xl:place-items-center xl:rounded-[6px] xl:p-4">
+          <div className="relative order-1 rounded-md md:order-2 md:bg-card md:p-5 xl:flex xl:aspect-square xl:w-full xl:items-center xl:justify-center xl:rounded-[6px] xl:p-4">
             <img
               src={nft.gallery[image]?.src ?? nft.image}
               alt={nft.gallery[image]?.alt ?? nft.name}
               width={430}
               height={430}
               fetchPriority="high"
-              className="aspect-square w-full rounded-[20px] object-cover md:rounded-xl xl:w-[404px] xl:rounded-[24px]"
+              className="aspect-square w-full rounded-[20px] object-cover md:rounded-xl xl:w-[calc(100%_-_8px)] xl:rounded-[24px]"
             />
             <button
               type="button"
@@ -171,7 +172,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
               <span className="-ml-[5px] text-muted-foreground">({nft.reviewsCount})</span>
             </p>
           </div>
-          <div className="hidden flex-wrap items-center justify-between gap-2 md:flex xl:mt-[9px] xl:w-[573px] xl:flex-nowrap xl:border-b xl:border-border xl:pb-[6px]">
+          <div className="hidden flex-wrap items-center justify-between gap-2 md:flex xl:mt-[9px] xl:w-[calc(100%_-_22px)] xl:flex-nowrap xl:border-b xl:border-border xl:pb-[6px]">
             <p className="text-xl font-bold text-primary xl:text-[22px] xl:leading-[28px] xl:text-highlight" data-testid="detail-price">
               {formatEth(edition.price)}
               {nft.compareAtPrice && edition.price === nft.price && (

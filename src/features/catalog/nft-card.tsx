@@ -22,8 +22,9 @@ export function NftCard({ nft, priority = false, className, variant = 'catalog' 
         className={cn(
           'relative overflow-hidden bg-card px-1 pb-5 pt-3 max-md:rounded-[18px] max-md:bg-[#271813] max-md:[li:nth-child(even)_&]:pb-3 max-md:[li:nth-child(even)_&]:pt-5 md:py-[25px]',
           // Detalhe: Frame 197 (255 de altura, padding 16/4/28/4). Carrinho: Artwork 219x255 com a arte 212 centrada.
-          detail && 'xl:h-[255px] xl:pb-[28px] xl:pt-4',
-          cart && 'xl:flex xl:h-[255px] xl:items-center xl:justify-center xl:p-0',
+          // Acima de 1440 os cards ficam mais largos: a altura acompanha a arte (mesmos respiros do Figma).
+          detail && 'xl:h-[255px] xl:pb-[28px] xl:pt-4 min-[1441px]:h-auto!',
+          cart && 'xl:flex xl:h-[255px] xl:items-center xl:justify-center xl:p-0 min-[1441px]:h-auto! min-[1441px]:py-[21.5px]!',
         )}
       >
         {nft.badge === 'raro' && <span className="sr-only">Raro.</span>}
@@ -51,7 +52,7 @@ export function NftCard({ nft, priority = false, className, variant = 'catalog' 
           className={cn(
             'aspect-square w-full rounded-xl object-cover transition-transform max-md:rounded-[14px] duration-300 group-hover:scale-[1.02]',
             detail && 'xl:rounded-[13px]',
-            cart && 'xl:size-[212px] xl:rounded-[17px]',
+            cart && 'xl:size-[212px] xl:rounded-[17px] min-[1441px]:h-auto! min-[1441px]:w-[96.7%]!',
             soldOut && 'opacity-60',
           )}
         />

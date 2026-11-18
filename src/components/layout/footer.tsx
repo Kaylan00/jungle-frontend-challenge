@@ -69,10 +69,12 @@ const SOCIAL: Array<{ name: string; icon: React.ReactNode }> = [
 export function Footer() {
   const [newsletterMsg, setNewsletterMsg] = useState('')
   return (
+    // Cada faixa tem a cor de ponta a ponta (.band) e o conteúdo na margem da página.
+    // Colunas em fr com as proporções do Figma (em 1440 dão exatamente as larguras em px dele).
     <footer className="mt-20 hidden md:block">
-      <div className="container-page">
-        {/* Vantagens + newsletter */}
-        <div className="grid grid-cols-2 gap-y-8 bg-card px-6 py-8 lg:grid-cols-4 lg:gap-y-0 xl:h-[250px] xl:grid-cols-[266px_266px_266px_1fr] xl:pb-4 xl:pl-[31px] xl:pr-[30px] xl:pt-8">
+      {/* Vantagens + newsletter */}
+      <div className="band bg-card">
+        <div className="grid grid-cols-2 gap-y-8 px-6 py-8 lg:grid-cols-4 lg:gap-y-0 xl:h-[250px] xl:grid-cols-[266fr_266fr_266fr_341fr] xl:pb-4 xl:pl-[31px] xl:pr-[30px] xl:pt-8">
           {features.map((f) => (
             <div key={f.letter} className="border-primary pl-[17px] pr-4 lg:border-r xl:pr-0">
               <span aria-hidden="true" className="grid size-[74px] place-items-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
@@ -113,17 +115,21 @@ export function Footer() {
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Faixa de contato */}
-        <div className="grid min-h-[88px] grid-cols-2 items-center gap-x-6 gap-y-3 bg-band px-8 py-5 leading-[22px] lg:grid-cols-4 xl:h-[88px] xl:grid-cols-[303px_303px_302px_1fr] xl:gap-0 xl:py-0 xl:pr-0">
+      {/* Faixa de contato */}
+      <div className="band bg-band">
+        <div className="grid min-h-[88px] grid-cols-2 items-center gap-x-6 gap-y-3 px-8 py-5 leading-[22px] lg:grid-cols-4 xl:h-[88px] xl:grid-cols-[303fr_303fr_302fr_260fr] xl:gap-0 xl:py-0 xl:pr-0">
           <span className="text-sm font-bold leading-5 tracking-[0.12em]">KURIO</span>
           <span className="max-w-[230px]">Feito para colecionadores, criadores e cultura</span>
           <span>contato@email.com</span>
           <span>+55 11 4002 8922</span>
         </div>
+      </div>
 
-        {/* Links */}
-        <div className="grid grid-cols-2 gap-y-8 bg-card px-8 pb-8 pt-[29px] leading-[30px] lg:grid-cols-4 xl:h-[236px] xl:grid-cols-[303px_303px_302px_1fr] xl:gap-y-0 xl:pb-0 xl:pr-0">
+      {/* Links */}
+      <div className="band bg-card">
+        <div className="grid grid-cols-2 gap-y-8 px-8 pb-8 pt-[29px] leading-[30px] lg:grid-cols-4 xl:h-[236px] xl:grid-cols-[303fr_303fr_302fr_260fr] xl:gap-y-0 xl:pb-0 xl:pr-0">
           <div>
             <h2 className={colTitle}>Meu perfil</h2>
             <ul className="mt-[5px]">
@@ -174,8 +180,8 @@ export function Footer() {
             </p>
           </div>
         </div>
-        <p className="pb-[29px] pt-[11px] text-center leading-5">© 2026 Kurio. Propriedade digital para todos.</p>
       </div>
+      <p className="container-page pb-[29px] pt-[11px] text-center leading-5">© 2026 Kurio. Propriedade digital para todos.</p>
     </footer>
   )
 }

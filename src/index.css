@@ -148,8 +148,31 @@
   }
 }
 
+/*
+ * Margem lateral da página (cabeçalho, conteúdo e rodapé).
+ * Até 1440: o conteúdo é a largura útil com no máximo 1200 px (1440 = margens de 120, como no Figma;
+ * abaixo disso a margem cai até 24 px). Acima de 1440 a margem fica em 120 e o conteúdo cresce
+ * até 1680 px; em telas ultralargas ele para de crescer e centraliza.
+ * Os valores em % (e os que dependem deles) são resolvidos em cada elemento contra a largura do
+ * bloco que o contém: use só em elementos que ocupam a largura toda da janela.
+ *
+ * --band-m: margem das faixas com fundo próprio (rodapé, linha do cabeçalho). Até 1440 a faixa
+ * acompanha o conteúdo (como no Figma); acima disso a margem some aos poucos e a cor vai de ponta a
+ * ponta a partir de 1600 px. O conteúdo de dentro continua na margem da página (.band).
+ */
+:root {
+  --page-x: max(clamp(24px, (100% - 1200px) / 2, 120px), (100% - 1680px) / 2);
+  --band-m: min(var(--page-x), max(0px, 120px - (100% - 1440px) * 0.75));
+}
+
 @layer components {
   .container-page {
-    @apply mx-auto w-full max-w-[1200px] px-6 xl:px-0;
+    width: 100%;
+    padding-inline: var(--page-x);
+  }
+  /* Faixa de fundo: a cor ocupa a largura toda (menos --band-m) e o conteúdo fica na margem da página. */
+  .band {
+    margin-inline: var(--band-m);
+    padding-inline: calc(var(--page-x) - var(--band-m));
   }
 }

@@ -6,12 +6,16 @@ import { featuredQuery } from '@/api/queries'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
-/** Fundo do cartão mobile do Figma: elipse clara, círculo grande em gradiente e cantos escuros. */
-const MOBILE_HERO_BG = [
-  'radial-gradient(ellipse 40px 100px at 126px 95px, rgba(200, 140, 90, 0.2) 0 98%, transparent 100%)',
-  'radial-gradient(circle 238px at 70px 150px, transparent 0 99.6%, #2e1e13 100%)',
-  'linear-gradient(180deg, #7e5635, #432d19)',
-].join(', ')
+/*
+ * Fundo do cartão mobile, com os valores do Inspecionar do Figma (Hero Banner > Mask Group):
+ * retângulo 366x190 raio 30 em #D28A4C 20%→10%, e duas elipses de 248px por cima —
+ * "Ellipse 49" em (-80, -31) com #DD9A5F 43%→#D28A4C 4% e "Ellipse 50" em (73, -10) com #DD9A5F 37%→#D28A4C 0%.
+ */
+const MOBILE_HERO_BG = 'linear-gradient(180deg, rgba(210, 138, 76, 0.2), rgba(210, 138, 76, 0.1))'
+const MOBILE_HERO_ELLIPSES = [
+  { left: -80, top: -31, from: 'rgba(221, 154, 95, 0.43)', to: 'rgba(210, 138, 76, 0.04)' },
+  { left: 73, top: -10, from: 'rgba(221, 154, 95, 0.37)', to: 'rgba(210, 138, 76, 0)' },
+]
 
 /** Destaques: NFTs marcados como featured pela API, alternados pelos pontos do carrossel. */
 export function Hero() {
@@ -22,9 +26,10 @@ export function Hero() {
 
   return (
     <section aria-labelledby="hero-title" className="container-page">
-      {/* Desktop (Figma 1440: arte 450x450 em x=870, texto em x=160) */}
-      <div className="hidden grid-cols-[1fr_450px] gap-10 pt-8 md:grid">
-        <div className="pt-[39px] md:pl-4 xl:pl-10">
+      {/* Desktop (Figma 1440: arte 450x450 em x=870, texto em x=160). Acima de 1440 a arte cresce
+          na mesma proporção do conteúdo (37,5%) e os pontos ficam no mesmo lugar relativo. */}
+      <div className="hidden grid-cols-[1fr_450px] gap-10 pt-8 md:grid xl:grid-cols-[1fr_max(450px,37.4%)]">
+        <div className="pt-[39px] md:pl-4 xl:pl-10 min-[1441px]:self-center min-[1441px]:pt-0!">
           <p className="text-sm leading-6 tracking-[0.1em]">Bem-vindo à Kurio</p>
           <h1 id="hero-title" className="mt-[5px] text-[34px] font-bold uppercase leading-[1.6] lg:text-[43px] lg:leading-[70px]">
             Seja dono do futuro
@@ -41,9 +46,9 @@ export function Hero() {
           >
             Explorar
           </Link>
-          <Dots count={items.length || 3} index={index} onSelect={setIndex} className="mt-9 xl:ml-[556px]" />
+          <Dots count={items.length || 3} index={index} onSelect={setIndex} className="mt-9 xl:ml-[max(556px,calc(79.3%_+_23px))]" />
         </div>
-        <div className="relative aspect-square w-[450px]">
+        <div className="relative aspect-square w-full">
           {isPending || !current ? (
             <Skeleton className="size-full rounded-2xl" />
           ) : (
@@ -61,8 +66,16 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Mobile (Figma 414: cartão de 366x190, raio de 28px, gradiente marrom com círculos; duas artes sobrepostas) */}
-      <div className="relative mt-4 h-[190px] overflow-hidden rounded-[28px] md:hidden" style={{ background: MOBILE_HERO_BG }}>
+      {/* Mobile (Figma 414: cartão de 366x190, raio de 30px, laranja translúcido com dois círculos; duas artes sobrepostas) */}
+      <div className="relative mt-4 h-[190px] overflow-hidden rounded-[30px] md:hidden" style={{ background: MOBILE_HERO_BG }}>
+        {MOBILE_HERO_ELLIPSES.map((e) => (
+          <span
+            key={e.left}
+            aria-hidden="true"
+            className="pointer-events-none absolute size-[248px] rounded-full"
+            style={{ left: e.left, top: e.top, background: `linear-gradient(180deg, ${e.from}, ${e.to})` }}
+          />
+        ))}
         <div className="absolute left-4 top-[5px] w-[190px]">
           <p className="text-[12px] leading-4">Bem-vindo à Kurio</p>
           <h1 className="mt-[6px] text-[18px] font-bold uppercase leading-[29px]">Seja dono da cultura digital</h1>

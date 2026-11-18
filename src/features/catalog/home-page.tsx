@@ -210,7 +210,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
               retrying={list.isFetching}
             />
           ) : list.isPending ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3 lg:gap-x-7 xl:gap-x-[34px] xl:gap-y-[66px]" aria-busy="true" aria-label="Carregando NFTs" data-testid="catalog-loading">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3 lg:gap-x-7 xl:grid-cols-[repeat(auto-fill,minmax(257px,1fr))] xl:gap-x-[34px] xl:gap-y-[66px]" aria-busy="true" aria-label="Carregando NFTs" data-testid="catalog-loading">
               {Array.from({ length: PAGE_SIZE }, (_, i) => (
                 <NftCardSkeleton key={i} />
               ))}
@@ -231,7 +231,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
                 <ErrorState className="mb-4 py-4" title="Falha ao atualizar a lista" message={list.error.message} onRetry={() => void list.refetch()} retrying={list.isFetching} />
               )}
               <ul
-                className={cn('grid grid-cols-2 gap-x-4 gap-y-[22px] pb-8 transition-opacity max-md:[&>li:nth-child(even)]:translate-y-8 md:gap-y-8 md:pb-0 lg:grid-cols-3 lg:gap-x-7 xl:gap-x-[34px] xl:gap-y-[66px]', list.isPlaceholderData && 'opacity-60')}
+                className={cn('grid grid-cols-2 gap-x-4 gap-y-[22px] pb-8 transition-opacity max-md:[&>li:nth-child(even)]:translate-y-8 md:gap-y-8 md:pb-0 lg:grid-cols-3 lg:gap-x-7 xl:grid-cols-[repeat(auto-fill,minmax(257px,1fr))] xl:gap-x-[34px] xl:gap-y-[66px]', list.isPlaceholderData && 'opacity-60')}
                 aria-busy={list.isFetching}
                 data-testid="catalog-grid"
               >
@@ -344,7 +344,7 @@ function PromoBanners() {
   return (
     <section aria-label="Destaques da Kurio" className="container-page mt-16 grid gap-6 md:mt-24 md:grid-cols-2 xl:gap-[30px]">
       {banners.map((b) => (
-        <article key={b.title[0]} className="grid h-[250px] grid-cols-[160px_1fr] md:grid-cols-[130px_1fr] lg:grid-cols-[200px_1fr] xl:grid-cols-[286px_1fr]">
+        <article key={b.title[0]} className="grid h-[250px] grid-cols-[160px_1fr] md:grid-cols-[130px_1fr] lg:grid-cols-[200px_1fr] xl:grid-cols-[max(286px,48.8%)_1fr]">
           {/* A arte tem cantos de 12px e fica por cima da caixa marrom (os cantos da esquerda mostram o fundo da página). */}
           <div className="relative z-10 h-full overflow-hidden rounded-xl bg-secondary">
             {b.nft && <img src={b.nft.image} alt="" width={286} height={250} loading="lazy" className="size-full object-cover" />}
@@ -396,8 +396,9 @@ function Journal() {
         Diário da Cunhagem
       </h2>
       <p className="mt-[11px] text-center leading-5 text-muted-foreground">Histórias, guias e insights para colecionadores sobre o universo da propriedade digital.</p>
-      {/* Figma: 4 cards de 268px com 24px entre eles, alinhados à esquerda do container. */}
-      <div className="mt-[39px] grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6 xl:grid-cols-[repeat(4,268px)]">
+      {/* Figma: 4 cards de 268px com 24px entre eles, alinhados à esquerda do container (sobram 56px à
+          direita em 1200). Em telas maiores os cards crescem na mesma proporção. */}
+      <div className="mt-[39px] grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6 xl:max-[1441px]:grid-cols-[repeat(4,max(268px,calc((100%_-_128px)_/_4)))]">
         {ARTICLES.map((a) => (
           <article key={a.title} className="overflow-hidden rounded-md bg-card">
             <img src={a.img} alt="" width={268} height={195} loading="lazy" className="aspect-[268/195] w-full object-cover" />
