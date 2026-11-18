@@ -33,7 +33,7 @@ export function ReviewDialog({ checkout, review }: { checkout: CheckoutFormApi; 
             {stale && (
               <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-warning/60 bg-warning/10 p-2.5 text-warning" data-testid="quote-stale">
                 Preço ou disponibilidade mudaram durante a revisão.
-                <Button size="sm" variant="outline" onClick={review.refresh} disabled={review.quoting}>
+                <Button size="sm" variant="outline" onClick={review.refresh} busy={review.quoting}>
                   Atualizar revisão
                 </Button>
               </div>
@@ -70,10 +70,10 @@ export function ReviewDialog({ checkout, review }: { checkout: CheckoutFormApi; 
           </div>
         )}
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => review.setReviewOpen(false)} disabled={submitting}>
+          <Button variant="outline" onClick={() => review.setReviewOpen(false)} busy={submitting}>
             Voltar
           </Button>
-          <Button onClick={() => void review.confirm()} disabled={submitting || stale || !quote} data-testid="confirm-purchase">
+          <Button onClick={() => void review.confirm()} disabled={stale || !quote} busy={submitting} data-testid="confirm-purchase">
             {submitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Enviando pedido…

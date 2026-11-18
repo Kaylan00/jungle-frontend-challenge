@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { CheckCircle2, Loader2, MoreVertical, Wallet as WalletIcon } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import type { Cart, Wallet } from '@/api/contracts'
 import { Button } from '@/components/ui/button'
 import { NETWORK_LABEL } from '@/features/catalog/search-params'
@@ -16,6 +17,18 @@ import type { WalletConnectionApi } from './use-wallet-connection'
 export function WalletNetworkFieldset({ cart, wallets, checkout, connection }: { cart: Cart; wallets: Wallet[]; checkout: CheckoutFormApi; connection: WalletConnectionApi }) {
   const { form, walletId, network, provider } = checkout
   const { conn, connected } = connection
+  // Conectar troca o botão pelo status (e desconectar, o contrário): o elemento que tinha o foco some. Quando o
+  // foco se perde assim, ele vai para o que entrou no lugar, em vez de cair no início da página.
+  const statusRef = useRef<HTMLSpanElement>(null)
+  const connectRef = useRef<HTMLButtonElement>(null)
+  const wasConnected = useRef(connected)
+  useEffect(() => {
+    if (wasConnected.current === connected) return
+    wasConnected.current = connected
+    const active = document.activeElement
+    if (active && active !== document.body) return
+    ;(connected ? statusRef.current : connectRef.current)?.focus()
+  }, [connected])
   const walletError = form.formState.errors.walletId
 
   return (
@@ -102,7 +115,7 @@ export function WalletNetworkFieldset({ cart, wallets, checkout, connection }: {
       >
         {connected ? (
           <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-2 text-success">
+            <span ref={statusRef} tabIndex={-1} className="flex items-center gap-2 text-success outline-none" data-testid="wallet-connected-status">
               <CheckCircle2 className="size-4" aria-hidden="true" /> Conectada via {PROVIDER_LABEL[provider]} · {NETWORK_LABEL[network]}
             </span>
             <button type="button" onClick={() => void connection.disconnect()} className="text-primary hover:underline">
@@ -119,7 +132,7 @@ export function WalletNetworkFieldset({ cart, wallets, checkout, connection }: {
                 {conn.message}
               </p>
             )}
-            <Button type="button" variant="outline" className="w-full" onClick={() => void connection.connect()} disabled={conn.status === 'connecting'} data-testid="connect-wallet">
+            <Button ref={connectRef} type="button" variant="outline" className="w-full" onClick={() => void connection.connect()} busy={conn.status === 'connecting'} data-testid="connect-wallet">
               {conn.status === 'connecting' ? (
                 <>
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Aguardando a carteira…

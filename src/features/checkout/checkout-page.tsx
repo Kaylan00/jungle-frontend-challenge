@@ -168,7 +168,7 @@ function SubmitBar({ quoting }: Pick<OrderReviewApi, 'quoting'>) {
       <Button
         type="submit"
         className="h-11 w-full font-semibold max-lg:h-12 max-lg:rounded-full max-md:h-[60px] max-md:bg-[linear-gradient(90deg,#d08a4c,#b77842)] max-md:text-[16px] max-md:font-bold max-md:hover:brightness-110 lg:h-[45px] lg:rounded-[4px] lg:text-[16px] lg:font-bold"
-        disabled={quoting}
+        busy={quoting}
         data-testid="review-button"
         aria-label={quoting ? undefined : 'Revisar e confirmar compra'}
       >

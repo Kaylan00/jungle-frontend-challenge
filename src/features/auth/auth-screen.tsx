@@ -222,8 +222,8 @@ function SignupForm({ onDone }: { onDone: () => void }) {
           {formError}
         </p>
       )}
-      {/* Mobile: o Figma escreve "Criar perfil"; o nome acessível continua "Criar conta". */}
-      <Button type="submit" disabled={isSubmitting} className={cn('mt-6 max-md:mt-10', authSubmit)} aria-label={isSubmitting ? undefined : 'Criar conta'}>
+      {/* Mobile: o Figma escreve "Criar perfil". O nome acessível é o texto visível em cada tamanho (WCAG 2.5.3). */}
+      <Button type="submit" busy={isSubmitting} className={cn('mt-6 max-md:mt-10', authSubmit)}>
         {isSubmitting ? (
           'Criando conta…'
         ) : (

@@ -274,12 +274,14 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
                 variant="outline"
                 className="h-9 border-primary/70 bg-transparent px-3 xl:size-10 xl:rounded-[5px] xl:border-primary xl:text-highlight"
                 onClick={() => buy(false)}
-                disabled={!!unavailableReason || add.isPending}
+                disabled={!!unavailableReason}
+                busy={add.isPending}
                 aria-label="Adicionar ao carrinho e continuar navegando"
               >
                 <ShoppingCart className="size-4 xl:size-5" aria-hidden="true" />
               </Button>
-              <Button className="h-9 px-8 text-[13px] font-semibold uppercase xl:h-10 xl:w-[130px] xl:rounded-[5px] xl:px-0 xl:text-[14px] xl:font-bold" onClick={() => buy(true)} disabled={!!unavailableReason || add.isPending} data-testid="buy-button">
+              <Button className="h-9 px-8 text-[13px] font-semibold uppercase xl:h-10 xl:w-[130px] xl:rounded-[5px] xl:px-0 xl:text-[14px] xl:font-bold" onClick={() => buy(true)} disabled={!!unavailableReason}
+                busy={add.isPending} data-testid="buy-button">
                 {add.isPending ? 'Adicionando…' : 'Comprar'}
               </Button>
               <FavoriteButton
@@ -408,7 +410,8 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
           <Button
             className="h-[60px] w-[196px] rounded-full bg-[linear-gradient(90deg,#d08a4c,#b77842)] text-[16px] font-bold text-primary-foreground hover:brightness-110"
             onClick={() => buy(true)}
-            disabled={!!unavailableReason || add.isPending}
+            disabled={!!unavailableReason}
+                busy={add.isPending}
           >
             Comprar NFT
           </Button>
@@ -416,7 +419,8 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
             variant="outline"
             className="size-[60px] rounded-full border-[#3f2319] bg-[#2a1a14] text-[#b39463] hover:text-highlight dark:bg-[#2a1a14]"
             onClick={() => buy(false)}
-            disabled={!!unavailableReason || add.isPending}
+            disabled={!!unavailableReason}
+                busy={add.isPending}
             aria-label="Adicionar ao carrinho"
           >
             <CartFilledIcon />

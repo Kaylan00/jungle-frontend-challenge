@@ -27,7 +27,7 @@ test.describe('Painel admin', () => {
       await app.goto('/perfil')
       await expect(page.getByRole('navigation', { name: 'Meu perfil' }).getByRole('link', { name: 'Painel' })).toHaveCount(0)
     } else {
-      await page.getByRole('button', { name: /Menu da conta/ }).click()
+      await page.getByRole('button', { name: /menu da conta/ }).click()
       await expect(page.getByRole('menuitem', { name: 'Dados do perfil' })).toBeVisible()
       await expect(page.getByRole('menuitem', { name: 'Painel' })).toHaveCount(0)
       await page.keyboard.press('Escape')

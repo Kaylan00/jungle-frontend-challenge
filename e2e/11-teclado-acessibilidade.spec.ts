@@ -90,7 +90,7 @@ test.describe('Teclado e acessibilidade', () => {
     await app.login('admin') // kurio_admin: o nome mais longo da seed
     for (const path of ['/', '/nft/nft-01', '/carrinho']) {
       await app.goto(path)
-      await expect(page.getByRole('button', { name: /Menu da conta de/ })).toBeVisible()
+      await expect(page.getByRole('button', { name: /, menu da conta$/ })).toBeVisible()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow, `${path} em 768px`).toBeLessThanOrEqual(0)
     }

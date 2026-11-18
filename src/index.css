@@ -134,6 +134,27 @@
   }
   html {
     scrollbar-width: auto;
+    /*
+     * Foco nunca escondido atrás das barras fixas (WCAG 2.4.11, técnica C43): ao levar o foco (Tab) ou rolar até
+     * um elemento, o navegador desconta a altura das barras de baixo (--bottom-bars, medida em lib/bottom-bars.ts)
+     * e, no desktop, a do cabeçalho fixo.
+     */
+    scroll-padding-bottom: calc(var(--bottom-bars, 0px) + 12px);
+  }
+  @media (width >= 768px) {
+    html {
+      scroll-padding-top: 84px;
+    }
+  }
+  /*
+   * Tela muito baixa (zoom de 400% em 1280×1024 vira 320×256): as barras fixas do celular cobririam quase toda a
+   * altura. Abaixo de 340 px de altura elas passam a fazer parte do fluxo da página (WCAG 1.4.10, reflow).
+   */
+  @media (width < 768px) and (height < 340px) {
+    [data-motion-fixed],
+    nav[aria-label='Navegação inferior'] {
+      position: static !important;
+    }
   }
   ::-webkit-scrollbar {
     width: 12px;

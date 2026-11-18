@@ -225,7 +225,7 @@ function CartItems({ cart }: { cart: Cart }) {
             <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
             {changed.length === 1 ? `O preço de ${changed[0].name} mudou.` : `${changed.length} itens mudaram de preço.`} O resumo já mostra os valores atuais.
           </p>
-          <Button size="sm" variant="outline" onClick={() => ack.mutate()} disabled={ack.isPending}>
+          <Button size="sm" variant="outline" onClick={() => ack.mutate()} busy={ack.isPending}>
             Entendi os novos preços
           </Button>
         </div>
@@ -292,7 +292,8 @@ function CartItems({ cart }: { cart: Cart }) {
                   max={Math.max(item.quantity, Math.min(item.available, item.maxPerOrder))}
                   onChange={(q) => update.mutate({ itemId: item.id, quantity: q })}
                   label={`Quantidade de ${item.name}`}
-                  disabled={update.isPending || item.issue === 'sold_out'}
+                  disabled={item.issue === 'sold_out'}
+                  busy={update.isPending}
                 />
               </td>
               <td className="font-bold tracking-[0.6px] text-[#e89b55] xl:text-[16px] xl:tracking-normal" data-testid="item-line-total">
@@ -331,7 +332,8 @@ function CartItems({ cart }: { cart: Cart }) {
                 max={Math.max(item.quantity, Math.min(item.available, item.maxPerOrder))}
                 onChange={(q) => update.mutate({ itemId: item.id, quantity: q })}
                 label={`Quantidade de ${item.name}`}
-                disabled={update.isPending || item.issue === 'sold_out'}
+                disabled={item.issue === 'sold_out'}
+                  busy={update.isPending}
                 className="absolute right-4 top-[38px]"
               />
             </div>
