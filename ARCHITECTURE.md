@@ -88,7 +88,7 @@ Correção:
 - Refresh: `GET /auth/session`. O guard (`routes/_auth.tsx`, `beforeLoad` + `ensureQueryData`) leva a `/login?redirect=`; `redirect` só aceita caminho interno (`isInternalPath`).
 - **Expiração**: `401 SESSION_EXPIRED` passa pelo interceptor do Axios; o `SessionSync` limpa o cache privado, avisa (toast + `aria-live`) e leva ao login com `reason=expired`. O formulário de pagamento fica como rascunho no `sessionStorage`. Testado com `page.clock`.
 - **Logout e troca de usuário**: remove `['private', ...]` e reinicia o socket. Chaves privadas incluem o id do dono, então resposta atrasada da sessão anterior não cai no cache novo. Outras abas acompanham pelo evento `storage`.
-- **Senhas** no servidor simulado: `SHA-256(salt + senha)`, salt por usuário.
+- **Senhas** no servidor simulado: PBKDF2-HMAC-SHA-256 (600 mil iterações, salt por usuário, `pbkdf2-sha256$<iter>$<hash>`, comparação em tempo constante). O hash dos usuários da seed vem pronto nas fixtures: a carga não deriva senha.
 
 ### Recuperação de senha
 
@@ -176,7 +176,7 @@ Resposta sempre `202` neutra. Token `rst_` + 24 bytes aleatórios, guardado só 
 
 ## 10. Testes
 
-`e2e/` (Playwright, Chromium, projetos `desktop` 1440×900 e `mobile` 390×844, `reducedMotion: 'reduce'`):
+`e2e/` (Playwright, Chromium, projetos `desktop` 1440×900, `mobile` 390×844 e `tablet` 768×1024 nos fluxos principais, `reducedMotion: 'reduce'`):
 
 | Arquivo | Cobertura |
 | --- | --- |
@@ -185,11 +185,11 @@ Resposta sempre `202` neutra. Token `rst_` + 24 bytes aleatórios, guardado só 
 | `03-conta-sessao` | cadastro (validação, conflito), login inválido, expiração com relógio, logout, troca de usuário |
 | `04-favoritos` | visitante → login, 500 com rollback, nova tentativa, persistência |
 | `05-carrinho` | quantidades, cupons, valores exatos, remoção, refresh, merge, seta "Voltar" no mobile |
-| `06-compra` | catálogo → recibo confirmado; recibo imutável; cupom mantido com itens sobrando |
+| `06-compra` | catálogo → recibo confirmado com relógio controlado (pendente até o prazo do pagamento); recibo imutável; cupom mantido com itens sobrando |
 | `07-falhas-pagamento` | recusa, clique repetido, timeout, refresh no envio, contrato de idempotência |
 | `08-perfil-carteiras` | perfil, avatar, senha, carteiras principal e secundária (409), edição, persistência |
 | `09-tempo-real-checkout` | preço/esgotamento via socket no carrinho e na revisão; recusa sem o evento |
-| `10-eventos-reconexao` | duplicata, evento antigo, queda e reconciliação, pedido pendente com refresh |
+| `10-eventos-reconexao` | duplicata e evento antigo (com sentinela e gravação do que a tela mostrou), queda e reconciliação, pedido pendente com refresh, evento de pedido da conta anterior ignorado após troca de usuário |
 | `11-teclado-acessibilidade` | skip link, foco em diálogo, Esc, erros ligados, axe; overflow em 8 rotas × 4 larguras (um teste por largura) |
 | `12-carregamento-falhas` | skeletons em rede lenta, 500 e sem conexão com "Tentar novamente" |
 | `13-recuperar-senha` | fluxo completo, link reusado/inválido/expirado, resposta neutra, falhas, foco, axe |
@@ -199,15 +199,16 @@ Resposta sempre `202` neutra. Token `rst_` + 24 bytes aleatórios, guardado só 
 | `19-seguranca` | cabeçalhos; app inteiro sob a CSP de produção; inline bloqueado |
 | `20-painel-casca` | entrada do painel, trilho, busca global, axe nas seções, pedidos ao vivo |
 | `21` a `23` | socket religado rápido, presets, service worker recuperado |
-| `visual` | início, detalhe, carrinho e pagamento, desktop e mobile (8 baselines) |
+| `24-acessibilidade-foco` | foco mantido em botões em andamento, devolvido pelos diálogos, nunca atrás das barras fixas; zoom de 400%; axe nas telas logadas |
+| `visual` | início, detalhe, carrinho e pagamento, desktop e mobile (8 baselines do Linux; fora do Linux são pulados com aviso) |
 
-Unitários (Vitest, 273 testes em 15 arquivos): contratos, cliente HTTP, ETH, artes, search params, redirect do login, cliente de tempo real, banco simulado (`db`, `sync` entre "abas", `isolation` entre contas, `admin`, `admin-panel`), `realtime` (socket real contra o mock), `scenario` e `worker-watchdog`. `npm run test:api`: 16 casos da função de e-mail.
+Unitários (Vitest, 307 testes em 19 arquivos, cobertura com limite mínimo na CI): contratos, cliente HTTP, ETH, artes, search params, redirect do login, cliente de tempo real, banco simulado (`db`, `sync` entre "abas", `isolation` entre contas, `admin`, `admin-panel`), `realtime` (socket real contra o mock), `scenario` e `worker-watchdog`. `npm run test:api`: 16 casos da função de e-mail.
 
-Cada teste roda num contexto novo (seed limpa). Eventos saem do servidor simulado e chegam pelo `socket.io-client`. Relatório e traces: `npm run test:e2e:report`.
+Cada teste roda num contexto novo (seed limpa). Eventos saem do servidor simulado e chegam pelo `socket.io-client`. Tempo controlado com `page.clock` onde o comportamento depende de tempo (sessão, pagamento, respostas fora de ordem, backoff do socket); nenhum `waitForTimeout`. Na CI, `failOnFlakyTests`: um teste que só passa na segunda tentativa reprova. Relatório e traces: `npm run test:e2e:report`.
 
 ## 11. Performance (Lighthouse)
 
-Resultados, ambiente, condições e o passo a passo das otimizações em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Mediana de 5: desktop 100 e 100; mobile 90 (início) e 94 (detalhe) na rodada oficial do script; num navegador comum o início mede 93 a 96, e no ambiente do script varia de 82 a 90 e não cobra os arquivos servidos pelo service worker do MSW (sem esse efeito: 77 / 77). Detalhes na seção de limitações do RESULTADOS.
+Resultados, ambiente, condições e o passo a passo das otimizações em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Num PC Windows comum (Chrome do sistema, site publicado, mediana de 5): mobile 98 (início) e 99 (detalhe), desktop 100 e 100. O script do repositório num ambiente lento (Linux dentro do Windows) dá menos no mobile (início entre 82 e 90); o Lighthouse também não cobra o download dos arquivos servidos pelo service worker do MSW (sem esse efeito: 77 / 77). Detalhes na seção de limitações do RESULTADOS.
 
 - **Medição como produção**: `npm run lighthouse` serve o build em HTTPS/HTTP2 (certificado local de uso único), como a Vercel.
 - **Chunks**: React num chunk próprio (vai com a entrada), núcleo das bibliotecas da loja num `vendor` carregado com o app, zod e decimal.js com os contratos (os mocks usam antes do app), skeletons de espera (`pendingComponent`) separados por rota (`vite.config.ts`).
@@ -259,7 +260,7 @@ Revisão com o OWASP Top 10 / ASVS nível 1 aplicada às camadas que existem; de
 - **Entrada**: `redirect` interno validado, segmentos de caminho codificados, `explorerUrl` só `https:`, limites de tamanho nos schemas.
 - **Sem achado**: nada de `dangerouslySetInnerHTML`/`eval`/`innerHTML`; `rel="noreferrer"`; avatar sem SVG; nenhum segredo no repositório nem no histórico; `npm audit --omit=dev` limpo.
 - **Qualidade**: lint zerado, efeitos com limpeza, pagamento dividido em hooks e seções.
-- **Registrado, não alterado**: token no `localStorage`, SHA-256 e login sem limite de tentativas são do ambiente simulado; `mocks/db.ts` (~1.400 linhas) e `handlers.ts` (~700) seguem agrupados por domínio com funções curtas; `GET /orders/:id` de outra conta responde 403.
+- **Registrado, não alterado**: token no `localStorage` e login sem limite de tentativas são do ambiente simulado; `mocks/db.ts` (~1.400 linhas) e `handlers.ts` (~700) seguem agrupados por domínio com funções curtas; `GET /orders/:id` de outra conta responde 403.
 
 ## 17. Limitações e decisões de UX
 

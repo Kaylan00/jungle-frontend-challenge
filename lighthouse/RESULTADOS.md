@@ -1,9 +1,34 @@
 # Lighthouse — resultados
 
-Execução de **2026-11-18 21:18 UTC** sobre a versão entregue, **5 medições** por página e perfil. Valor reportado = **mediana**.
+Duas medições da versão entregue: num **PC Windows comum** (como um avaliador confere) e pelo **script do repositório**
+(`npm run lighthouse`, reproduzível em qualquer máquina). Valor reportado = **mediana**.
 Relatórios completos (HTML e JSON de cada medição): [`reports/2026-11-18T21-18-39/`](./reports/2026-11-18T21-18-39/).
 
-## Mediana
+## Medição num PC Windows comum (site publicado)
+
+É como um avaliador costuma conferir: o Lighthouse com o Chrome instalado no Windows, contra o site publicado.
+
+**Lighthouse 13.6.0 (CLI) no Windows nativo**, Chrome 157 do sistema, perfil novo a cada execução, uma por vez,
+5 execuções por página e perfil (20 no total, nenhuma com aviso). Notebook com Intel Core i5-13450HX e 24 GB de RAM,
+Windows 11, 18/11/2026. Mediana [mínimo–máximo]:
+
+| Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | TBT | CLS |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `/` | mobile | **98** [96–98] | 100 | 100 | 100 | 2,07 s | 146 ms | 0 |
+| `/` | desktop | **100** [100–100] | 100 | 100 | 100 | 0,51 s | 1 ms | 0,001 |
+| `/nft/nft-01` | mobile | **99** [96–99] | 100 | 100 | 100 | 2,04 s | 77 ms | 0 |
+| `/nft/nft-01` | desktop | **100** [100–100] | 100 | 100 | 100 | 0,49 s | 0 ms | 0 |
+
+Relatórios JSON das 20 execuções: [reports/2026-11-18-windows/](./reports/2026-11-18-windows/).
+
+Conferência manual no mesmo PC, pelo DevTools (perfil Mobile, página inicial): **96** no Chrome em janela anônima
+e **93** no Edge, com 100 nas outras três categorias.
+
+As medições do script (abaixo) rodam num Linux dentro do Windows (WSL) com o navegador sem interface, um ambiente
+bem mais lento no mesmo hardware: como o perfil mobile simula a CPU a partir da velocidade real da máquina, lá o
+mesmo site dá números menores. Por isso as duas tabelas são diferentes.
+
+## Script do repositório: mediana (2026-11-18 21:18 UTC, 5 medições)
 
 | Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -16,27 +41,13 @@ Metas: Performance ≥ 90 · Accessibility ≥ 95 · Best Practices ≥ 95 · SE
 100 em todas as medições. Performance: desktop 100 sempre; **mobile atinge a meta nesta rodada, mas no limite**
 (leia as limitações abaixo antes de comparar).
 
-## Medição num navegador comum (site publicado)
-
-Lighthouse do DevTools, perfil **Mobile**, página inicial de https://jungle-frontend-challenge-navy.vercel.app,
-num notebook comum (Windows), em 18/11/2026 por volta das 20h:
-
-| Navegador | Performance | Accessibility | Best Practices | SEO | LCP |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Chrome, janela anônima | **96** | 100 | 100 | 100 | 2,4 s |
-| Edge | **93** | 100 | 100 | 100 | — |
-
-É o jeito mais comum de alguém conferir o site. As medições do script (abaixo) rodam num Linux dentro do Windows
-(WSL) com o navegador sem interface, um ambiente bem mais lento: como o perfil mobile simula a CPU a partir da
-velocidade real da máquina, lá o mesmo site dá números menores.
-
 ## Limitações da medição pelo script (leia antes de comparar)
 
 1. **Variação entre momentos e entre máquinas.** O perfil mobile simula CPU 4× mais lenta a partir do tempo real
    medido, então a carga do computador entra no número. Dentro desta rodada o início foi de 87 a 92. Horas depois,
    a mesma build (commit `a543c5b`, sem nenhuma mudança) mediu **82** de mediana no início, com TBT de 620 ms em vez
    de 363 ms. No ambiente do script o início no mobile fica
-   **entre 82 e 90**; num navegador comum, 93 a 96 (tabela acima). O detalhe fica uns 4 pontos acima do início.
+   **entre 82 e 90**; no Windows nativo, 96 a 98 (tabela acima). O detalhe fica uns 4 pontos acima do início.
 2. **Arquivos servidos pelo service worker do MSW.** Depois que o MSW assume a página, os chunks, a fonte e as artes
    passam pelo service worker, e o Lighthouse 13.6 (simulação Lantern) os registra com 0 byte transferido: o
    download deles não entra no LCP simulado. Para o usuário real o download acontece igual. Medido com o service

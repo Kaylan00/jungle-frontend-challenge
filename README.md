@@ -33,6 +33,17 @@ Tudo abaixo funciona na URL publicada.
 
 O cenário escolhido fica salvo no navegador. Para voltar ao normal sem apagar os dados, abra `/?mock=padrao`.
 
+## Telas
+
+Capturas das baselines da regressão visual (dados fixos da seed), desktop 1440 e mobile 390.
+
+| Tela | Desktop | Mobile |
+| --- | --- | --- |
+| Início | <img src="./e2e/__screenshots__/visual.spec.ts/inicio-desktop.png" alt="Página inicial no desktop" width="360"> | <img src="./e2e/__screenshots__/visual.spec.ts/inicio-mobile.png" alt="Página inicial no celular" width="140"> |
+| Detalhe do NFT | <img src="./e2e/__screenshots__/visual.spec.ts/detalhe-desktop.png" alt="Detalhe do NFT no desktop" width="360"> | <img src="./e2e/__screenshots__/visual.spec.ts/detalhe-mobile.png" alt="Detalhe do NFT no celular" width="140"> |
+| Carrinho | <img src="./e2e/__screenshots__/visual.spec.ts/carrinho-desktop.png" alt="Carrinho no desktop" width="360"> | <img src="./e2e/__screenshots__/visual.spec.ts/carrinho-mobile.png" alt="Carrinho no celular" width="140"> |
+| Pagamento | <img src="./e2e/__screenshots__/visual.spec.ts/pagamento-desktop.png" alt="Pagamento no desktop" width="360"> | <img src="./e2e/__screenshots__/visual.spec.ts/pagamento-mobile.png" alt="Pagamento no celular" width="140"> |
+
 ## Stack
 
 | Exigida no enunciado | Usada |
@@ -71,9 +82,10 @@ npm run dev                        # http://localhost:5173, com mocks
 | `npm run typecheck` | `tsc -b` (app, testes e a função `api/`) |
 | `npm run lint` | oxlint em `src/`, `e2e/`, `api/` e `scripts/` |
 | `npm run test:unit` | Vitest, sem navegador (`test:unit:watch` para o modo observação) |
+| `npm run test:coverage` | Vitest com cobertura (relatório HTML em `coverage/`; a CI reprova abaixo dos limites) |
 | `npm run test:api` | Teste isolado da função de e-mail `api/send-reset-email.ts`, sem rede e sem chave |
 | `npm run test:e2e` | Playwright, desktop e mobile; sobe build + preview sozinho na porta 4173 |
-| `npm run test:e2e:desktop` / `test:e2e:mobile` | Só um viewport |
+| `npm run test:e2e:desktop` / `test:e2e:mobile` / `test:e2e:tablet` | Só um viewport |
 | `npm run test:e2e:update` | Regrava as baselines visuais |
 | `npm run test:e2e:report` | Abre o relatório HTML (com os traces das falhas) |
 | `npm run lighthouse` | 5 medições por página e perfil, em HTTPS/HTTP2 local; rode `npm run build` antes |
@@ -148,9 +160,17 @@ O cenário fica no `localStorage` e sobrevive ao refresh. Cada preset (painel, `
 | Pedido pendente sem conexão | Confirme uma compra e, ainda em “Processando pagamento”, Painel → **Desligar socket** e recarregue; depois **Ligar socket** | O estado vem da REST, sem criar outra compra |
 | Link de redefinição de senha inválido, usado ou expirado | `/redefinir-senha?token=qualquer`, o mesmo link aberto de novo, ou `await __jungleMock.expirePasswordResets()` antes de abrir | Mensagem do motivo e “Pedir um novo link” |
 
+## Estados de carregamento, erro e vazio
+
+Toda tela que depende da API tem os três estados, no mesmo padrão visual do Figma:
+
+- **Carregando**: skeleton com shimmer nas mesmas dimensões do conteúdo (`components/ui/skeleton.tsx` e os `*Pending`/`*Skeleton` de cada tela); CLS 0 no Lighthouse. Com movimento reduzido o shimmer para.
+- **Erro**: `ErrorState` (`components/shared/error-state.tsx`) com a mensagem da API e "Tentar novamente"; falhas de mutation desfazem o otimista e avisam (`aria-live`). Reproduzir: tabela acima e `e2e/12`.
+- **Vazio**: `EmptyState` (mesmo arquivo) com a ação que resolve, por exemplo "Limpar busca e filtros" no catálogo.
+
 ## Testes
 
-**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900) e `mobile` (Pixel 7, 390×844), 24 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
+**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900), `mobile` (Pixel 7, 390×844) e `tablet` (768×1024, só os fluxos principais: catálogo, detalhe, carrinho, compra e carregamento), 24 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
 
 | # | Cenário do enunciado | Arquivo |
 | --- | --- | --- |
@@ -168,26 +188,28 @@ O cenário fica no `localStorage` e sobrevive ao refresh. Cada preset (painel, `
 | 12 | Skeletons em rede lenta, falha e nova tentativa | `e2e/12-carregamento-falhas.spec.ts` |
 
 - **Extras**: `e2e/13` a `e2e/23` (recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, compartilhar, cabeçalhos de segurança/CSP, casca do painel, religar o socket em até 6 s, presets que partem do cenário base e service worker do MSW que cai e se recupera sozinho).
-- **Regressão visual**: `e2e/visual.spec.ts`, início, detalhe, carrinho e pagamento nos dois viewports; 8 baselines versionadas em `e2e/__screenshots__/`.
+- **Tempo, latência e eventos controlados pelo teste** (o enunciado pede): relógio do Playwright (`page.clock`) na expiração da sessão (`03`), na confirmação do pagamento, que fica pendente até o teste avançar o tempo (`06`), nas respostas fora de ordem (`01`) e no backoff de reconexão do socket (`21`); latência e falhas escolhidas por cenário; eventos disparados pelo controle dos mocks. Nenhum teste espera milissegundos fixos (`waitForTimeout`): para provar que um evento duplicado, antigo ou de outro usuário foi descartado, o teste manda um evento "sentinela" depois dele e grava tudo o que a tela mostrou e anunciou até lá (`10`, `16`). Única exceção de tempo real: o timeout do pedido (`07`), porque o limite de 8 s é do próprio XHR do navegador.
+- **Regressão visual**: `e2e/visual.spec.ts`, início, detalhe, carrinho e pagamento nos dois viewports; 8 baselines versionadas em `e2e/__screenshots__/`. As baselines são do Linux (o mesmo da CI): em Windows ou macOS esses 8 testes são pulados com aviso, porque a renderização de fontes muda entre sistemas. No Windows, rode-os pelo WSL.
 - **Relatório e traces**: relatório HTML em `playwright-report/` (`npm run test:e2e:report`); traces das falhas em `test-results/` (`trace: 'retain-on-failure'`).
-- **Unitários (Vitest)**: 15 arquivos, 273 testes: valores em ETH, contratos zod, cliente HTTP, cliente de tempo real, regras do servidor simulado, isolamento entre contas, rotas do painel admin, propagação entre abas, socket simulado com o `socket.io-client` de verdade (recusa e reconexão), presets de cenário e vigia do service worker.
+- **Unitários (Vitest)**: 19 arquivos, 307 testes: valores em ETH, contratos zod, cliente HTTP, **cliente REST de ponta a ponta** (cada função de `api` pelo Axios e pelos handlers MSW reais), chaves e opções do TanStack Query, cliente de tempo real, regras do servidor simulado (inclusive senha com PBKDF2), isolamento entre contas, rotas do painel admin, propagação entre abas, socket simulado com o `socket.io-client` de verdade (recusa e reconexão), presets de cenário e vigia do service worker.
+- **Cobertura** (`npm run test:coverage`, lógica que roda em Node): **92% das linhas, 87% das instruções, 85% das funções e 79% dos ramos**. A CI reprova abaixo de 90/85/82/76. Telas, hooks do React e módulos só de navegador ficam fora dessa conta, declarados em `vitest.config.ts`: quem os exercita são os E2E.
 - **Função de e-mail**: `npm run test:api`, 16 verificações com `fetch` falso e relógio controlado.
-- **CI** ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)): a cada push, tipos, lint, unitários, `test:api`, build e a suíte E2E nos dois viewports, publicando o relatório HTML e os traces como artefatos. O Lighthouse roda sob demanda (`workflow_dispatch`).
+- **CI** ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)): a cada push, tipos, lint, unitários com cobertura (relatório como artefato), `test:api`, build e a suíte E2E nos três viewports, publicando o relatório HTML e os traces como artefatos. Um teste que só passa na segunda tentativa reprova a CI (`failOnFlakyTests`): instabilidade não passa escondida. O Lighthouse roda sob demanda (`workflow_dispatch`).
 
 A descrição de cada arquivo está em [ARCHITECTURE.md §10](./ARCHITECTURE.md#10-testes).
 
 ## Lighthouse
 
-Build de produção servido por `vite preview` em HTTPS/HTTP2 (como a Vercel), cenário padrão dos mocks, 5 medições por página e perfil, mediana:
+Num PC Windows comum, com o Chrome do sistema contra o site publicado (Lighthouse 13.6, 5 execuções por página e perfil, mediana):
 
-| Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
+| Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | TBT | CLS |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `/` | mobile | 90 | 100 | 100 | 100 | 2.19 s | 0 | 363 ms |
-| `/` | desktop | 100 | 100 | 100 | 100 | 0.55 s | 0 | 9 ms |
-| `/nft/nft-01` | mobile | 94 | 100 | 100 | 100 | 2.12 s | 0 | 266 ms |
-| `/nft/nft-01` | desktop | 100 | 100 | 100 | 100 | 0.51 s | 0 | 0 ms |
+| `/` | mobile | 98 | 100 | 100 | 100 | 2,07 s | 146 ms | 0 |
+| `/` | desktop | 100 | 100 | 100 | 100 | 0,51 s | 1 ms | 0 |
+| `/nft/nft-01` | mobile | 99 | 100 | 100 | 100 | 2,04 s | 77 ms | 0 |
+| `/nft/nft-01` | desktop | 100 | 100 | 100 | 100 | 0,49 s | 0 ms | 0 |
 
-Desktop 100 e Accessibility, Best Practices e SEO 100 em tudo. **Num navegador comum** (Lighthouse do DevTools, perfil Mobile, site publicado): **96 no Chrome (janela anônima) e 93 no Edge** na página inicial. O script mede num ambiente mais lento (Linux dentro do Windows, navegador sem interface), onde o mobile varia de 82 a 90; além disso o Lighthouse não cobra o download dos arquivos servidos pelo service worker do MSW (sem esse efeito: 77 / 77). As limitações estão explicadas em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md#medição-num-navegador-comum-site-publicado). O que levou o mobile de 76 / 78 a 90 / 94, as alternativas descartadas, versões e ambiente estão em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Relatórios HTML e JSON de cada medição: [`lighthouse/reports/2026-11-18T21-18-39/`](./lighthouse/reports/2026-11-18T21-18-39/).
+Pior caso das 20 execuções no mobile: 96. O script `npm run lighthouse` (build local em HTTPS/HTTP2, 5 execuções) dá números menores quando roda num ambiente lento, como Linux dentro do Windows: lá o início no mobile ficou entre 82 e 90. O motivo, o efeito do service worker do MSW na simulação, o passo a passo das otimizações e os relatórios de cada execução estão em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md).
 
 ## Deploy
 
@@ -207,6 +229,24 @@ Nada desta seção é exigido pelo enunciado.
 - **Animações** (GSAP e Lenis), desligadas com `prefers-reduced-motion`. São só realce: nada fica escondido esperando a rolagem (todo o conteúdo aparece desde o primeiro render, inclusive em print de página inteira e na impressão).
 - **CI** no GitHub Actions e **testes unitários** (Vitest).
 - **Cabeçalhos de segurança** (CSP sem `unsafe-eval`, HSTS e outros), testados em `e2e/19-seguranca.spec.ts`. Ver [SECURITY.md](./SECURITY.md).
+
+## Decisões e trade-offs
+
+- **MSW no navegador, também na demonstração publicada.** O app faz as mesmas chamadas REST e Socket.IO que faria contra um backend real; os mocks sobem antes do app para nenhuma requisição escapar e para o `socket.io-client` já nascer interceptado. Custo: no celular a primeira tela espera o service worker e os mocks (ver Lighthouse).
+- **Estado do "servidor" no `localStorage`, com Web Locks e `BroadcastChannel`.** Sustenta refresh e várias abas consistentes (loja e painel admin), com transações para duas abas não sobrescreverem uma à outra. Custo: mais código no mock do que um backend em memória.
+- **Servidor é a fonte da verdade nos valores.** Totais, descontos e taxa vêm da API em ETH como string decimal (`decimal.js`); a cotação tem `fingerprint` e o pedido com cotação antiga recebe 409. O cliente só trava a confirmação para o usuário não tentar à toa.
+- **Idempotência ponta a ponta.** A chave do pedido é salva antes do envio; timeout, queda ou refresh reenviam a mesma chave e recuperam o mesmo pedido.
+- **Tempo real tolerante a falhas.** Dedupe por `eventId`, versão por recurso, pedidos terminais, reconciliação com a REST ao reconectar e filtro por usuário no servidor e no cliente.
+- **Contratos zod na borda.** Toda resposta é validada no cliente HTTP, antes de chegar a componente; `jitless` porque a CSP não permite `eval`.
+- **Só o layout do tamanho atual é montado.** Desktop e mobile são composições diferentes no Figma; montar só uma reduz trabalho na carga do celular.
+- **Extras isolados.** Painel admin, animações e alertas ficam em chunks próprios e não entram na carga da loja.
+
+## O que eu faria com mais tempo
+
+- Pré-renderizar a primeira tela no build, para o conteúdo acima da dobra não depender dos mocks subirem.
+- Regressão visual em container (imagem oficial do Playwright), para rodar igual em qualquer sistema.
+- Projetos Firefox e WebKit no Playwright para os fluxos principais.
+- Backend real (por exemplo NestJS) reaproveitando os mesmos contratos zod, com hash de senha Argon2id no servidor.
 
 ## Estrutura
 

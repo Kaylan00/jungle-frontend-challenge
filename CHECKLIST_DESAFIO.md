@@ -18,7 +18,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 
 | Item | Onde |
 | --- | --- |
-| Descoberta, compra e conta, desktop e mobile | `src/routes/`; projetos `desktop` e `mobile` do Playwright |
+| Descoberta, compra e conta, desktop, tablet e mobile | `src/routes/`; projetos `desktop`, `tablet` e `mobile` do Playwright |
 | Dados simulados (API, auth, carteiras, pagamento) | `src/mocks/` |
 | React + TypeScript | `src/`; `tsc -b` |
 | TanStack Router | `src/routes/`, `features/catalog/search-params.ts`, guards em `routes/_auth.tsx` e `routes/admin/_painel.tsx` |
@@ -58,7 +58,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 | Sessão após refresh, expiração com retomada | `app/session-sync.tsx` | `e2e/03` (`page.clock`) |
 | Logout e troca limpam cache e socket | `use-session.ts`, `RealtimeClient.restart()` | `e2e/03`, `client.test.ts` |
 | Erros da API nos campos | `lib/form-errors.ts` | `e2e/03`, `08` |
-| Senhas não guardadas em claro | `mocks/db.ts` (SHA-256 + salt) | `isolation.test.ts` |
+| Senhas não guardadas em claro | `mocks/db.ts` (PBKDF2-SHA256, 600 mil iterações, salt) | `db.test.ts`, `isolation.test.ts` |
 
 ## 4. Integração e estado
 
@@ -138,13 +138,13 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 | 11 | Teclado e foco | `e2e/11`, `e2e/24` |
 | 12 | Skeletons, falha e nova tentativa | `e2e/12` |
 | Extras | Senha, admin, alerta, sugestões, compartilhar, CSP, socket, presets, service worker | `e2e/13` a `23` |
-| Infra | Chromium desktop + mobile, estado isolado, relógio, relatório HTML e traces | `playwright.config.ts`, `e2e/fixtures.ts` |
+| Infra | Chromium desktop + mobile + tablet, estado isolado, relógio (`page.clock` em `01`, `03`, `06`, `21`), sem `waitForTimeout`, `failOnFlakyTests` na CI, relatório HTML e traces | `playwright.config.ts`, `e2e/fixtures.ts` |
 
 ## 10. Performance
 
 | Item | Onde |
 | --- | --- |
-| Início e detalhe, mobile e desktop, 5 execuções, mediana (desktop 100 / 100; mobile 93 a 96 no início num navegador comum, 82 a 90 no ambiente do script; detalhes no RESULTADOS) | `lighthouse/run.mjs` |
+| Início e detalhe, mobile e desktop, 5 execuções, mediana (PC Windows: mobile 98 / 99, desktop 100 / 100; script em ambiente lento: mobile 82 a 90) | `lighthouse/run.mjs`, `lighthouse/reports/` |
 | Relatórios, ambiente, LCP/CLS/TBT | `lighthouse/RESULTADOS.md` |
 | Metas e ressalvas | `RESULTADOS.md`; ARCHITECTURE §11 |
 
