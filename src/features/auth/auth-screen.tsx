@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { Link, type NavigateOptions } from '@tanstack/react-router'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { LoginInput, SignupInput } from '@/api/contracts'
@@ -11,35 +11,35 @@ import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { announce } from '@/lib/announcer'
 import { cn } from '@/lib/utils'
 import { AuthBackdrop, AuthDialog, AuthMobileBrand } from './auth-dialog'
+import { useAuthFlow, type AuthMode } from './auth-overlay'
 import { authInput, authSubmit } from './auth-ui'
-import { closeTarget, type AuthSearch } from './auth-search'
+import type { AuthSearch } from './auth-search'
 import { useLogin, useSession, useSignup } from './use-session'
 
 /**
- * Login e cadastro: no Figma são uma janela sobre a página inicial (desktop) e uma tela cheia (mobile).
+ * Login e cadastro: no Figma são uma janela sobre a página (desktop) e uma tela cheia (mobile).
  * A janela é um Dialog do shadcn/ui (Radix): prende o foco dentro dela, fecha com Esc e devolve
- * o foco ao sair. Depois de entrar, volta para `redirect` (a página onde a pessoa estava).
+ * o foco ao sair. Abre sobre a página onde a pessoa estava (auth-overlay.ts); pela rota /login direta,
+ * sobre a página inicial. Depois de entrar, segue para `redirect`.
  */
-export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search: AuthSearch }) {
-  const navigate = useNavigate()
+export function AuthScreen({ mode, search }: { mode: Extract<AuthMode, 'login' | 'signup'>; search: AuthSearch }) {
   const { user } = useSession()
-  const target = search.redirect ?? '/'
+  const flow = useAuthFlow(search)
+  const finish = flow.finish
+  const onUser = useEffectEvent(finish)
 
-  // Já autenticado (ex.: abriu /login em outra aba): segue para o destino.
+  // Já autenticado (ex.: entrou em outra aba): segue para o destino.
   useEffect(() => {
-    if (user) void navigate({ to: target, replace: true })
-  }, [user, navigate, target])
-
-  // Fechar volta para a página de origem (ou para o início, se ela exigir login).
-  const close = () => void navigate({ to: closeTarget(search.redirect), replace: true })
+    if (user) onUser()
+  }, [user])
 
   const isLogin = mode === 'login'
 
   return (
     <>
-      <AuthBackdrop />
+      {!flow.overlay && <AuthBackdrop />}
       <AuthDialog
-        onClose={close}
+        onClose={flow.close}
         // Desktop: foco no primeiro campo. Toque/mobile: foco na própria janela (sem abrir o teclado).
         initialFocusId={isLogin ? 'login-email' : 'signup-username'}
         className={cn(
@@ -58,9 +58,7 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
           </p>
           <nav aria-label="Entrar ou criar conta" className="flex items-center justify-center gap-2 text-[20px] leading-6 max-md:hidden">
             <Link
-              to="/login"
-              search={search}
-              replace
+              {...flow.link('login')}
               aria-current={isLogin ? 'page' : undefined}
               className={cn(isLogin ? 'text-[#e89b55]' : 'text-[#f5f1eb] hover:text-[#e89b55]')}
             >
@@ -68,9 +66,7 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
             </Link>
             <span aria-hidden="true" className="h-5 w-px bg-[#8a4b38]" />
             <Link
-              to="/cadastro"
-              search={search}
-              replace
+              {...flow.link('signup')}
               aria-current={!isLogin ? 'page' : undefined}
               className={cn(!isLogin ? 'text-[#e89b55]' : 'text-[#f5f1eb] hover:text-[#e89b55]')}
             >
@@ -92,14 +88,14 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
             </p>
           )}
           {isLogin ? (
-            <LoginForm search={search} onDone={() => void navigate({ to: target, replace: true })} />
+            <LoginForm forgotLink={flow.link('forgot', { redirect: search.redirect })} onDone={finish} />
           ) : (
-            <SignupForm onDone={() => void navigate({ to: target, replace: true })} />
+            <SignupForm onDone={finish} />
           )}
           <SocialLogins roomy={!isLogin} />
           <p className="mt-[41px] text-center text-[15px] leading-5 text-muted-foreground md:hidden">
             {isLogin ? 'Novo na Kurio? ' : 'Já tem uma conta? '}
-            <Link to={isLogin ? '/cadastro' : '/login'} search={search} replace className="hover:text-highlight hover:underline">
+            <Link {...flow.link(isLogin ? 'signup' : 'login')} className="hover:text-highlight hover:underline">
               {isLogin ? 'Crie uma conta' : 'Entre'}
             </Link>
           </p>
@@ -109,7 +105,7 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
   )
 }
 
-function LoginForm({ onDone, search }: { onDone: () => void; search: AuthSearch }) {
+function LoginForm({ onDone, forgotLink }: { onDone: () => void; forgotLink: NavigateOptions }) {
   const login = useLogin()
   const [formError, setFormError] = useState<string | null>(null)
   const form = useForm<LoginInput>({ resolver: zodResolver(LoginInput), defaultValues: { email: '', password: '' } })
@@ -148,9 +144,7 @@ function LoginForm({ onDone, search }: { onDone: () => void; search: AuthSearch 
         />
       </div>
       <Link
-        to="/recuperar-senha"
-        search={{ redirect: search.redirect }}
-        replace
+        {...forgotLink}
         className="mt-[10px] self-end text-[14px] leading-5 text-[#e89b55] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         Esqueceu a senha?

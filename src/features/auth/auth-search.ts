@@ -14,13 +14,15 @@ export type AuthSearch = z.infer<typeof authSearchSchema>
 
 const PRIVATE_PREFIXES = ['/pagamento', '/perfil', '/pedido']
 
+/** Página que exige login (layout `_auth`). */
+export const isPrivatePath = (path: string) => PRIVATE_PREFIXES.some((p) => path.startsWith(p))
+
 /**
  * Para onde o X das telas de conta leva: a página de origem, exceto se ela exigir login (o guard
  * mandaria de volta para o login e o X pareceria não funcionar). Nesse caso, o início.
  */
 export function closeTarget(redirect: string | undefined) {
-  const isPrivate = !!redirect && PRIVATE_PREFIXES.some((p) => redirect.startsWith(p))
-  return redirect && !isPrivate ? redirect : '/'
+  return redirect && !isPrivatePath(redirect) ? redirect : '/'
 }
 
 /** /redefinir-senha?token=... (o token vem do link do e-mail) */

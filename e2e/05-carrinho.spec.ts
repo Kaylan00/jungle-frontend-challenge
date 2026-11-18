@@ -1,5 +1,5 @@
 /** Cenário 5 — carrinho: quantidades, remoção, cupom, persistência após refresh e login. */
-import { expect, test } from './fixtures'
+import { expect, test, USERS } from './fixtures'
 
 test.describe('Carrinho', () => {
   test('quantidade, cupom inválido/expirado/válido, remoção e persistência após refresh e login', async ({ app, page }) => {
@@ -47,5 +47,50 @@ test.describe('Carrinho', () => {
     await app.goto('/carrinho')
     await expect(app.cartItems()).toHaveCount(1)
     await expect(app.cartItems().first()).toContainText('Sage Nomad #009')
+  })
+
+  test('sem conta, "Conectar e finalizar" abre o login por cima do carrinho e segue para o pagamento', async ({ app, page }) => {
+    await app.addToCart('nft-02', { edition: 'nft-02-ed-1' })
+    const main = page.locator('main#conteudo')
+    const checkout = page.getByTestId('checkout-button')
+    const dialog = page.getByRole('dialog')
+
+    await checkout.click()
+    await expect(page).toHaveURL(/\/login\?redirect=%2Fpagamento$/)
+    await expect(dialog).toBeVisible()
+    // Fundo = o próprio carrinho (continua montado, inerte), não a página inicial
+    await expect(main.getByTestId(app.isMobile ? 'cart-item-mobile' : 'cart-item')).toHaveCount(1)
+    await expect(main.getByTestId('catalog-grid')).toHaveCount(0)
+    await expect(page.locator('[inert] main#conteudo')).toHaveCount(1)
+
+    // Esc fecha e volta ao carrinho, com o foco de volta no botão
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await expect(page).toHaveURL(/\/carrinho$/)
+    await expect(checkout).toBeFocused()
+
+    // Voltar e avançar do navegador
+    await checkout.click()
+    await expect(dialog).toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL(/\/carrinho$/)
+    await expect(dialog).toBeHidden()
+    await page.goForward()
+    await expect(page).toHaveURL(/\/login\?redirect=%2Fpagamento$/)
+    await expect(dialog).toBeVisible()
+    await expect(main.getByTestId(app.isMobile ? 'cart-item-mobile' : 'cart-item')).toHaveCount(1)
+
+    // Refresh: rota /login comum (fundo = início), mesmo destino
+    await page.reload()
+    await expect(dialog).toBeVisible()
+    await expect(page).toHaveURL(/\/login\?redirect=%2Fpagamento$/)
+    await expect(main.getByTestId(app.isMobile ? 'cart-item-mobile' : 'cart-item')).toHaveCount(0)
+
+    // Entrar segue para o pagamento
+    await dialog.getByLabel('E-mail').fill(USERS.ana.email)
+    await dialog.getByLabel('Senha', { exact: true }).fill(USERS.ana.password)
+    await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
+    await expect(page).toHaveURL(/\/pagamento$/)
+    await expect(dialog).toBeHidden()
   })
 })

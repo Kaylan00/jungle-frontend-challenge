@@ -1,5 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useCartCount } from '@/features/cart/hooks'
+import { useBottomBar } from '@/lib/bottom-bars'
 import { cn } from '@/lib/utils'
 import { hasMobileNav } from './mobile-nav-routes'
 
@@ -91,6 +92,8 @@ function NotchPiece() {
 export function MobileNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const count = useCartCount()
+  // O botão central sai 25px para cima da barra: os avisos ficam acima dele.
+  const barRef = useBottomBar({ extra: 25 })
   if (!hasMobileNav(pathname)) return null
   const active = pathname === '/' ? 'home' : pathname === '/perfil/favoritos' ? 'favorites' : pathname.startsWith('/perfil') ? 'profile' : null
   const item = (on: boolean) =>
@@ -99,7 +102,7 @@ export function MobileNav() {
       on && 'text-highlight',
     )
   return (
-    <nav aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-40 h-24 md:hidden">
+    <nav ref={barRef} aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-40 h-24 md:hidden">
       <div aria-hidden="true" className="absolute inset-0 flex drop-shadow-[0_-8px_24px_rgba(0,0,0,0.25)]">
         <div className="flex-1 rounded-tl-[40px] bg-card" />
         <NotchPiece />

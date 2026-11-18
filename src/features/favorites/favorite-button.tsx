@@ -1,5 +1,6 @@
-import { useNavigate, useRouterState } from '@tanstack/react-router'
+import { useRouterState } from '@tanstack/react-router'
 import { Heart } from 'lucide-react'
+import { useOpenAuth } from '@/features/auth/auth-overlay'
 import { useSession } from '@/features/auth/use-session'
 import { cn } from '@/lib/utils'
 import { useFavorites, useToggleFavorite } from './hooks'
@@ -22,7 +23,7 @@ export function FavoriteButton({
   const { user } = useSession()
   const { data } = useFavorites()
   const toggle = useToggleFavorite()
-  const navigate = useNavigate()
+  const openAuth = useOpenAuth()
   const href = useRouterState({ select: (s) => s.location.href })
   const active = Boolean(data?.nftIds.includes(nftId))
 
@@ -30,8 +31,8 @@ export function FavoriteButton({
     e.preventDefault()
     e.stopPropagation()
     if (!user) {
-      // Favoritos exigem conta: volta para cá depois do login.
-      void navigate({ to: '/login', search: { redirect: href } })
+      // Favoritos exigem conta: login por cima desta página e volta para ela depois.
+      openAuth({ redirect: href })
       return
     }
     toggle.mutate({ nftId, value: !active, name: nftName })

@@ -9,6 +9,9 @@ import { MobileNav } from '@/components/layout/mobile-nav'
 import { MotionBoot } from '@/components/layout/motion-boot'
 import { hasMobileNav } from '@/components/layout/mobile-nav-routes'
 import { RealtimeBadge } from '@/components/layout/realtime-badge'
+import { useAuthOverlay } from '@/features/auth/auth-overlay'
+import { AuthOverlayHost } from '@/features/auth/auth-overlay-host'
+import { refreshBottomBars } from '@/lib/bottom-bars'
 import { cn } from '@/lib/utils'
 
 // Painel de cenários só existe com mocks ligados (não entra no bundle sem eles).
@@ -18,40 +21,69 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
 })
 
+/**
+ * Avisos (sonner). Desktop: canto inferior direito, acima do indicador de tempo real. Mobile: embaixo, acima
+ * da barra fixa da página (navegação inferior, barra de compra ou botão de pagamento: --bottom-bars, medido
+ * em lib/bottom-bars.ts), sem cobrir o cabeçalho, o voltar nem botões fixos. Respeita a área segura.
+ * Abaixo de 600px o sonner usa `mobileOffset` e ocupa a largura toda.
+ */
+const TOAST_OFFSET = {
+  bottom: 'max(calc(var(--bottom-bars, 0px) + 12px), calc(env(safe-area-inset-bottom, 0px) + 56px))',
+  right: 'calc(env(safe-area-inset-right, 0px) + 16px)',
+}
+const TOAST_MOBILE_OFFSET = {
+  bottom: 'calc(max(var(--bottom-bars, 0px), env(safe-area-inset-bottom, 0px)) + 12px)',
+  left: 'calc(env(safe-area-inset-left, 0px) + 12px)',
+  right: 'calc(env(safe-area-inset-right, 0px) + 12px)',
+}
+
 function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  // Tela de conta aberta sobre esta página (ver features/auth/auth-overlay.ts): a página fica ao fundo, inerte.
+  const authOverlay = useAuthOverlay()
+  const overlayOpen = authOverlay !== null
+  // Com a página inerte atrás da tela de conta, as barras dela não empurram mais os avisos.
+  useEffect(() => refreshBottomBars(), [overlayOpen])
+  // Página já exibida (não a que ainda está carregando): uma navegação que o guard desvia para o login por
+  // cima da página atual não chega a trocar de página, e o foco fica em quem abriu a janela.
+  const shownPathname = useRouterState({ select: (s) => (s.resolvedLocation ?? s.location).pathname })
   const mainRef = useRef<HTMLElement>(null)
-  const first = useRef(true)
+  const lastPathname = useRef(shownPathname)
 
   // Troca de página: foco vai para o conteúdo principal (leitor de tela anuncia a nova página).
+  // Compara com a página anterior (e não "primeira execução"): o StrictMode roda o efeito duas vezes ao montar.
   useEffect(() => {
-    if (first.current) {
-      first.current = false
-      return
-    }
+    if (lastPathname.current === shownPathname) return
+    lastPathname.current = shownPathname
     mainRef.current?.focus({ preventScroll: true })
-  }, [pathname])
+  }, [shownPathname])
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <a
-        href="#conteudo"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
-      >
-        Pular para o conteúdo
-      </a>
-      <Header />
-      <main id="conteudo" ref={mainRef} tabIndex={-1} className={cn('scale-frame min-h-dvh flex-1 outline-none', hasMobileNav(pathname) && 'max-md:pb-24')}>
-        <Outlet />
-      </main>
-      <Footer />
-      <MobileNav />
-      <RealtimeBadge />
+      {/* display: contents não muda o layout; `inert` tira a página de fundo do foco e do clique. */}
+      <div className="contents" inert={overlayOpen ? true : undefined}>
+        <a
+          href="#conteudo"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+        >
+          Pular para o conteúdo
+        </a>
+        <Header />
+        <main id="conteudo" ref={mainRef} tabIndex={-1} className={cn('scale-frame min-h-dvh flex-1 outline-none', hasMobileNav(pathname) && 'max-md:pb-24')}>
+          <Outlet />
+        </main>
+        <Footer />
+        <MobileNav />
+        <RealtimeBadge />
+      </div>
+      {authOverlay && <AuthOverlayHost overlay={authOverlay} />}
       <LiveAnnouncer />
       <MotionBoot />
       <Toaster
         theme="dark"
-        position="top-center"
+        position="bottom-right"
+        offset={TOAST_OFFSET}
+        mobileOffset={TOAST_MOBILE_OFFSET}
         richColors
         toastOptions={{ style: { fontFamily: 'var(--font-sans)', background: 'var(--card)', border: '1px solid var(--border)' } }}
       />

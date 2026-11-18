@@ -3,6 +3,7 @@ import { User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { authNavigation, canHostAuthOverlay } from '@/features/auth/auth-overlay'
 import { useLogout, useSession } from '@/features/auth/use-session'
 import { useCartCount } from '@/features/cart/hooks'
 import { cn } from '@/lib/utils'
@@ -44,7 +45,8 @@ function EnterIcon() {
 }
 
 export function Header() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const location = useRouterState({ select: (s) => s.location })
+  const pathname = location.pathname
   const marketActive = pathname.startsWith('/nft') || pathname.startsWith('/carrinho') || pathname.startsWith('/pagamento')
   const homeActive = pathname === '/' && !marketActive
   const count = useCartCount()
@@ -166,8 +168,8 @@ export function Header() {
             </DropdownMenu>
           ) : (
             <Link
-              to="/login"
-              search={{ redirect: pathname === '/login' ? undefined : pathname }}
+              // Login por cima da página atual; depois de entrar, volta para ela.
+              {...authNavigation(location, 'login', { redirect: canHostAuthOverlay(pathname) ? location.href : undefined })}
               className="hidden h-[35px] w-[100px] items-center justify-center gap-1.5 rounded-[5px] bg-primary text-base text-primary-foreground transition-colors hover:bg-primary-hover md:inline-flex"
             >
               <EnterIcon />

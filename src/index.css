@@ -319,3 +319,16 @@ html.lenis body {
     padding-inline: var(--page-x);
   }
 }
+
+/*
+ * Avisos (sonner) no mobile: ficam acima das barras fixas (offset em __root.tsx), mas um aviso ainda pode
+ * passar por cima de um botão no fluxo da página (ex.: "Salvar" no fim do perfil). Eles só informam (o
+ * mesmo texto vai para a região aria-live), não têm ações e somem sozinhos: no mobile não recebem toque,
+ * então nunca bloqueiam o botão de baixo. No desktop continuam interativos (pausar ao passar o mouse).
+ */
+@media (width < 768px) {
+  [data-sonner-toaster],
+  [data-sonner-toaster] [data-sonner-toast] {
+    pointer-events: none !important;
+  }
+}

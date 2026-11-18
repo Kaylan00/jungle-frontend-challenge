@@ -1,21 +1,26 @@
 import { X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import { useRef } from 'react'
+import { use, useRef } from 'react'
 import { Dialog, DialogClose, DialogOverlay, DialogPortal } from '@/components/ui/dialog'
 import { HomePage } from '@/features/catalog/home-page'
 import { cn } from '@/lib/utils'
+import { AuthReturnFocus } from './auth-overlay'
 import { isTouchLayout } from './auth-ui'
 
 /**
  * Moldura comum das telas de conta (entrar, criar conta, recuperar e redefinir senha).
- * Desktop: janela sobre a página inicial, como no Figma. Mobile: tela cheia com rolagem própria.
+ * Desktop: janela sobre a página de origem (ou a inicial), como no Figma. Mobile: tela cheia com rolagem própria.
  * É um Dialog do Radix: prende o foco, fecha com Esc e devolve o foco ao sair.
  */
 
-/** Página inicial ao fundo (só desktop), inerte para mouse e leitor de tela. */
+/**
+ * Página inicial ao fundo (só desktop) quando a tela de conta é aberta pela rota direta (/login digitado,
+ * refresh, origem privada). Vindo de uma página pública, o fundo é a própria página (auth-overlay.ts).
+ * Só visual: inerte (sem foco nem clique) e fora da árvore de acessibilidade.
+ */
 export function AuthBackdrop() {
   return (
-    <div aria-hidden="true" className="pointer-events-none hidden md:block">
+    <div aria-hidden="true" inert className="pointer-events-none hidden md:block">
       <HomePage search={{}} />
     </div>
   )
@@ -36,6 +41,7 @@ export function AuthDialog({
   children: React.ReactNode
 }) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const returnFocus = use(AuthReturnFocus)
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -59,6 +65,15 @@ export function AuthDialog({
             const field = initialFocusId && !isTouchLayout() ? document.getElementById(initialFocusId) : null
             // Sem campo: a própria janela recebe o foco (fica preso nela e o leitor de tela anuncia o título).
             ;(field ?? contentRef.current)?.focus({ preventScroll: true })
+          }}
+          onCloseAutoFocus={(e) => {
+            // Janela sobre a página de origem: o foco volta para quem a abriu ou, se ele saiu da tela (ex.: o
+            // "Entrar" do cabeçalho depois do login), para o conteúdo principal. Trocando de tela dentro da
+            // janela, a página continua inerte e o foco fica na janela nova.
+            if (!returnFocus) return
+            e.preventDefault()
+            const target = returnFocus.isConnected ? returnFocus : document.getElementById('conteudo')
+            if (target && !target.closest('[inert]')) target.focus({ preventScroll: true })
           }}
         >
           {/* Faixa de altura zero e "sticky" no topo da área que rola: o X fica sempre visível, mesmo com o

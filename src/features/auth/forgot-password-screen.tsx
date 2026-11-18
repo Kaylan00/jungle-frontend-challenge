@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { MailCheck } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -11,8 +11,9 @@ import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { announce } from '@/lib/announcer'
 import { cn } from '@/lib/utils'
 import { AuthBackdrop, AuthDialog, AuthMobileBrand } from './auth-dialog'
+import { useAuthFlow } from './auth-overlay'
 import { authInput, authSubmit } from './auth-ui'
-import { closeTarget, type AuthSearch } from './auth-search'
+import type { AuthSearch } from './auth-search'
 import { useRequestPasswordReset } from './use-password-reset'
 
 /**
@@ -26,16 +27,15 @@ const SimulatedInboxLink = import.meta.env.VITE_ENABLE_MOCKS === 'true' ? lazy((
  * A API responde sempre a mesma coisa, exista ou não a conta, e a tela repete essa mensagem neutra.
  */
 export function ForgotPasswordScreen({ search }: { search: AuthSearch }) {
-  const navigate = useNavigate()
+  const flow = useAuthFlow(search)
   const [sent, setSent] = useState<{ email: string; message: string } | null>(null)
   const [email, setEmail] = useState('')
-  const close = () => void navigate({ to: closeTarget(search.redirect), replace: true })
 
   return (
     <>
-      <AuthBackdrop />
+      {!flow.overlay && <AuthBackdrop />}
       <AuthDialog
-        onClose={close}
+        onClose={flow.close}
         initialFocusId="forgot-email"
         className={cn(
           'min-h-[480px] [@media(min-height:860px)]:md:top-[160px] [@media(min-height:860px)]:md:translate-y-0',
@@ -76,7 +76,7 @@ export function ForgotPasswordScreen({ search }: { search: AuthSearch }) {
             ) : (
               'Lembrou a senha? '
             )}
-            <Link to="/login" search={{ redirect: search.redirect }} replace className="text-[#e89b55] hover:underline">
+            <Link {...flow.link('login', { redirect: search.redirect })} className="text-[#e89b55] hover:underline">
               Voltar para o login
             </Link>
           </p>

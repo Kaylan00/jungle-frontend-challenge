@@ -8,10 +8,10 @@ import { EmptyState, ErrorState } from '@/components/shared/error-state'
 import { QuantityStepper } from '@/components/shared/quantity-stepper'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useSession } from '@/features/auth/use-session'
 import { NftCard } from '@/features/catalog/nft-card'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
+import { useBottomBar } from '@/lib/bottom-bars'
 import { cn } from '@/lib/utils'
 import { VitrineCardSkeleton, VitrineDotsSkeleton } from '@/features/nft/vitrine-skeleton'
 import { CouponForm, CouponSkeleton, SummaryLines } from './cart-summary'
@@ -79,10 +79,13 @@ export function CartPage() {
 }
 
 function CartLayout({ list, summary, busy }: { list: React.ReactNode; summary: React.ReactNode; busy?: boolean }) {
+  // Mobile: o resumo fica encostado embaixo, com o botão de finalizar; os avisos aparecem acima dele.
+  const summaryRef = useBottomBar({ flow: true, media: '(max-width: 767.98px)' })
   return (
     <div className="grid gap-8 max-md:flex max-md:flex-1 max-md:flex-col max-md:gap-1 md:mt-[4px] lg:grid-cols-[minmax(0,1fr)_332px] lg:gap-12 xl:mt-[11px] xl:gap-[86px] wide:grid-cols-[minmax(0,1fr)_calc(332*var(--u))] wide:gap-[calc(86*var(--u))]" aria-busy={busy}>
       <section aria-label="Itens do carrinho">{list}</section>
       <aside
+        ref={summaryRef}
         aria-labelledby="resumo-title"
         className="rounded-2xl bg-card p-4 max-md:-mx-7 max-md:mt-auto max-md:rounded-b-none max-md:rounded-t-[30px] max-md:px-6 max-md:pb-8 max-md:pt-6 lg:rounded-none lg:bg-transparent lg:p-0"
       >
@@ -354,7 +357,6 @@ function TrashIcon({ className }: { className?: string }) {
 
 function CartSummaryPanel({ cart }: { cart: Cart }) {
   const navigate = useNavigate()
-  const { user } = useSession()
   const blocking = cart.items.filter((i) => i.issue === 'sold_out' || i.issue === 'insufficient_stock')
   return (
     <div className="space-y-5 max-md:space-y-0 lg:space-y-0">
@@ -368,7 +370,8 @@ function CartSummaryPanel({ cart }: { cart: Cart }) {
       <Button
         className="h-11 w-full rounded-md font-semibold max-lg:rounded-full max-md:!mt-7 max-md:h-[60px] max-md:bg-[linear-gradient(90deg,#d08a4c,#b77842)] max-md:text-[16px] max-md:font-bold max-md:hover:brightness-110 lg:!mt-6 lg:h-10 lg:rounded-[3px] lg:text-[15px] lg:font-bold lg:leading-4"
         disabled={blocking.length > 0}
-        onClick={() => void navigate(user ? { to: '/pagamento' } : { to: '/login', search: { redirect: '/pagamento' } })}
+        // Sem conta, o guard de /pagamento abre o login por cima do carrinho e segue para o pagamento depois.
+        onClick={() => void navigate({ to: '/pagamento' })}
         data-testid="checkout-button"
       >
         Conectar e finalizar

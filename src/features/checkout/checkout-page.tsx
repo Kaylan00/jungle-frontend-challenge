@@ -36,6 +36,7 @@ import { useCart } from '@/features/cart/hooks'
 import { NETWORK_LABEL } from '@/features/catalog/search-params'
 import { announce } from '@/lib/announcer'
 import { ART_SIZES, artSources } from '@/lib/art'
+import { useBottomBar } from '@/lib/bottom-bars'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
 import { clearAttempt, loadAttempt, newIdempotencyKey, rememberPendingOrder, saveAttempt, submitAttempt, type OrderAttempt } from './order-attempt'
@@ -138,6 +139,7 @@ export function CheckoutPage() {
 
 function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
   const { user } = useSession()
+  const submitBarRef = useBottomBar()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const primary = wallets.find((w) => w.role === 'primary') ?? wallets[0]
@@ -630,7 +632,11 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
           </fieldset>
         </aside>
 
-        <div className="max-lg:order-3 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-[linear-gradient(transparent,var(--background)_16px)] max-md:px-7 max-md:pb-[27px] max-md:pt-4 lg:col-start-2" data-motion-fixed>
+        <div
+          ref={submitBarRef}
+          className="max-lg:order-3 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-[linear-gradient(transparent,var(--background)_16px)] max-md:px-7 max-md:pb-[27px] max-md:pt-4 lg:col-start-2"
+          data-motion-fixed
+        >
           <Button
             type="submit"
             className="h-11 w-full font-semibold max-lg:h-12 max-lg:rounded-full max-md:h-[60px] max-md:bg-[linear-gradient(90deg,#d08a4c,#b77842)] max-md:text-[16px] max-md:font-bold max-md:hover:brightness-110 lg:h-[45px] lg:rounded-[4px] lg:text-[16px] lg:font-bold"
@@ -845,6 +851,7 @@ function FieldSkeleton({ label, required = true, className }: { label: string; r
  * dos dados (campos, carteiras, itens, valores) vira skeleton. Mostra 2 carteiras e 1 item.
  */
 function CheckoutSkeleton() {
+  const submitBarRef = useBottomBar()
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_405px] lg:gap-x-8 lg:gap-y-[25px] wide:grid-cols-[minmax(0,1fr)_calc(405*var(--u))] wide:gap-x-[calc(32*var(--u))]" aria-busy="true" aria-label="Carregando pagamento" data-testid="checkout-loading">
       <p className="sr-only">Carregando pagamento…</p>
@@ -947,6 +954,7 @@ function CheckoutSkeleton() {
       </div>
 
       <div
+        ref={submitBarRef}
         className="max-lg:order-3 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-[linear-gradient(transparent,var(--background)_16px)] max-md:px-7 max-md:pb-[27px] max-md:pt-4 lg:col-start-2"
         aria-hidden="true"
         data-motion-fixed

@@ -17,6 +17,7 @@ import { NftCard } from '@/features/catalog/nft-card'
 import { NETWORK_LABEL } from '@/features/catalog/search-params'
 import { FavoriteButton } from '@/features/favorites/favorite-button'
 import { ART_SIZES, artSources } from '@/lib/art'
+import { useBottomBar } from '@/lib/bottom-bars'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
 import { SkeletonLine, VitrineCardSkeleton, VitrineDotsSkeleton } from './vitrine-skeleton'
@@ -58,6 +59,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
   const [zoom, setZoom] = useState(false)
   const [tab, setTab] = useState<'details' | 'reviews'>('details')
   const add = useAddToCart()
+  const buyBarRef = useBottomBar()
 
   // Se o limite cair (evento de estoque, item no carrinho), a quantidade acompanha.
   useEffect(() => {
@@ -373,6 +375,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
 
       {/* Mobile: barra fixa de compra (Figma) */}
       <div
+        ref={buyBarRef}
         className="fixed inset-x-0 bottom-0 z-50 h-[159px] rounded-t-[30px] bg-card pl-6 pr-[25px] pt-[21px] shadow-[0_-3px_6px_rgba(0,0,0,0.18)] md:hidden"
         data-testid="mobile-buy-bar"
         data-motion-fixed
@@ -492,6 +495,7 @@ function CollectionSkeleton() {
  * trocado por uma barra da altura da sua linha. Sem pulo de layout quando os dados chegam.
  */
 function DetailSkeleton() {
+  const buyBarRef = useBottomBar()
   return (
     <div
       className="container-page pb-28 pt-4 max-md:bg-[linear-gradient(180deg,#251712,#2c1b15_395px,#241612_395px)] max-md:pb-[180px] max-md:pl-7 max-md:pr-[25px] max-md:pt-[23px] md:pb-0 md:pt-6 xl:pb-4 xl:pt-8"
@@ -598,7 +602,7 @@ function DetailSkeleton() {
         <CollectionSkeleton />
 
         {/* Mobile: barra fixa de compra */}
-        <div className="fixed inset-x-0 bottom-0 z-50 h-[159px] rounded-t-[30px] bg-card pl-6 pr-[25px] pt-[21px] shadow-[0_-3px_6px_rgba(0,0,0,0.18)] md:hidden" data-motion-fixed>
+        <div ref={buyBarRef} className="fixed inset-x-0 bottom-0 z-50 h-[159px] rounded-t-[30px] bg-card pl-6 pr-[25px] pt-[21px] shadow-[0_-3px_6px_rgba(0,0,0,0.18)] md:hidden" data-motion-fixed>
           <div className="flex h-7 items-center justify-between">
             <Skeleton className="h-7 w-[110px] rounded-full" />
             <SkeletonLine className="h-7 w-[96px]" />
