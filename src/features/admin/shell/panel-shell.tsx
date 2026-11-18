@@ -16,22 +16,12 @@ import { useAdminLogout } from '../hooks'
 import { CommandPalette } from './command-palette'
 import './panel.css'
 import { RailContent } from './rail'
+import { initialRailCollapsed, RAIL_KEY, readRailPreference } from './rail-preference'
 import { PanelShellContext } from './shell-context'
-
-const RAIL_KEY = 'kurio.admin.trilho'
-
-function readRailPreference(): boolean | null {
-  try {
-    const v = localStorage.getItem(RAIL_KEY)
-    return v === null ? null : v === 'recolhido'
-  } catch {
-    return null
-  }
-}
 
 /** Recolhido por escolha gravada; sem escolha, recolhido na faixa entre tablet e notebook (768–1199px). */
 function useRailCollapsed() {
-  const [collapsed, setCollapsed] = useState(() => readRailPreference() ?? window.matchMedia('(min-width: 768px) and (max-width: 1199px)').matches)
+  const [collapsed, setCollapsed] = useState(initialRailCollapsed)
   useEffect(() => {
     if (readRailPreference() !== null) return
     const mid = window.matchMedia('(min-width: 768px) and (max-width: 1199px)')

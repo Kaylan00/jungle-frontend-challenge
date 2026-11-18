@@ -232,4 +232,85 @@ test.describe('Kurio Admin: entrada e casca', () => {
     await expect(row.getByTestId('order-status')).toHaveAttribute('data-status', 'confirmed')
     await expect(page.getByRole('navigation', { name: 'Filtrar pedidos por status' }).getByRole('link', { name: /Confirmados/ })).toContainText('2')
   })
+
+  test('tema do painel: claro escolhido no trilho vale depois de recarregar, passa no axe e não muda a loja', async ({ app, page }) => {
+    const check = async (where: string) => {
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+      expect(results.violations.map((v) => `${where} (claro): ${v.id} (${v.nodes.length})`)).toEqual([])
+    }
+    const html = page.locator('html')
+    const themeGroup = () => {
+      // No celular o seletor está no menu que abre por cima; no desktop, no rodapé do trilho.
+      const scope = app.isMobile ? page.getByTestId('panel-mobile-menu') : page.getByRole('complementary', { name: 'Menu do painel' })
+      return scope.getByRole('radiogroup', { name: 'Tema do painel' })
+    }
+
+    await app.panelLogin('admin')
+    await expect(html).toHaveAttribute('data-kp-tema', 'escuro')
+    if (app.isMobile) await page.getByRole('button', { name: 'Menu', exact: true }).click()
+    await expect(themeGroup().getByRole('radio', { name: 'Escuro' })).toHaveAttribute('aria-checked', 'true')
+    await themeGroup().getByRole('radio', { name: 'Claro' }).click()
+    await expect(html).toHaveAttribute('data-kp-tema', 'claro')
+    await expect(themeGroup().getByRole('radio', { name: 'Claro' })).toHaveAttribute('aria-checked', 'true')
+    // Teclado (padrão de grupo de rádios): a seta marca a próxima opção e leva o foco junto.
+    await page.keyboard.press('ArrowRight')
+    await expect(themeGroup().getByRole('radio', { name: 'Igual ao sistema' })).toBeFocused()
+    await expect(themeGroup().getByRole('radio', { name: 'Igual ao sistema' })).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('ArrowLeft')
+    await expect(themeGroup().getByRole('radio', { name: 'Claro' })).toHaveAttribute('aria-checked', 'true')
+    if (app.isMobile) {
+      await check('menu do celular')
+      // O primeiro Esc fecha a dica da opção focada; o segundo, o menu.
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('Escape')
+      await expect(page.getByTestId('panel-mobile-menu')).toBeHidden()
+    }
+    await expect(page.locator('main#conteudo')).toHaveCSS('background-color', 'rgb(255, 252, 247)')
+
+    // Recarregar: continua claro (escolha gravada) e já nasce claro.
+    await page.reload()
+    await expect(page.getByTestId('kpi-revenue').getByTestId('kpi-value')).toBeVisible()
+    await expect(html).toHaveAttribute('data-kp-tema', 'claro')
+    expect(await page.evaluate(() => localStorage.getItem('kurio.admin.tema'))).toBe('claro')
+    await check('visão geral')
+    for (const [path, ready] of [
+      ['/admin/nfts?q=nft-01&abrir=nft-01', 'admin-edition'],
+      ['/admin/cupons', 'admin-coupon'],
+      ['/admin/usuarios', 'admin-user'],
+    ] as const) {
+      await app.goto(path)
+      await expect(page.getByTestId(ready).first()).toBeVisible()
+      await check(path)
+    }
+    await app.goto('/admin/pedidos')
+    await expect(page.getByRole('navigation', { name: 'Filtrar pedidos por status' }).getByRole('link', { name: /^Todos/ })).toContainText('0')
+    await check('/admin/pedidos')
+    // Diálogo (renderizado fora da casca) também no claro.
+    await app.goto('/admin/cupons')
+    await page.locator('[data-testid="admin-coupon"]').filter({ has: page.getByRole('button', { name: /Desativar/ }) }).first().getByRole('button', { name: /Desativar/ }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(255, 252, 247)')
+    await check('diálogo')
+    await page.keyboard.press('Escape')
+    const input = await app.openPanelSearch()
+    await input.fill('tema')
+    await expect(page.getByRole('option', { name: /Tema: claro/ })).toContainText('Em uso agora')
+    await check('busca')
+    await page.keyboard.press('Escape')
+
+    // A loja não muda: sem o atributo do painel, fundo escuro de sempre.
+    await app.goto('/')
+    await expect(html).not.toHaveAttribute('data-kp-tema', /.*/)
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(20, 13, 10)')
+    await expect(page.locator('main#conteudo')).toBeVisible()
+
+    // De volta ao painel: ainda claro. A busca global também troca o tema ("Tema: escuro").
+    await app.goto('/admin')
+    await expect(html).toHaveAttribute('data-kp-tema', 'claro')
+    const search = await app.openPanelSearch()
+    await search.fill('tema escuro')
+    await page.keyboard.press('Enter')
+    await expect(html).toHaveAttribute('data-kp-tema', 'escuro')
+    expect(await page.evaluate(() => localStorage.getItem('kurio.admin.tema'))).toBe('escuro')
+  })
 })

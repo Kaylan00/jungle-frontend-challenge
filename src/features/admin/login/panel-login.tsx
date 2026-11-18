@@ -5,11 +5,14 @@
  * papel. Conta comum recebe o 403 da API e a mensagem dele aparece na tela; a sessão que o login criou é
  * encerrada no servidor (ver useAdminLogin). Os campos ficam controlados pelo formulário: erro de senha não
  * apaga o que foi digitado.
+ *
+ * Enquanto a rota confere se já há sessão de admin (beforeLoad), aparece PanelLoginPending: a mesma moldura,
+ * o mesmo título e o formulário em skeleton, no mesmo tamanho (nada pula quando o formulário de verdade entra).
  */
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, LockKeyhole, ShieldAlert } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { LoginInput } from '@/api/contracts'
 import { ApiError } from '@/api/http'
@@ -19,6 +22,7 @@ import { cn } from '@/lib/utils'
 import type { PanelAccess } from '../access'
 import { useAdminLogin } from '../hooks'
 import '../shell/panel.css'
+import { cameFromSkeleton, markSkeletonHandoff } from '../shell/shell-context'
 
 const fieldClass = 'h-11 rounded-[10px] border-[var(--kp-linha-forte)] bg-[var(--kp-ficha)] px-3.5 focus-visible:border-[var(--kp-laranja)]'
 
@@ -45,18 +49,95 @@ export function PanelLogin({ redirectTo, reason, access }: { redirectTo?: string
   const signedInAs = access.status === 'forbidden' ? access : null
 
   return (
-    <div className="kpanel relative grid min-h-dvh place-items-center overflow-hidden px-4 py-12" data-testid="panel-login">
+    <LoginFrame>
+      {reason === 'sem-permissao' && signedInAs && !forbidden && (
+        <div role="status" className="mt-5 flex gap-3 rounded-[12px] border border-warning/40 bg-warning/10 p-3.5 text-[13px] leading-5" data-testid="panel-login-notice">
+          <ShieldAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+          <p>
+            {signedInAs.message} Você está conectado como <strong>@{signedInAs.user.username}</strong>. Entrar aqui com uma conta da equipe troca a conta conectada neste
+            navegador (a loja usa a mesma sessão).
+          </p>
+        </div>
+      )}
+      {reason === 'expirada' && <ReasonNotice reason="expirada" />}
+      {reason === 'saiu' && !signedInAs && <ReasonNotice reason="saiu" />}
+
+      {forbidden && (
+        <div role="alert" className="mt-5 flex gap-3 rounded-[12px] border border-destructive/50 bg-destructive/10 p-3.5 text-[13px] leading-5" data-testid="panel-login-forbidden">
+          <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
+          <div>
+            <p className="font-semibold">Sem permissão (403)</p>
+            <p className="mt-0.5 text-[var(--kp-grafite)]">{forbidden} Use uma conta da equipe. Sua conta continua valendo na loja.</p>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={submit} noValidate className="mt-6 flex flex-col gap-4">
+        <FormField label="E-mail" type="email" autoComplete="username" autoFocus className={fieldClass} error={formState.errors.email?.message} {...register('email')} />
+        <FormField label="Senha" type="password" autoComplete="current-password" className={fieldClass} error={formState.errors.password?.message} {...register('password')} />
+        {formError && (
+          <p role="alert" className="text-[13px] text-destructive" data-testid="panel-login-error">
+            {formError}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={login.isPending}
+          className={cn(
+            'mt-1 h-11 rounded-[10px] bg-[var(--kp-laranja)] text-[14px] font-bold text-[#140d0a] transition-colors hover:bg-[var(--kp-laranja-hover)] disabled:opacity-60',
+            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kp-laranja)]',
+          )}
+        >
+          {login.isPending ? 'Conferindo acesso…' : 'Entrar'}
+        </button>
+      </form>
+    </LoginFrame>
+  )
+}
+
+function ReasonNotice({ reason }: { reason: 'expirada' | 'saiu' }) {
+  return (
+    <p role="status" className="mt-5 rounded-[12px] border border-[var(--kp-linha-forte)] bg-[rgb(var(--kp-veu-rgb)/0.03)] p-3.5 text-[13px] leading-5" data-testid="panel-login-notice">
+      {reason === 'expirada' ? 'Sua sessão expirou. Entre de novo para continuar de onde parou.' : 'Você saiu do painel. A sessão deste navegador foi encerrada.'}
+    </p>
+  )
+}
+
+/** Skeleton da entrada (a rota ainda confere se já há sessão de admin): mesma moldura, campos em skeleton. */
+export function PanelLoginPending({ reason }: { reason?: 'sem-permissao' | 'expirada' | 'saiu' }) {
+  useEffect(() => () => markSkeletonHandoff(), [])
+  return (
+    <LoginFrame pending>
+      {(reason === 'expirada' || reason === 'saiu') && <ReasonNotice reason={reason} />}
+      <div className="mt-6 flex flex-col gap-4" aria-hidden="true" data-testid="panel-login-skeleton">
+        {['E-mail', 'Senha'].map((label) => (
+          <div key={label} className="flex flex-col gap-2">
+            <span className="text-[14px] leading-4">{label}</span>
+            <span className="kp-sk-bloco block h-11 rounded-[10px]" />
+          </div>
+        ))}
+        <span className="kp-sk-bloco mt-1 block h-11 rounded-[10px]" />
+      </div>
+    </LoginFrame>
+  )
+}
+
+function LoginFrame({ children, pending = false }: { children: React.ReactNode; pending?: boolean }) {
+  // Logo depois do skeleton, o formulário só substitui as barras (sem a animação de entrada).
+  const [enter] = useState(() => !pending && !cameFromSkeleton())
+  return (
+    <div className="kpanel relative grid min-h-dvh place-items-center overflow-hidden px-4 py-12" data-testid={pending ? 'panel-login-pending' : 'panel-login'} aria-busy={pending || undefined}>
       {/* Fundo: a mesa com um brilho de cobre e uma grade fina, só decoração. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(60% 50% at 50% 0%, rgb(210 138 76 / 0.16), transparent 70%), linear-gradient(rgb(245 241 235 / 0.025) 1px, transparent 1px) 0 0 / 100% 48px, linear-gradient(90deg, rgb(245 241 235 / 0.025) 1px, transparent 1px) 0 0 / 48px 100%',
+            'radial-gradient(60% 50% at 50% 0%, rgb(210 138 76 / 0.16), transparent 70%), linear-gradient(var(--kp-grade) 1px, transparent 1px) 0 0 / 100% 48px, linear-gradient(90deg, var(--kp-grade) 1px, transparent 1px) 0 0 / 48px 100%',
         }}
       />
 
-      <main id="conteudo" tabIndex={-1} className="kp-entra relative z-10 w-full max-w-[440px] outline-none">
+      <main id={pending ? undefined : 'conteudo'} tabIndex={-1} className={cn(enter && 'kp-entra', 'relative z-10 w-full max-w-[440px] outline-none')}>
         <div className="mb-7 flex items-center justify-center gap-3">
           <span aria-hidden="true" className="grid size-11 place-items-center rounded-[12px] bg-[var(--kp-laranja)] text-[19px] font-black text-[#140d0a]">
             K
@@ -77,70 +158,12 @@ export function PanelLogin({ redirectTo, reason, access }: { redirectTo?: string
           </h1>
           <p className="mt-1.5 text-[13px] leading-5 text-[var(--kp-grafite)]">Catálogo, preços, cupons e pedidos da Kurio. Só contas de administrador passam daqui.</p>
 
-          {reason === 'sem-permissao' && signedInAs && !forbidden && (
-            <div role="status" className="mt-5 flex gap-3 rounded-[12px] border border-warning/40 bg-warning/10 p-3.5 text-[13px] leading-5" data-testid="panel-login-notice">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
-              <p>
-                {signedInAs.message} Você está conectado como <strong>@{signedInAs.user.username}</strong>. Entrar aqui com uma conta da equipe troca a conta conectada neste
-                navegador (a loja usa a mesma sessão).
-              </p>
-            </div>
+          {pending && (
+            <span role="status" className="sr-only">
+              Conferindo a sessão…
+            </span>
           )}
-          {reason === 'expirada' && (
-            <p role="status" className="mt-5 rounded-[12px] border border-[var(--kp-linha-forte)] bg-white/[0.03] p-3.5 text-[13px] leading-5" data-testid="panel-login-notice">
-              Sua sessão expirou. Entre de novo para continuar de onde parou.
-            </p>
-          )}
-          {reason === 'saiu' && !signedInAs && (
-            <p role="status" className="mt-5 rounded-[12px] border border-[var(--kp-linha-forte)] bg-white/[0.03] p-3.5 text-[13px] leading-5" data-testid="panel-login-notice">
-              Você saiu do painel. A sessão deste navegador foi encerrada.
-            </p>
-          )}
-
-          {forbidden && (
-            <div role="alert" className="mt-5 flex gap-3 rounded-[12px] border border-destructive/50 bg-destructive/10 p-3.5 text-[13px] leading-5" data-testid="panel-login-forbidden">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
-              <div>
-                <p className="font-semibold">Sem permissão (403)</p>
-                <p className="mt-0.5 text-[var(--kp-grafite)]">{forbidden} Use uma conta da equipe. Sua conta continua valendo na loja.</p>
-              </div>
-            </div>
-          )}
-
-          <form onSubmit={submit} noValidate className="mt-6 flex flex-col gap-4">
-            <FormField
-              label="E-mail"
-              type="email"
-              autoComplete="username"
-              autoFocus
-              className={fieldClass}
-              error={formState.errors.email?.message}
-              {...register('email')}
-            />
-            <FormField
-              label="Senha"
-              type="password"
-              autoComplete="current-password"
-              className={fieldClass}
-              error={formState.errors.password?.message}
-              {...register('password')}
-            />
-            {formError && (
-              <p role="alert" className="text-[13px] text-destructive" data-testid="panel-login-error">
-                {formError}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={login.isPending}
-              className={cn(
-                'mt-1 h-11 rounded-[10px] bg-[var(--kp-laranja)] text-[14px] font-bold text-[#140d0a] transition-colors hover:bg-[#df9a5e] disabled:opacity-60',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kp-laranja)]',
-              )}
-            >
-              {login.isPending ? 'Conferindo acesso…' : 'Entrar'}
-            </button>
-          </form>
+          {children}
         </section>
 
         <a href="/" className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-md px-2 py-1 text-[13px] text-[var(--kp-grafite)] transition-colors hover:text-[var(--kp-tinta)]">

@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -10,6 +9,7 @@ import { ApiError } from '@/api/http'
 import { ErrorState } from '@/components/shared/error-state'
 import { FormField } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { announce } from '@/lib/announcer'
 import { applyApiFieldErrors } from '@/lib/form-errors'
@@ -35,13 +35,8 @@ export function ResetPasswordScreen({ token }: { token: string | undefined }) {
   let body: React.ReactNode
   if (!token) body = <InvalidLink message={INVALID_LINK} />
   else if (linkError) body = <InvalidLink message={linkError} />
-  else if (check.isPending) {
-    body = (
-      <p role="status" className="mt-8 flex items-center justify-center gap-2 text-[13px] text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Conferindo o link…
-      </p>
-    )
-  } else if (check.isError) {
+  else if (check.isPending) body = <ResetFormSkeleton />
+  else if (check.isError) {
     body = isResetLinkError(check.error) ? (
       <InvalidLink message={check.error.message} />
     ) : (
@@ -117,6 +112,36 @@ function InvalidLink({ message }: { message: string }) {
           Pedir um novo link
         </Link>
       </Button>
+    </div>
+  )
+}
+
+/**
+ * Link sendo conferido: o formulário de senha nova em skeleton, com as mesmas medidas (linha da conta, os dois
+ * campos com rótulo e dica, o botão). Quando a API responde, o formulário real ocupa o mesmo lugar.
+ */
+function ResetFormSkeleton() {
+  return (
+    <div className="mt-[25px] flex flex-col max-md:mt-[32px]" aria-busy="true" data-testid="reset-loading">
+      <p role="status" className="sr-only">
+        Conferindo o link…
+      </p>
+      <div className="mb-4 flex h-[19.5px] items-center justify-center" aria-hidden="true">
+        <Skeleton className="h-3 w-[220px] rounded-sm" />
+      </div>
+      <div className="flex flex-col gap-3" aria-hidden="true">
+        {[
+          ['Nova senha', 'Pelo menos 8 caracteres, com letras e números.'],
+          ['Confirmar nova senha', null],
+        ].map(([label, hint]) => (
+          <div key={label} className="flex flex-col gap-2">
+            <span className="text-[14px] leading-4 text-foreground">{label}</span>
+            <Skeleton className="h-10 rounded-[4px] max-md:h-[50px] max-md:rounded-[10px]" />
+            {hint && <span className="text-[12px] text-muted-foreground">{hint}</span>}
+          </div>
+        ))}
+      </div>
+      <Skeleton className="mt-6 h-[45px] rounded-[4px] max-md:mt-8 max-md:h-[60px] max-md:rounded-[10px]" aria-hidden="true" />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { createRootRouteWithContext, Outlet, useRouterState } from '@tanstack/react-router'
-import { lazy, Suspense, useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 import { Toaster } from 'sonner'
 import type { RouterContext } from '@/app/router'
 import { Footer } from '@/components/layout/footer'
@@ -13,6 +13,7 @@ import { useAuthOverlay } from '@/features/auth/auth-overlay'
 import { AuthOverlayHost } from '@/features/auth/auth-overlay-host'
 import { PriceDropNotifier } from '@/features/favorites/price-drop-notifier'
 import { isPanelPath } from '@/features/admin/panel-path'
+import { setPanelThemeAttr, usePanelTheme } from '@/features/admin/shell/panel-theme'
 import { refreshBottomBars } from '@/lib/bottom-bars'
 import { useIsDesktop } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
@@ -51,19 +52,34 @@ function RootLayout() {
   return isPanelPath(shownPathname) ? <PanelRoot /> : <StoreLayout />
 }
 
-/** Raiz do painel: só a página, as regiões de anúncio (aria-live) e os avisos. */
+/**
+ * Raiz do painel: só a página, as regiões de anúncio (aria-live) e os avisos.
+ * O tema do painel (escuro, claro ou o do sistema) vai para o <html> antes da primeira pintura e sai quando o
+ * painel desmonta: a loja nunca herda o tema claro. Ver features/admin/shell/panel-theme.ts.
+ */
 function PanelRoot() {
+  const { theme } = usePanelTheme()
+  useLayoutEffect(() => {
+    setPanelThemeAttr(theme)
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    const before = meta?.content
+    if (meta && theme === 'claro') meta.content = '#ece3d6'
+    return () => {
+      if (meta && before) meta.content = before
+    }
+  }, [theme])
+  useLayoutEffect(() => () => setPanelThemeAttr(null), [])
   return (
     <>
       <Outlet />
       <LiveAnnouncer />
       <Toaster
-        theme="dark"
+        theme={theme === 'claro' ? 'light' : 'dark'}
         position="bottom-right"
         offset={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', right: 'calc(env(safe-area-inset-right, 0px) + 16px)' }}
         mobileOffset={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)', left: '12px', right: '12px' }}
         richColors
-        toastOptions={{ style: { fontFamily: 'var(--font-sans)', background: '#1b120e', border: '1px solid #442c1b' } }}
+        toastOptions={{ style: { fontFamily: 'var(--font-sans)', background: 'var(--kp-ficha)', border: '1px solid var(--kp-linha-forte)' } }}
       />
     </>
   )

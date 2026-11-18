@@ -7,13 +7,20 @@
  *   escolha, entre 768 e 1199px ele nasce recolhido, para devolver largura à lousa.
  * - No celular ele não existe ao lado: o mesmo conteúdo abre por cima, num diálogo com foco preso (PanelShell).
  * - Pedidos mostra quantos estão pendentes (número da API, atualizado pelo socket).
+ * - Enquanto a casca confere o acesso (pending), o mesmo trilho aparece com o nome da conta em skeleton e os
+ *   botões que dependem da sessão (buscar, recolher, sair) ainda inativos: nada muda de lugar depois.
+ * - Tema do painel (escuro, claro ou igual ao sistema) no rodapé: grupo de opções (radiogroup) com setas, nos
+ *   três estados do trilho (aberto, recolhido e no menu do celular).
  */
 import { Link } from '@tanstack/react-router'
-import { ChevronsLeft, ExternalLink, LogOut, Search } from 'lucide-react'
+import { ChevronsLeft, ExternalLink, LogOut, Monitor, Moon, Search, Sun, type LucideIcon } from 'lucide-react'
+import { useRef } from 'react'
 import { useSession } from '@/features/auth/use-session'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useAdminOverview } from '../hooks'
+import { PANEL_THEME_OPTIONS, usePanelTheme, type PanelThemeChoice } from './panel-theme'
+import { Sk, SkBlock } from '../sections/ui'
 import { PANEL_SECTIONS } from './sections'
 
 const isMac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
@@ -36,6 +43,60 @@ function Hint({ show, label, children }: { show: boolean; label: string; childre
   )
 }
 
+const THEME_ICON: Record<PanelThemeChoice, LucideIcon> = { escuro: Moon, claro: Sun, sistema: Monitor }
+
+/**
+ * Tema do painel: três opções num grupo (radiogroup). Setas (e Home/End) trocam e levam o foco, como num grupo
+ * de rádios; só a opção marcada fica na ordem do Tab. Cada opção tem o nome completo (leitor de tela e dica).
+ */
+export function ThemeSwitch({ vertical = false }: { vertical?: boolean }) {
+  const { choice, setChoice } = usePanelTheme()
+  const refs = useRef<Array<HTMLButtonElement | null>>([])
+  const move = (e: React.KeyboardEvent, i: number) => {
+    const n = PANEL_THEME_OPTIONS.length
+    const next =
+      e.key === 'ArrowRight' || e.key === 'ArrowDown'
+        ? (i + 1) % n
+        : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+          ? (i + n - 1) % n
+          : e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? n - 1
+              : null
+    if (next === null) return
+    e.preventDefault()
+    setChoice(PANEL_THEME_OPTIONS[next].value)
+    refs.current[next]?.focus()
+  }
+  return (
+    <div role="radiogroup" aria-label="Tema do painel" aria-orientation={vertical ? 'vertical' : 'horizontal'} className={cn('kp-tema', vertical && 'flex-col')} data-testid="panel-theme">
+      {PANEL_THEME_OPTIONS.map((o, i) => {
+        const Icon = THEME_ICON[o.value]
+        const checked = choice === o.value
+        return (
+          <Hint key={o.value} show label={`Tema: ${o.short}`}>
+            <button
+              ref={(el) => {
+                refs.current[i] = el
+              }}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              aria-label={o.label}
+              tabIndex={checked ? 0 : -1}
+              onClick={() => setChoice(o.value)}
+              onKeyDown={(e) => move(e, i)}
+            >
+              <Icon className="size-[15px]" strokeWidth={1.9} aria-hidden="true" />
+            </button>
+          </Hint>
+        )
+      })}
+    </div>
+  )
+}
+
 export function RailContent({
   collapsed = false,
   onToggle,
@@ -43,6 +104,7 @@ export function RailContent({
   onLogout,
   loggingOut,
   onNavigate,
+  pending = false,
 }: {
   collapsed?: boolean
   onToggle?: () => void
@@ -50,10 +112,11 @@ export function RailContent({
   onLogout: () => void
   loggingOut: boolean
   onNavigate?: () => void
+  /** Skeleton da casca (acesso sendo conferido): sem consultas do painel e sem ações que dependem da sessão. */
+  pending?: boolean
 }) {
   const { user } = useSession()
-  const overview = useAdminOverview()
-  const pending = overview.data?.orders.pending ?? 0
+  const accountLoading = pending || !user
   const label = (text: string) => <span className={collapsed ? 'sr-only' : 'truncate'}>{text}</span>
 
   return (
@@ -75,10 +138,11 @@ export function RailContent({
             <button
               type="button"
               onClick={onToggle}
+              disabled={pending}
               aria-label={collapsed ? 'Abrir o menu' : 'Recolher o menu'}
               aria-expanded={!collapsed}
               aria-controls="kp-trilho"
-              className="grid size-8 shrink-0 place-items-center rounded-lg text-[var(--kp-fumaca)] transition-colors hover:bg-white/5 hover:text-[var(--kp-tinta)]"
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-[var(--kp-fumaca)] transition-colors hover:bg-[rgb(var(--kp-veu-rgb)/0.05)] hover:text-[var(--kp-tinta)]"
             >
               <ChevronsLeft className={cn('size-4 transition-transform duration-200', collapsed && 'rotate-180')} aria-hidden="true" />
             </button>
@@ -91,6 +155,7 @@ export function RailContent({
         <button
           type="button"
           onClick={onSearch}
+          disabled={pending}
           className={cn(
             'flex h-10 items-center gap-2.5 rounded-[10px] border border-[var(--kp-linha)] text-[13px] text-[var(--kp-fumaca)] transition-colors hover:border-[var(--kp-linha-forte)] hover:text-[var(--kp-tinta)]',
             collapsed ? 'justify-center px-0' : 'px-3',
@@ -119,12 +184,7 @@ export function RailContent({
                 >
                   <s.icon className="size-[18px]" strokeWidth={1.75} aria-hidden="true" />
                   {label(s.label)}
-                  {s.to === '/admin/pedidos' && pending > 0 && (
-                    <span className={cn('kp-contador', collapsed && 'absolute -right-1 -top-1 ml-0')} data-testid="rail-pending">
-                      {pending}
-                      <span className="sr-only"> {pending === 1 ? 'pendente' : 'pendentes'}</span>
-                    </span>
-                  )}
+                  {s.to === '/admin/pedidos' && !pending && <PendingOrdersBadge collapsed={collapsed} />}
                 </Link>
               </Hint>
             </li>
@@ -146,17 +206,32 @@ export function RailContent({
           </a>
         </Hint>
 
-        <div className={cn('mt-2 flex items-center gap-2.5 rounded-[12px] bg-white/[0.03] p-2', collapsed && 'flex-col bg-transparent p-0')}>
-          <span
-            aria-hidden="true"
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--kp-linha-forte)] text-[10.5px] font-bold tracking-[0.06em] text-[var(--kp-laranja-texto)]"
-          >
-            {initials(user?.name)}
-          </span>
+        {collapsed ? (
+          <div className="flex justify-center py-1">
+            <ThemeSwitch vertical />
+          </div>
+        ) : (
+          <div className="flex min-h-[42px] items-center justify-between gap-3 pl-3 text-[13.5px] font-medium text-[var(--kp-trilho-tinta)]">
+            <span aria-hidden="true">Tema</span>
+            <ThemeSwitch />
+          </div>
+        )}
+
+        <div className={cn('mt-2 flex items-center gap-2.5 rounded-[12px] bg-[rgb(var(--kp-veu-rgb)/0.03)] p-2', collapsed && 'flex-col bg-transparent p-0')}>
+          {accountLoading ? (
+            <SkBlock className="size-9 shrink-0 rounded-full" />
+          ) : (
+            <span
+              aria-hidden="true"
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--kp-linha-forte)] text-[10.5px] font-bold tracking-[0.06em] text-[var(--kp-laranja-texto)]"
+            >
+              {initials(user?.name)}
+            </span>
+          )}
           {!collapsed && (
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block truncate text-[13px] font-semibold" data-testid="panel-account-name">
-                {user?.name}
+                {accountLoading ? <Sk>Administrador Kurio</Sk> : user?.name}
               </span>
               <span className="block truncate text-[11.5px] text-[var(--kp-fumaca)]">Administrador</span>
             </span>
@@ -165,9 +240,9 @@ export function RailContent({
             <button
               type="button"
               onClick={onLogout}
-              disabled={loggingOut}
+              disabled={loggingOut || pending}
               aria-label="Sair do painel"
-              className="grid size-8 shrink-0 place-items-center rounded-lg text-[var(--kp-fumaca)] transition-colors hover:bg-white/5 hover:text-[var(--kp-tinta)] disabled:opacity-50"
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-[var(--kp-fumaca)] transition-colors hover:bg-[rgb(var(--kp-veu-rgb)/0.05)] hover:text-[var(--kp-tinta)] disabled:opacity-50"
             >
               <LogOut className="size-4" aria-hidden="true" />
             </button>
@@ -175,5 +250,18 @@ export function RailContent({
         </div>
       </div>
     </div>
+  )
+}
+
+/** Pedidos pendentes no item Pedidos (número da API, atualizado pelo socket). */
+function PendingOrdersBadge({ collapsed }: { collapsed: boolean }) {
+  const overview = useAdminOverview()
+  const pending = overview.data?.orders.pending ?? 0
+  if (pending <= 0) return null
+  return (
+    <span className={cn('kp-contador', collapsed && 'absolute -right-1 -top-1 ml-0')} data-testid="rail-pending">
+      {pending}
+      <span className="sr-only"> {pending === 1 ? 'pendente' : 'pendentes'}</span>
+    </span>
   )
 }

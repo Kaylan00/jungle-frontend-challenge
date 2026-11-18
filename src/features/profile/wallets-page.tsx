@@ -383,6 +383,15 @@ function WalletFieldsSkeleton() {
  * Carteiras em carregamento: as duas seções com os mesmos títulos, textos e grades do formulário
  * carregado (com carteira principal e secundária, o caso da conta de demonstração).
  */
+/** Enquanto a sessão da rota privada é conferida: o layout do perfil com o skeleton das carteiras. */
+export function WalletsPending() {
+  return (
+    <ProfileLayout title="Carteiras">
+      <WalletsSkeleton />
+    </ProfileLayout>
+  )
+}
+
 function WalletsSkeleton() {
   return (
     <div aria-busy="true" aria-live="polite" data-testid="wallets-loading">

@@ -2,6 +2,9 @@
  * Seção "NFTs" do Kurio Admin: busca, paginação e, por NFT, destaque e edição de cada edição
  * (preço, disponibilidade e status). Cada gravação manda a versão do NFT que está na tela; se ele mudou
  * desde então, a API responde 409 e o diálogo mostra os valores atuais para decidir.
+ * Carregando (primeira leitura, busca ou página): fichas skeleton com a mesma marcação das fichas reais, na
+ * quantidade que estava na tela (ou uma página cheia), e a contagem em skeleton. As edições não carregam ao
+ * expandir: vêm junto com o NFT na lista, então abrem na hora.
  */
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { UseQueryResult } from '@tanstack/react-query'
@@ -15,14 +18,15 @@ import { EmptyState, ErrorState } from '@/components/shared/error-state'
 import { FormField } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Skeleton } from '@/components/ui/skeleton'
 import { NETWORK_LABEL } from '@/features/catalog/search-params'
 import { primaryButton } from '@/features/profile/profile-page'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
 import { applyApiFieldErrors } from '@/lib/form-errors'
+import { ADMIN_PAGE_SIZE } from '@/api/queries'
 import { cn } from '@/lib/utils'
 import { useToggleFeatured, useUpdateEdition, versionConflictOf } from './hooks'
+import { LoadingNote, Sk, SkBlock } from './sections/ui'
 
 export interface NftsSearch {
   q?: string
@@ -64,42 +68,13 @@ export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftLis
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="relative w-full sm:w-[340px]">
-          <label htmlFor="admin-search" className="mb-2 block text-[14px] leading-4">
-            Buscar NFT
-          </label>
-          <Search className="pointer-events-none absolute bottom-3 left-3 size-4 text-[var(--kp-fumaca)]" aria-hidden="true" />
-          <input
-            id="admin-search"
-            type="search"
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            placeholder="Nome, coleção ou id (nft-01)"
-            className="h-10 w-full rounded-[10px] border border-[var(--kp-linha-forte)] bg-[var(--kp-ficha)] pl-9 pr-3 text-[14px] placeholder:text-[var(--kp-fumaca)] focus-visible:border-[var(--kp-laranja)] focus-visible:outline-none"
-          />
-        </div>
-        {data && (
-          <p className="text-[13px] text-muted-foreground" aria-live="polite">
-            {data.total} {data.total === 1 ? 'NFT' : 'NFTs'}
-            {search.q ? ` para “${search.q}”` : ''}
-          </p>
-        )}
-      </div>
+      <NftsToolbar term={term} onTerm={setTerm} total={query.isPlaceholderData ? undefined : data?.total} q={search.q} />
 
-      {query.isPending ? (
-        <ul className="flex flex-col gap-3" aria-busy="true" aria-label="Carregando NFTs">
-          {Array.from({ length: 5 }, (_, i) => (
-            <li key={i} className="kp-ficha flex items-center gap-4 p-4" aria-hidden="true">
-              <Skeleton className="size-14 shrink-0 rounded-md" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
-              <Skeleton className="hidden h-9 w-40 sm:block" />
-            </li>
-          ))}
-        </ul>
+      {query.isPending || query.isPlaceholderData ? (
+        <>
+          <NftListSkeleton rows={data?.items.length || ADMIN_PAGE_SIZE} />
+          {data && data.totalPages > 1 && <NftsPager page={data.page} totalPages={data.totalPages} onPage={goToPage} />}
+        </>
       ) : query.isError ? (
         <ErrorState
           title="Não foi possível carregar os NFTs"
@@ -119,32 +94,131 @@ export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftLis
         />
       ) : (
         <>
-          <ul className={cn('flex flex-col gap-3 transition-opacity', query.isPlaceholderData && 'opacity-60')} aria-busy={query.isPlaceholderData || undefined} data-testid="admin-nft-list">
+          <ul className="flex flex-col gap-3" data-testid="admin-nft-list">
             {query.data.items.map((nft) => (
               <NftRow key={search.abrir === nft.id ? `${nft.id}:aberto` : nft.id} nft={nft} defaultOpen={search.abrir === nft.id} onEdit={(editionId) => setEditing({ nft, editionId })} />
             ))}
           </ul>
-          {query.data.totalPages > 1 && (
-            <nav aria-label="Páginas da lista de NFTs" className="flex items-center justify-between gap-3">
-              <Button variant="outline" onClick={() => goToPage(query.data.page - 1)} disabled={query.data.page <= 1}>
-                <ChevronLeft aria-hidden="true" />
-                Anterior
-              </Button>
-              <p className="text-[13px] text-muted-foreground" aria-current="page">
-                Página {query.data.page} de {query.data.totalPages}
-              </p>
-              <Button variant="outline" onClick={() => goToPage(query.data.page + 1)} disabled={query.data.page >= query.data.totalPages}>
-                Próxima
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </nav>
-          )}
+          {query.data.totalPages > 1 && <NftsPager page={query.data.page} totalPages={query.data.totalPages} onPage={goToPage} />}
         </>
       )}
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         {editing && liveNft && <EditionDialog key={`${editing.nft.id}:${editing.editionId}`} nft={liveNft} editionId={editing.editionId} onDone={() => setEditing(null)} />}
       </Dialog>
+    </div>
+  )
+}
+
+/** Busca e contagem da lista. Sem contagem ainda, ela aparece em skeleton no mesmo lugar. */
+export function NftsToolbar({ term, onTerm, total, q, disabled }: { term: string; onTerm: (v: string) => void; total?: number; q?: string; disabled?: boolean }) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="relative w-full sm:w-[340px]">
+        <label htmlFor="admin-search" className="mb-2 block text-[14px] leading-4">
+          Buscar NFT
+        </label>
+        <Search className="pointer-events-none absolute bottom-3 left-3 size-4 text-[var(--kp-fumaca)]" aria-hidden="true" />
+        <input
+          id="admin-search"
+          type="search"
+          value={term}
+          onChange={(e) => onTerm(e.target.value)}
+          disabled={disabled}
+          placeholder="Nome, coleção ou id (nft-01)"
+          className="h-10 w-full rounded-[10px] border border-[var(--kp-linha-forte)] bg-[var(--kp-ficha)] pl-9 pr-3 text-[14px] placeholder:text-[var(--kp-fumaca)] focus-visible:border-[var(--kp-laranja)] focus-visible:outline-none"
+        />
+      </div>
+      {total === undefined ? (
+        <p className="text-[13px]">
+          <Sk>00 NFTs</Sk>
+        </p>
+      ) : (
+        <p className="text-[13px] text-muted-foreground" aria-live="polite">
+          {total} {total === 1 ? 'NFT' : 'NFTs'}
+          {q ? ` para “${q}”` : ''}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function NftsPager({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (page: number) => void }) {
+  return (
+    <nav aria-label="Páginas da lista de NFTs" className="flex items-center justify-between gap-3">
+      <Button variant="outline" onClick={() => onPage(page - 1)} disabled={page <= 1}>
+        <ChevronLeft aria-hidden="true" />
+        Anterior
+      </Button>
+      <p className="text-[13px] text-muted-foreground" aria-current="page">
+        Página {page} de {totalPages}
+      </p>
+      <Button variant="outline" onClick={() => onPage(page + 1)} disabled={page >= totalPages}>
+        Próxima
+        <ChevronRight aria-hidden="true" />
+      </Button>
+    </nav>
+  )
+}
+
+const SAMPLE_NFTS = [
+  ['Emerald Ape #042', 'Selva Digital · Ethereum · nft-01'],
+  ['Cosmic Owl #07', 'Noite Kurio · Polygon · nft-02'],
+  ['Jade Tiger #13', 'Selva Digital · Ethereum · nft-03'],
+  ['Ruby Fox #21', 'Raposas · Polygon · nft-04'],
+] as const
+
+/** Fichas de NFT carregando: mesma marcação da NftRow (imagem, nome, coleção, preço, estoque e os dois botões). */
+export function NftListSkeleton({ rows }: { rows: number }) {
+  return (
+    <div aria-busy="true">
+      <LoadingNote>Carregando NFTs…</LoadingNote>
+      <ul className="flex flex-col gap-3" aria-hidden="true" data-testid="nfts-skeleton">
+        {Array.from({ length: rows }, (_, i) => {
+          const [name, sub] = SAMPLE_NFTS[i % SAMPLE_NFTS.length]
+          return (
+            <li key={i} className="kp-ficha">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4">
+                <SkBlock className="size-14 shrink-0 rounded-md" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-bold leading-5">
+                    <Sk>{name}</Sk>
+                  </p>
+                  <p className="truncate text-[13px] leading-5">
+                    <Sk>{sub}</Sk>
+                  </p>
+                </div>
+                <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-5">
+                  <dl className="flex gap-5 text-[13px] leading-5">
+                    <div>
+                      <dt className="text-muted-foreground">A partir de</dt>
+                      <dd className="font-bold">
+                        <Sk>0.483 ETH</Sk>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">À venda</dt>
+                      <dd>
+                        <Sk>00</Sk>
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="flex items-center gap-2">
+                    <span className="kp-sk-bloco inline-flex h-9 items-center gap-1.5 rounded-md border border-transparent px-3 text-[13px] font-medium text-transparent select-none">
+                      <span className="size-4" />
+                      Destacar
+                    </span>
+                    <span className="kp-sk-bloco inline-flex h-9 items-center gap-1.5 rounded-md border border-transparent px-2.5 text-sm font-medium text-transparent select-none">
+                      Edições (4)
+                      <span className="size-4" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
@@ -395,7 +469,7 @@ function EditionDialog({ nft, editionId, onDone }: { nft: NftDetail; editionId: 
                     key={value}
                     className={cn(
                       'flex cursor-pointer flex-col rounded-[2px] border px-3 py-2 text-[14px] transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
-                      field.value === value ? 'border-primary bg-primary/10' : 'border-[#3f2319] hover:border-primary/60',
+                      field.value === value ? 'border-primary bg-primary/10' : 'border-[var(--kp-campo-borda)] hover:border-primary/60',
                     )}
                   >
                     <input type="radio" name={field.name} value={value} checked={field.value === value} onChange={() => field.onChange(value)} onBlur={field.onBlur} className="sr-only" />

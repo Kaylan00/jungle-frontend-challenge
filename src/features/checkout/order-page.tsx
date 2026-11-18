@@ -64,14 +64,7 @@ export function OrderPage({ orderId }: { orderId: string }) {
       </div>
     )
   }
-  if (query.isPending) {
-    return (
-      <div className="container-page flex justify-center py-6 md:pb-[97px] md:pt-[97px]" aria-busy="true" aria-label="Carregando pedido" data-testid="order-loading">
-        <p className="sr-only">Carregando pedido…</p>
-        <ReceiptSkeleton />
-      </div>
-    )
-  }
+  if (query.isPending) return <OrderPending />
 
   const order = query.data
   return (
@@ -200,6 +193,18 @@ function Line({ className, bar }: { className?: string; bar?: string }) {
  * (o caso mais comum ao abrir/recarregar um pedido): mesma caixa, mesmas faixas e alturas.
  * Rótulos fixos aparecem; valores, itens e o texto da rede viram barras. Mostra 1 item.
  */
+/** Pedido carregando (também enquanto a sessão da rota privada é conferida): o recibo em skeleton. */
+export function OrderPending() {
+  return (
+    <div className="container-page flex justify-center py-6 md:pb-[97px] md:pt-[97px]" aria-busy="true" data-testid="order-loading">
+      <p className="sr-only" role="status">
+        Carregando pedido…
+      </p>
+      <ReceiptSkeleton />
+    </div>
+  )
+}
+
 function ReceiptSkeleton() {
   return (
     <div className="relative w-full max-w-[578px] bg-card wide:max-w-[calc(578*var(--u))]" aria-hidden="true">

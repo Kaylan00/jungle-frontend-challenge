@@ -1,0 +1,139 @@
+/*
+ * Cores do Kurio Admin nos dois temas. Carregado com o app (é pequeno), para o fundo do painel já nascer na
+ * cor certa enquanto o resto carrega.
+ *
+ * As variáveis --kp-* são do painel. No tema claro o painel também redefine os tokens da loja (--background,
+ * --card, --muted-foreground...), porque diálogos, avisos, dicas e campos compartilhados usam esses tokens e
+ * são renderizados fora da casca. O atributo data-kp-tema só existe no <html> enquanto o painel está aberto
+ * (ver panel-theme.ts): a loja nunca é atingida.
+ */
+:root {
+  --kp-mesa: #0b0705;
+  --kp-lousa: #140d0a;
+  --kp-borda-lousa: #2a1b14;
+  --kp-ficha: #1b120e;
+  --kp-ficha-hover: #22160f;
+  --kp-linha: #2e1f17;
+  --kp-linha-forte: #442c1b;
+  --kp-tinta: #f5f1eb;
+  --kp-grafite: #cfb28c;
+  --kp-fumaca: #a8917c;
+  --kp-laranja: #d28a4c;
+  --kp-laranja-hover: #df9a5e;
+  --kp-laranja-texto: #e89b55;
+  --kp-trilho-tinta: #d9c6ad;
+  /* Texto de "recusado/desativado" (o vermelho da loja é escuro demais para texto sobre a lousa escura). */
+  --kp-perigo-texto: #f08a83;
+  /* Véu: realces sutis sobre a lousa (hover, fundo de ícone, trilho da barra). Usado como rgb(var() / alfa). */
+  --kp-veu-rgb: 255 255 255;
+  --kp-hover-trilho: rgb(245 241 235 / 0.06);
+  --kp-grade: rgb(245 241 235 / 0.025);
+  --kp-campo-borda: #3f2319;
+  --kp-sombra-lousa: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 30px 80px -40px rgb(0 0 0 / 0.9);
+  --kp-sombra-modal: 0 40px 120px -30px rgb(0 0 0 / 0.9);
+  /* Skeleton do painel: base e brilho que atravessa. */
+  --kp-sk-base: #2c1d19;
+  --kp-sk-brilho: rgb(255 255 255 / 0.06);
+}
+
+/*
+ * TEMA CLARO: papel creme (mesa), lousa quase branca, fichas em creme claro, tinta marrom-café e o laranja da
+ * marca no preenchimento (pílula ativa, botões). O laranja de TEXTO escurece para passar no AA sobre o claro.
+ * Contrastes (WCAG): tinta 14–18:1, grafite 7.6–9.5:1, fumaça 5.7–7:1, laranja-texto 4.75–5.9:1, verde,
+ * âmbar e vermelho de status ≥ 4.6:1 sobre a mesa, a lousa, as fichas e os fundos tingidos das pílulas.
+ */
+:root[data-kp-tema='claro'] {
+  color-scheme: light;
+  scrollbar-color: #c9a27c #ece3d6;
+
+  --kp-mesa: #ece3d6;
+  --kp-lousa: #fffcf7;
+  --kp-borda-lousa: #e0d2bf;
+  --kp-ficha: #f9f4ec;
+  --kp-ficha-hover: #f3ebe0;
+  --kp-linha: #e7dacb;
+  --kp-linha-forte: #d3bfa7;
+  --kp-tinta: #1e130d;
+  --kp-grafite: #56402f;
+  --kp-fumaca: #6b5243;
+  --kp-laranja: #d28a4c;
+  --kp-laranja-hover: #c0763a;
+  --kp-laranja-texto: #975019;
+  --kp-trilho-tinta: #47331f;
+  --kp-perigo-texto: #a3261c;
+  --kp-veu-rgb: 74 46 26;
+  --kp-hover-trilho: rgb(74 46 26 / 0.07);
+  --kp-grade: rgb(74 46 26 / 0.05);
+  --kp-campo-borda: #d3bfa7;
+  --kp-sombra-lousa: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 24px 60px -36px rgb(74 46 26 / 0.35), 0 2px 6px -2px rgb(74 46 26 / 0.08);
+  --kp-sombra-modal: 0 40px 100px -30px rgb(74 46 26 / 0.45), 0 4px 14px -4px rgb(74 46 26 / 0.12);
+  --kp-sk-base: #e8dccb;
+  --kp-sk-brilho: rgb(255 255 255 / 0.7);
+
+  /* Tokens da loja, só enquanto o painel claro está aberto (diálogos, avisos, dicas, campos, botões). */
+  --background: #fffcf7;
+  --foreground: #1e130d;
+  --card: #fffcf7;
+  --card-foreground: #1e130d;
+  --popover: #fffcf7;
+  --popover-foreground: #1e130d;
+  --primary: #d28a4c;
+  --primary-hover: #c0763a;
+  --primary-foreground: #140d0a;
+  --highlight: #975019;
+  --secondary: #efe5d8;
+  --secondary-foreground: #1e130d;
+  --muted: #efe5d8;
+  --muted-foreground: #5a4434;
+  --subtle-foreground: #6b5243;
+  --accent: #f3ebe0;
+  --accent-foreground: #1e130d;
+  --destructive: #b42318;
+  --success: #1d6e31;
+  --warning: #875400;
+  --border: #d3bfa7;
+  --input: #d3bfa7;
+  --ring: #c0763a;
+  --band: #efe5d8;
+  /* Campo de formulário compartilhado (FormField) e skeleton compartilhado: só o painel claro define. */
+  --campo-borda: #d3bfa7;
+  --campo-dica: #7a5f4c;
+  --campo-obrigatorio: #b8461f;
+  --skeleton-base: #e8dccb;
+  --skeleton-brilho: rgb(255 255 255 / 0.7);
+}
+:root[data-kp-tema='claro'],
+:root[data-kp-tema='claro'] body {
+  background: var(--kp-mesa);
+}
+/* O index.html pinta o body (fundo e texto) antes do CSS chegar; no claro o texto herdado (diálogos, dicas,
+   tudo o que é renderizado no <body>, fora da casca) passa a ser a tinta do painel. */
+:root[data-kp-tema='claro'] body {
+  color: var(--foreground);
+}
+/* Avisos (sonner, tema light com richColors) sobre a ficha creme: textos de status escurecidos para o AA. */
+:root[data-kp-tema='claro'] [data-sonner-toaster][data-theme='light'] {
+  --normal-text: #1e130d;
+  --success-text: #1d6e31;
+  --error-text: #b42318;
+  --warning-text: #875400;
+  --info-text: #1d4f8c;
+}
+
+/* A busca global no claro é uma folha da lousa (no escuro ela segue a mesa, como sempre foi). */
+:root[data-kp-tema='claro'] .kp-paleta {
+  background: var(--kp-lousa);
+}
+
+/* Troca de tema: as cores deslizam por um instante (a classe sai sozinha). Sem movimento, troca seca. */
+@media (prefers-reduced-motion: no-preference) {
+  .kp-tema-trocando,
+  .kp-tema-trocando *,
+  .kp-tema-trocando *::before,
+  .kp-tema-trocando *::after {
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow, outline-color, text-decoration-color !important;
+    transition-duration: 300ms !important;
+    transition-timing-function: ease !important;
+    transition-delay: 0s !important;
+  }
+}

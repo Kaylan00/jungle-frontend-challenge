@@ -44,12 +44,7 @@ export function FavoritesPage() {
       </div>
 
       {favorites.isPending ? (
-        <div className={gridClass} aria-busy="true">
-          <p className="sr-only">Carregando lista de interesse…</p>
-          {Array.from({ length: 4 }, (_, i) => (
-            <NftCardSkeleton key={i} />
-          ))}
-        </div>
+        <FavoritesSkeleton />
       ) : favorites.isError ? (
         <ErrorState
           title="Não foi possível carregar sua lista de interesse"
@@ -108,6 +103,31 @@ export function FavoritesPage() {
           )}
         </>
       )}
+    </ProfileLayout>
+  )
+}
+
+function FavoritesSkeleton() {
+  return (
+    <div className={gridClass} aria-busy="true">
+      <p className="sr-only" role="status">
+        Carregando lista de interesse…
+      </p>
+      {Array.from({ length: 4 }, (_, i) => (
+        <NftCardSkeleton key={i} />
+      ))}
+    </div>
+  )
+}
+
+/** Enquanto a sessão da rota privada é conferida: o layout do perfil, o título e as fichas em skeleton. */
+export function FavoritesPending() {
+  return (
+    <ProfileLayout title="Lista de interesse">
+      <div className="mb-5 flex items-baseline justify-between gap-4">
+        <h2 className="text-[14px] font-bold">Lista de interesse</h2>
+      </div>
+      <FavoritesSkeleton />
     </ProfileLayout>
   )
 }

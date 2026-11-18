@@ -378,6 +378,15 @@ export function FieldSkeleton({ label, required = true, hideLabel, className }: 
 }
 
 /** Perfil em carregamento: mesmos títulos, grade, avatar, troca de senha e botão do formulário carregado. */
+/** Enquanto a sessão da rota privada é conferida: o layout do perfil com o skeleton dos dados. */
+export function ProfilePending() {
+  return (
+    <ProfileLayout title="Dados do perfil">
+      <ProfileSkeleton />
+    </ProfileLayout>
+  )
+}
+
 function ProfileSkeleton() {
   return (
     <div aria-busy="true" aria-live="polite" data-testid="profile-loading">

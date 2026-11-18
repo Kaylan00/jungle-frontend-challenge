@@ -48,7 +48,7 @@ export const FormField = forwardRef<
           aria-describedby={describedBy}
           aria-required={required || undefined}
           className={cn(
-            'h-10 w-full min-w-0 rounded-[2px] border border-[#3f2319] bg-transparent px-3 text-[14px] text-foreground placeholder:text-[#b39463]',
+            'h-10 w-full min-w-0 rounded-[2px] border border-[var(--campo-borda,#3f2319)] bg-transparent px-3 text-[14px] text-foreground placeholder:text-[var(--campo-dica,#b39463)]',
             'focus-visible:border-primary focus-visible:outline-none',
             'aria-[invalid=true]:border-destructive',
             isPassword && 'pr-11',
@@ -61,7 +61,7 @@ export const FormField = forwardRef<
             type="button"
             onClick={() => setShow((s) => !s)}
             className={cn(
-              'absolute right-2.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded text-[#b39463] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'absolute right-2.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded text-[var(--campo-dica,#b39463)] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               toggleClassName,
             )}
             aria-label={show ? 'Ocultar senha' : 'Mostrar senha'}
@@ -89,7 +89,7 @@ export const FormField = forwardRef<
 /** Asterisco de obrigatório do Figma: laranja-coral e maior que o rótulo, alinhado ao topo das maiúsculas. */
 export function RequiredMark({ className }: { className?: string }) {
   return (
-    <span aria-hidden="true" className={cn('relative top-px ml-px inline-block align-top text-[22px] leading-4 text-[#f0805f]', className)}>
+    <span aria-hidden="true" className={cn('relative top-px ml-px inline-block align-top text-[22px] leading-4 text-[var(--campo-obrigatorio,#f0805f)]', className)}>
       *
     </span>
   )

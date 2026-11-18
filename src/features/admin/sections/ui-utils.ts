@@ -22,7 +22,7 @@ export function useDebouncedSearch(urlValue: string | undefined, apply: (value: 
 export const ORDER_STATUS: Record<OrderStatus, { label: string; className: string; dot: string }> = {
   pending: { label: 'Processando', className: 'border-warning/40 bg-warning/10 text-warning', dot: 'bg-warning animate-pulse' },
   confirmed: { label: 'Confirmado', className: 'border-success/40 bg-success/10 text-success', dot: 'bg-success' },
-  rejected: { label: 'Recusado', className: 'border-destructive/50 bg-destructive/10 text-[#f08a83]', dot: 'bg-destructive' },
+  rejected: { label: 'Recusado', className: 'border-destructive/50 bg-destructive/10 text-[var(--kp-perigo-texto)]', dot: 'bg-destructive' },
 }
 
 const rtf = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' })

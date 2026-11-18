@@ -1,6 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import { applyPanelThemeEarly } from './features/admin/shell/panel-theme'
+
+// Kurio Admin no tema claro: o fundo já nasce claro, antes dos mocks e do app carregarem (sem piscar o escuro).
+applyPanelThemeEarly()
 
 /**
  * A camada de mocks (MSW) é ligada por configuração (VITE_ENABLE_MOCKS) e iniciada

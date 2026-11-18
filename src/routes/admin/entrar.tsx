@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { z } from 'zod'
 import { checkPanelAccess } from '@/features/admin/access'
-import { PanelLogin } from '@/features/admin/login/panel-login'
+import { PanelLogin, PanelLoginPending } from '@/features/admin/login/panel-login'
 import { safePanelRedirect } from '@/features/admin/shell/sections'
 
 /**
@@ -19,7 +19,16 @@ export const Route = createFileRoute('/admin/entrar')({
     return { access }
   },
   component: EntrarRoute,
+  // Conferindo se já há sessão de admin: a moldura da entrada com o formulário em skeleton (sem tela vazia).
+  pendingComponent: EntrarPending,
+  pendingMs: 120,
+  pendingMinMs: 300,
 })
+
+function EntrarPending() {
+  const search = Route.useSearch()
+  return <PanelLoginPending reason={search.motivo} />
+}
 
 function EntrarRoute() {
   const search = Route.useSearch()

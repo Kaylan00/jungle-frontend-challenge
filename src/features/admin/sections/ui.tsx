@@ -5,7 +5,22 @@ import { cn } from '@/lib/utils'
 import { formatDateTime, ORDER_STATUS, timeAgo } from './ui-utils'
 
 /** Campo de busca da seção. Quem usa decide o que fazer com o termo (normalmente, levá-lo à URL). */
-export function SectionSearch({ id, label, value, onChange, placeholder }: { id: string; label: string; value: string; onChange: (v: string) => void; placeholder: string }) {
+export function SectionSearch({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+  /** Enquanto a casca confere o acesso (skeleton da seção), o campo aparece mas ainda não aceita digitação. */
+  disabled?: boolean
+}) {
   return (
     <div className="relative w-full sm:w-[340px]">
       <label htmlFor={id} className="sr-only">
@@ -18,6 +33,7 @@ export function SectionSearch({ id, label, value, onChange, placeholder }: { id:
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        disabled={disabled}
         className="h-10 w-full rounded-[10px] border border-[var(--kp-linha-forte)] bg-[var(--kp-ficha)] pl-9 pr-3 text-[14px] placeholder:text-[var(--kp-fumaca)] focus-visible:border-[var(--kp-laranja)] focus-visible:outline-none"
       />
     </div>
@@ -51,6 +67,55 @@ export function OrderStatusPill({ status }: { status: OrderStatus }) {
     <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold leading-5', s.className)} data-testid="order-status" data-status={status}>
       <span aria-hidden="true" className={cn('size-1.5 rounded-full', s.dot)} />
       {s.label}
+    </span>
+  )
+}
+
+/*
+ * SKELETON do painel (classes em shell/panel.css). A regra: o skeleton usa a MESMA marcação do conteúdo final
+ * (mesmas classes de tamanho, padding, line-height) e só troca o dado por um texto de exemplo coberto pela
+ * barra. Assim a caixa é a mesma e nada pula quando o dado chega. Rótulos fixos (títulos, cabeçalhos de
+ * tabela, nomes dos indicadores) continuam visíveis: só o que vem da API vira skeleton.
+ */
+
+/** Uma linha de texto ainda carregando (o exemplo define a largura; não quebra linha). */
+export function Sk({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn('kp-sk', className)}>
+      {children}
+    </span>
+  )
+}
+
+/** Texto longo carregando: quebra como o texto final, uma faixa por linha. */
+export function SkLines({ children }: { children: React.ReactNode }) {
+  return (
+    <span aria-hidden="true" className="kp-sk-linhas">
+      {children}
+    </span>
+  )
+}
+
+/** Bloco com tamanho próprio (imagem, avatar, pílula, botão). */
+export function SkBlock({ className }: { className?: string }) {
+  return <span aria-hidden="true" className={cn('kp-sk-bloco block', className)} />
+}
+
+/** Pílula de status carregando: mesma caixa da OrderStatusPill (o rótulo de exemplo define a largura). */
+export function StatusPillSkeleton({ label = 'Confirmado' }: { label?: string }) {
+  return (
+    <span aria-hidden="true" className="kp-sk-bloco inline-flex items-center gap-1.5 rounded-full border border-transparent px-2.5 py-0.5 text-[12px] font-semibold leading-5 text-transparent select-none">
+      <span className="size-1.5" />
+      {label}
+    </span>
+  )
+}
+
+/** O aviso para leitor de tela (o container leva aria-busy). */
+export function LoadingNote({ children }: { children: React.ReactNode }) {
+  return (
+    <span role="status" className="sr-only">
+      {children}
     </span>
   )
 }

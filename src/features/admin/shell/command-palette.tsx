@@ -5,19 +5,26 @@
  * também a um NFT ou cupom pelo nome. As áreas respondem na hora (já estão na memória); os NFTs vêm da API
  * (/admin/nfts?q=, a partir de 2 letras e depois de uma pausa na digitação); os cupons vêm da lista do painel.
  *
+ * Também troca o tema do painel ("Tema: claro", "Tema: escuro", "Tema: igual ao sistema").
+ * Enquanto os NFTs do termo chegam, o grupo NFTs mostra linhas skeleton do tamanho das opções.
+ *
  * Teclado: setas andam pela lista inteira (áreas, NFTs e cupons na ordem da tela), Enter abre, Esc fecha.
  * Padrão combobox + listbox com aria-activedescendant: o foco fica no campo o tempo todo (preso no diálogo).
  */
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { CornerDownLeft, ExternalLink, Gem, Search, TicketPercent, type LucideIcon } from 'lucide-react'
+import { CornerDownLeft, ExternalLink, Gem, Monitor, Moon, Search, Sun, TicketPercent, type LucideIcon } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { adminCouponsQuery, adminSearchNftsQuery } from '@/api/queries'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { useSession } from '@/features/auth/use-session'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
+import { PANEL_THEME_OPTIONS, setPanelThemeChoice, usePanelTheme, type PanelThemeChoice } from './panel-theme'
 import { PANEL_SECTIONS } from './sections'
+
+const THEME_ICON: Record<PanelThemeChoice, LucideIcon> = { escuro: Moon, claro: Sun, sistema: Monitor }
+const THEME_WORDS: Record<PanelThemeChoice, string> = { escuro: 'dark noite preto', claro: 'light dia branco', sistema: 'sistema automatico automático auto os' }
 
 const fold = (s: string) =>
   s
@@ -27,7 +34,7 @@ const fold = (s: string) =>
 
 interface Result {
   id: string
-  group: 'Áreas' | 'NFTs' | 'Cupons'
+  group: 'Áreas' | 'NFTs' | 'Cupons' | 'Tema'
   label: string
   hint: string
   icon: LucideIcon
@@ -59,6 +66,7 @@ function PaletteBody({ close }: { close: () => void }) {
   const q = fold(term.trim())
   const nfts = useQuery({ ...adminSearchNftsQuery(owner, debounced), enabled: debounced.length >= 2 })
   const coupons = useQuery(adminCouponsQuery(owner))
+  const { choice: themeChoice } = usePanelTheme()
 
   const results = useMemo<Result[]>(() => {
     const go = (fn: () => void) => () => {
@@ -101,8 +109,20 @@ function PaletteBody({ close }: { close: () => void }) {
             run: go(() => void navigate({ to: '/admin/cupons', search: { codigo: c.code } })),
           }))
       : []
-    return [...areas, ...nftItems, ...couponItems]
-  }, [q, debounced, nfts.data, coupons.data, navigate, close])
+    // Tema: cada palavra digitada precisa aparecer ("tema claro", "modo escuro", "aparência sistema"...).
+    const themeItems: Result[] = PANEL_THEME_OPTIONS.filter((o) => {
+      const hay = fold(`tema aparencia cor modo ${o.label} ${THEME_WORDS[o.value]}`)
+      return !q || q.split(/\s+/).every((w) => hay.includes(w))
+    }).map((o) => ({
+      id: `tema:${o.value}`,
+      group: 'Tema',
+      label: `Tema: ${o.short}`,
+      hint: o.value === themeChoice ? 'Em uso agora' : o.value === 'sistema' ? 'Segue o claro ou escuro do sistema' : `Painel com fundo ${o.value === 'claro' ? 'claro' : 'escuro'}`,
+      icon: THEME_ICON[o.value],
+      run: go(() => setPanelThemeChoice(o.value)),
+    }))
+    return [...areas, ...nftItems, ...couponItems, ...themeItems]
+  }, [q, debounced, nfts.data, coupons.data, navigate, close, themeChoice])
 
   // Lista mudou: a seleção volta ao primeiro resultado.
   useEffect(() => setActive(0), [q])
@@ -115,12 +135,12 @@ function PaletteBody({ close }: { close: () => void }) {
   }, [current])
 
   const searchingNfts = q.length >= 2 && (fold(debounced) !== q || nfts.isFetching)
-  const groups = (['Áreas', 'NFTs', 'Cupons'] as const).map((g) => ({ g, items: results.map((r, i) => ({ r, i })).filter(({ r }) => r.group === g) }))
+  const groups = (['Áreas', 'NFTs', 'Cupons', 'Tema'] as const).map((g) => ({ g, items: results.map((r, i) => ({ r, i })).filter(({ r }) => r.group === g) }))
 
   return (
     <DialogContent
       showCloseButton={false}
-      className="kpanel top-[12vh] w-[min(640px,calc(100%-2rem))] max-w-none translate-y-0 gap-0 overflow-hidden rounded-2xl border border-[var(--kp-linha-forte)] bg-[var(--kp-lousa)] p-0 shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)] sm:max-w-none"
+      className="kpanel kp-paleta top-[12vh] w-[min(640px,calc(100%-2rem))] max-w-none translate-y-0 gap-0 overflow-hidden rounded-2xl border border-[var(--kp-linha-forte)] bg-[var(--kp-lousa)] p-0 shadow-[var(--kp-sombra-modal)] sm:max-w-none"
       data-testid="command-palette"
       onOpenAutoFocus={(e) => {
         e.preventDefault()
@@ -158,9 +178,11 @@ function PaletteBody({ close }: { close: () => void }) {
         <kbd className="kp-kbd">Esc</kbd>
       </div>
 
-      <ul ref={listRef} id={listId} role="listbox" aria-label="Resultados" className="max-h-[min(56vh,460px)] overflow-y-auto p-2">
+      <ul ref={listRef} id={listId} role="listbox" aria-label="Resultados" aria-busy={searchingNfts || undefined} className="max-h-[min(56vh,460px)] overflow-y-auto p-2">
         {groups.map(({ g, items }) =>
-          items.length === 0 ? null : (
+          items.length === 0 ? (
+            g === 'NFTs' && searchingNfts ? <PaletteSkeletonGroup key={g} label={g} /> : null
+          ) : (
             <li key={g} role="presentation">
               <p className="kp-rotulo px-3 pb-1.5 pt-3" aria-hidden="true">
                 {g}
@@ -209,5 +231,29 @@ function PaletteBody({ close }: { close: () => void }) {
         </span>
       </div>
     </DialogContent>
+  )
+}
+
+/** NFTs do termo ainda chegando: duas linhas no formato exato das opções (ícone, nome, coleção · preço · id). */
+function PaletteSkeletonGroup({ label }: { label: string }) {
+  return (
+    <li role="presentation" aria-hidden="true" data-testid="palette-skeleton">
+      <p className="kp-rotulo px-3 pb-1.5 pt-3">{label}</p>
+      <ul role="presentation">
+        {['Emerald Ape #042', 'Cosmic Owl #07'].map((name) => (
+          <li key={name} role="presentation" className="flex items-center gap-3 rounded-[10px] px-3 py-2.5">
+            <span className="kp-sk-bloco size-4 shrink-0 rounded-[4px]" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[14px] font-semibold">
+                <span className="kp-sk">{name}</span>
+              </span>
+              <span className="block truncate text-[12px]">
+                <span className="kp-sk">Coleção Kurio · 0.25 ETH · nft-00</span>
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </li>
   )
 }

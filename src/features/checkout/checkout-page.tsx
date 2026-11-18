@@ -73,36 +73,7 @@ export function CheckoutPage() {
   if (recovering) return <RecoverAttempt attempt={recovering} onGiveUp={() => setRecovering(null)} />
 
   return (
-    // Mobile (Figma 414): margens de 28px e espaço no fim para o botão fixo "Confirmar compra".
-    <div className="container-page pt-4 max-md:px-7 max-md:pb-[124px] max-md:pt-8 md:pt-7">
-      <nav aria-label="Trilha de navegação" className="mb-4 hidden text-[15px] font-bold leading-6 md:block lg:mb-6">
-        <ol className="flex gap-[9px]">
-          <li>
-            <Link to="/" className="hover:text-primary">
-              Início
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li>
-            <Link to="/" hash="catalogo" className="hover:text-primary">
-              Mercado
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li aria-current="page">Pagamento</li>
-        </ol>
-      </nav>
-      <div className="mb-5 flex items-center md:hidden">
-        <Link
-          to="/carrinho"
-          className="grid size-[35px] shrink-0 place-items-center rounded-full border border-[#3c2218] bg-[#2f1d15] text-[#b09261] transition-colors hover:text-highlight"
-          aria-label="Voltar ao carrinho"
-        >
-          <ChevronLeft className="size-5" strokeWidth={1.75} aria-hidden="true" />
-        </Link>
-        <h1 className="flex-1 pl-[25px] text-[20px] font-bold leading-7">Pagamento com carteira</h1>
-      </div>
-      <h1 className="sr-only max-md:hidden">Pagamento com carteira</h1>
+    <CheckoutFrame>
       <PendingOrdersBanner />
       {cart.isError && !cart.data ? (
         <ErrorState title="Não foi possível carregar o carrinho" message={cart.error.message} onRetry={() => void cart.refetch()} />
@@ -133,7 +104,54 @@ export function CheckoutPage() {
       ) : (
         <CheckoutForm_ cart={cart.data} wallets={wallets.data.items} />
       )}
+    </CheckoutFrame>
+  )
+}
+
+/** Moldura da página de pagamento: trilha (desktop), título com voltar (celular) e o h1. */
+function CheckoutFrame({ children }: { children: React.ReactNode }) {
+  return (
+    // Mobile (Figma 414): margens de 28px e espaço no fim para o botão fixo "Confirmar compra".
+    <div className="container-page pt-4 max-md:px-7 max-md:pb-[124px] max-md:pt-8 md:pt-7">
+      <nav aria-label="Trilha de navegação" className="mb-4 hidden text-[15px] font-bold leading-6 md:block lg:mb-6">
+        <ol className="flex gap-[9px]">
+          <li>
+            <Link to="/" className="hover:text-primary">
+              Início
+            </Link>
+          </li>
+          <li aria-hidden="true">/</li>
+          <li>
+            <Link to="/" hash="catalogo" className="hover:text-primary">
+              Mercado
+            </Link>
+          </li>
+          <li aria-hidden="true">/</li>
+          <li aria-current="page">Pagamento</li>
+        </ol>
+      </nav>
+      <div className="mb-5 flex items-center md:hidden">
+        <Link
+          to="/carrinho"
+          className="grid size-[35px] shrink-0 place-items-center rounded-full border border-[#3c2218] bg-[#2f1d15] text-[#b09261] transition-colors hover:text-highlight"
+          aria-label="Voltar ao carrinho"
+        >
+          <ChevronLeft className="size-5" strokeWidth={1.75} aria-hidden="true" />
+        </Link>
+        <h1 className="flex-1 pl-[25px] text-[20px] font-bold leading-7">Pagamento com carteira</h1>
+      </div>
+      <h1 className="sr-only max-md:hidden">Pagamento com carteira</h1>
+      {children}
     </div>
+  )
+}
+
+/** Enquanto a sessão é conferida (rota privada): a mesma moldura com o skeleton do pagamento. */
+export function CheckoutPending() {
+  return (
+    <CheckoutFrame>
+      <CheckoutSkeleton />
+    </CheckoutFrame>
   )
 }
 

@@ -7,19 +7,7 @@
  * o lugar onde se está (uma vez por coluna) e a Roboto Mono continua sendo a voz.
  */
 .kpanel {
-  --kp-mesa: #0b0705;
-  --kp-lousa: #140d0a;
-  --kp-borda-lousa: #2a1b14;
-  --kp-ficha: #1b120e;
-  --kp-ficha-hover: #22160f;
-  --kp-linha: #2e1f17;
-  --kp-linha-forte: #442c1b;
-  --kp-tinta: #f5f1eb;
-  --kp-grafite: #cfb28c;
-  --kp-fumaca: #a8917c;
-  --kp-laranja: #d28a4c;
-  --kp-laranja-texto: #e89b55;
-  --kp-trilho-tinta: #d9c6ad;
+  /* As cores (--kp-*) dos dois temas ficam em panel-theme.css. */
   background: var(--kp-mesa);
   color: var(--kp-tinta);
 }
@@ -30,9 +18,7 @@
     radial-gradient(120% 60% at 100% 0%, rgb(210 138 76 / 0.055), transparent 60%),
     var(--kp-lousa);
   border: 1px solid var(--kp-borda-lousa);
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.03) inset,
-    0 30px 80px -40px rgb(0 0 0 / 0.9);
+  box-shadow: var(--kp-sombra-lousa);
 }
 
 /* Item do trilho: ícone e nome na mesma linha; o ativo é a pílula laranja com a tinta da lousa. */
@@ -54,7 +40,7 @@
     color 0.15s ease;
 }
 .kp-trilho-item:hover {
-  background: rgb(245 241 235 / 0.06);
+  background: var(--kp-hover-trilho);
   color: var(--kp-tinta);
 }
 .kp-trilho-item[aria-current='page'] {
@@ -163,6 +149,120 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .kp-chegou {
+    animation: none;
+  }
+}
+
+/* Tema do painel (rodapé do trilho): três botões num trilho fino; o marcado ganha a ficha e o laranja. */
+.kp-tema {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--kp-linha);
+  border-radius: 10px;
+}
+.kp-tema [role='radio'] {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--kp-fumaca);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    scale 120ms ease-out;
+}
+.kp-tema [role='radio']:hover {
+  background: var(--kp-hover-trilho);
+  color: var(--kp-tinta);
+}
+.kp-tema [role='radio'][aria-checked='true'] {
+  background: var(--kp-ficha-hover);
+  color: var(--kp-laranja-texto);
+  box-shadow: inset 0 0 0 1px var(--kp-linha-forte);
+}
+
+/*
+ * SKELETON do painel, nos dois temas (cores em panel-theme.css).
+ * - .kp-sk: texto de exemplo invisível coberto por uma barra. A caixa é a do próprio texto (mesma fonte, mesmo
+ *   line-height, mesma quebra), então o conteúdo final ocupa exatamente o mesmo lugar: sem pulo de layout.
+ *   A barra tem a altura das letras (0.9em), centrada na linha, e não a altura toda da linha.
+ * - .kp-sk-bloco: bloco com o tamanho dado por quem usa (imagem, avatar, pílula, botão).
+ * - Os dois são aria-hidden; quem avisa o leitor de tela é o container (aria-busy + texto "Carregando…").
+ * - Com "reduzir movimento" o brilho não corre.
+ */
+@keyframes kp-sk {
+  from {
+    background-position: -150% 0;
+  }
+  to {
+    background-position: 250% 0;
+  }
+}
+.kp-sk {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  overflow: clip;
+  white-space: nowrap;
+  vertical-align: baseline;
+  color: transparent !important;
+  user-select: none;
+  pointer-events: none;
+}
+.kp-sk::before,
+.kp-sk-bloco {
+  background-color: var(--kp-sk-base);
+  background-image: linear-gradient(90deg, transparent, var(--kp-sk-brilho), transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: kp-sk 1.6s ease-in-out infinite;
+}
+.kp-sk::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 0.9em;
+  margin-top: -0.45em;
+  border-radius: 5px;
+}
+.kp-sk-bloco {
+  pointer-events: none;
+}
+/* Texto longo que quebra linha (frase do cabeçalho): uma faixa por linha, na mesma quebra do texto final. */
+@keyframes kp-sk-linhas {
+  from {
+    background-position:
+      -150% 56%,
+      0 56%;
+  }
+  to {
+    background-position:
+      250% 56%,
+      0 56%;
+  }
+}
+.kp-sk-linhas {
+  color: transparent !important;
+  user-select: none;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  background-image: linear-gradient(90deg, transparent, var(--kp-sk-brilho), transparent), linear-gradient(var(--kp-sk-base), var(--kp-sk-base));
+  background-size:
+    50% 0.9em,
+    100% 0.9em;
+  background-position:
+    -150% 56%,
+    0 56%;
+  background-repeat: no-repeat;
+  animation: kp-sk-linhas 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp-sk::before,
+  .kp-sk-bloco,
+  .kp-sk-linhas {
     animation: none;
   }
 }

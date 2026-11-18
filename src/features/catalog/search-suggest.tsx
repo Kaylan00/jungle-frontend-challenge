@@ -17,6 +17,7 @@ import type { NftSummary } from '@/api/contracts'
 import { nftSuggestQuery } from '@/api/queries'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 const SUGGEST_MIN_CHARS = 2
@@ -216,6 +217,25 @@ export const SearchSuggest = forwardRef<HTMLInputElement, Props>(function Search
                 </li>
               ))}
             </ul>
+          ) : !settled ? (
+            // Buscando: três linhas no formato das sugestões (miniatura, nome, coleção e preço).
+            <div id={listId} className="py-1" data-testid="search-suggestions-loading">
+              <p className="sr-only">Buscando sugestões…</p>
+              {[62, 48, 56].map((w) => (
+                <div key={w} className="flex items-center gap-3 px-3 py-2" aria-hidden="true">
+                  <Skeleton className="size-9 shrink-0 rounded-[6px]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex h-5 items-center">
+                      <Skeleton className="h-3 rounded-sm" style={{ width: `${w}%` }} />
+                    </div>
+                    <div className="flex h-4 items-center">
+                      <Skeleton className="h-2.5 w-2/5 rounded-sm" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-3.5 w-16 shrink-0 rounded-sm" />
+                </div>
+              ))}
+            </div>
           ) : (
             // Sem opções: o painel mostra o estado (o listbox só existe com opções).
             <div id={listId} className="flex items-center justify-between gap-3 px-3 py-3 text-[13px] text-muted-foreground" data-testid="search-suggestions-status">
