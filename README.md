@@ -98,7 +98,7 @@ Os cenários mudam o servidor simulado, nunca a interface. Três formas de escol
 2. **URL**: `?mock=<preset>` em qualquer página. Aceita combinações, como `/?mock=latency:variable,payment:reject`.
 3. **Console ou testes**: `window.__jungleMock.setScenario({...})`.
 
-O cenário fica no `localStorage` e sobrevive ao refresh. **Reset**: **Resetar tudo** no painel ou `await window.__jungleMock.reset()` restaura a seed inteira (dados, sessões, pedidos e cenário). `?mock=padrao` volta só o cenário.
+O cenário fica no `localStorage` e sobrevive ao refresh. Cada preset (painel, `?mock=` ou `__jungleMock.applyPreset(nome)`) parte do cenário base inteiro: nada do cenário anterior continua valendo. **Reset**: **Resetar tudo** no painel ou `await window.__jungleMock.reset()` restaura a seed inteira (dados, sessões, pedidos e cenário). `?mock=padrao` volta só o cenário.
 
 | Preset (`?mock=`) | Efeito |
 | --- | --- |
@@ -113,7 +113,7 @@ O cenário fica no `localStorage` e sobrevive ao refresh. **Reset**: **Resetar t
 | `timeout-pedido` | O próximo pedido é criado, mas a resposta não chega ao cliente |
 | `carteira-recusa` | A próxima conexão de carteira é recusada |
 | `sessao-curta` | Sessões novas duram 60 s |
-| `tempo-real-offline` | O servidor Socket.IO derruba as conexões |
+| `tempo-real-offline` | O servidor Socket.IO derruba as conexões e recusa as novas (ao religar, o cliente reconecta em até ~4 s) |
 
 ## Como reproduzir os fluxos de falha
 
@@ -150,7 +150,7 @@ O cenário fica no `localStorage` e sobrevive ao refresh. **Reset**: **Resetar t
 
 ## Testes
 
-**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900) e `mobile` (Pixel 7, 390×844), 20 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
+**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900) e `mobile` (Pixel 7, 390×844), 23 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
 
 | # | Cenário do enunciado | Arquivo |
 | --- | --- | --- |
@@ -167,11 +167,11 @@ O cenário fica no `localStorage` e sobrevive ao refresh. **Reset**: **Resetar t
 | 11 | Teclado, foco em diálogos, validação de formulários (com axe) | `e2e/11-teclado-acessibilidade.spec.ts` |
 | 12 | Skeletons em rede lenta, falha e nova tentativa | `e2e/12-carregamento-falhas.spec.ts` |
 
-- **Extras**: `e2e/13` a `e2e/20` (recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, compartilhar, cabeçalhos de segurança/CSP e casca do painel).
+- **Extras**: `e2e/13` a `e2e/23` (recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, compartilhar, cabeçalhos de segurança/CSP, casca do painel, religar o socket em até 6 s, presets que partem do cenário base e service worker do MSW que cai e se recupera sozinho).
 - **Regressão visual**: `e2e/visual.spec.ts`, início, detalhe, carrinho e pagamento nos dois viewports; 8 baselines versionadas em `e2e/__screenshots__/`.
 - **Relatório e traces**: relatório HTML em `playwright-report/` (`npm run test:e2e:report`); traces das falhas em `test-results/` (`trace: 'retain-on-failure'`).
-- **Unitários (Vitest)**: 12 arquivos, 231 testes: valores em ETH, contratos zod, cliente HTTP, cliente de tempo real, regras do servidor simulado, isolamento entre contas, rotas do painel admin e propagação entre abas.
-- **Função de e-mail**: `npm run test:api`, 11 verificações com `fetch` falso.
+- **Unitários (Vitest)**: 15 arquivos, 273 testes: valores em ETH, contratos zod, cliente HTTP, cliente de tempo real, regras do servidor simulado, isolamento entre contas, rotas do painel admin, propagação entre abas, socket simulado com o `socket.io-client` de verdade (recusa e reconexão), presets de cenário e vigia do service worker.
+- **Função de e-mail**: `npm run test:api`, 16 verificações com `fetch` falso e relógio controlado.
 - **CI** ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)): a cada push, tipos, lint, unitários, `test:api`, build e a suíte E2E nos dois viewports, publicando o relatório HTML e os traces como artefatos. O Lighthouse roda sob demanda (`workflow_dispatch`).
 
 A descrição de cada arquivo está em [ARCHITECTURE.md §10](./ARCHITECTURE.md#10-testes).
@@ -182,12 +182,12 @@ Build de produção servido por `vite preview`, cenário padrão dos mocks, 3 me
 
 | Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `/` | mobile | 82 | 100 | 100 | 100 | 3.84 s | 0 | 311 ms |
-| `/` | desktop | 99 | 100 | 100 | 100 | 1.04 s | 0 | 0 ms |
-| `/nft/nft-01` | mobile | 84 | 100 | 100 | 100 | 3.78 s | 0 | 242 ms |
-| `/nft/nft-01` | desktop | 98 | 100 | 100 | 100 | 1.06 s | 0 | 0 ms |
+| `/` | mobile | 76 | 100 | 100 | 100 | 4.10 s | 0 | 451 ms |
+| `/` | desktop | 96 | 100 | 100 | 100 | 1.36 s | 0 | 6 ms |
+| `/nft/nft-01` | mobile | 78 | 100 | 100 | 100 | 4.01 s | 0 | 376 ms |
+| `/nft/nft-01` | desktop | 96 | 100 | 100 | 100 | 1.30 s | 0 | 0 ms |
 
-Performance mobile fica abaixo da meta de 90. A causa medida é a avaliação do JavaScript comum e a inicialização do MSW antes da primeira requisição, com CPU 4× mais lenta; a análise, as otimizações feitas, as alternativas descartadas, versões e ambiente estão em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Relatórios HTML e JSON de cada medição: [`lighthouse/reports/2026-11-18T16-10-14/`](./lighthouse/reports/2026-11-18T16-10-14/).
+Performance mobile fica abaixo da meta de 90. A causa medida é a avaliação do JavaScript comum e a inicialização do MSW antes da primeira requisição, com CPU 4× mais lenta; a análise, as otimizações feitas, as alternativas descartadas, versões e ambiente estão em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Relatórios HTML e JSON de cada medição: [`lighthouse/reports/2026-11-18T20-11-55/`](./lighthouse/reports/2026-11-18T20-11-55/). No mobile a mesma build oscila entre execuções (69 a 80 nesta rodada); a tabela é a mediana de 3.
 
 ## Deploy
 
@@ -204,7 +204,7 @@ Nada desta seção é exigido pelo enunciado.
 - **Busca com sugestões**: até 5 NFTs a partir de 2 letras, navegáveis por teclado.
 - **Alerta de preço**: queda de preço de um favorito gera aviso com link e selo “Caiu de …” na lista de favoritos.
 - **Compartilhar**: folha de compartilhamento do sistema quando existe; senão, copia o link.
-- **Animações** (GSAP e Lenis), desligadas com `prefers-reduced-motion`.
+- **Animações** (GSAP e Lenis), desligadas com `prefers-reduced-motion`. São só realce: nada fica escondido esperando a rolagem (todo o conteúdo aparece desde o primeiro render, inclusive em print de página inteira e na impressão).
 - **CI** no GitHub Actions e **testes unitários** (Vitest).
 - **Cabeçalhos de segurança** (CSP sem `unsafe-eval`, HSTS e outros), testados em `e2e/19-seguranca.spec.ts`. Ver [SECURITY.md](./SECURITY.md).
 

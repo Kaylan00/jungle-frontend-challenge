@@ -1,23 +1,35 @@
 # Lighthouse — resultados
 
-Execução de **2026-11-18 16:10 UTC**, 3 medições por página e perfil. Valor reportado = **mediana**.
-Relatórios completos (HTML e JSON de cada medição): [`reports/2026-11-18T16-10-14/`](./reports/2026-11-18T16-10-14/).
+Execução de **2026-11-18 20:11 UTC** sobre a versão entregue, 3 medições por página e perfil. Valor reportado = **mediana**.
+Relatórios completos (HTML e JSON de cada medição): [`reports/2026-11-18T20-11-55/`](./reports/2026-11-18T20-11-55/).
 
 ## Mediana
 
 | Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `/` | mobile | **82** | 100 | 100 | 100 | 3.84 s | 0 | 311 ms |
-| `/` | desktop | **99** | 100 | 100 | 100 | 1.04 s | 0 | 0 ms |
-| `/nft/nft-01` | mobile | **84** | 100 | 100 | 100 | 3.78 s | 0 | 242 ms |
-| `/nft/nft-01` | desktop | **98** | 100 | 100 | 100 | 1.06 s | 0 | 0 ms |
+| `/` | mobile | **76** | 100 | 100 | 100 | 4.10 s | 0 | 451 ms |
+| `/` | desktop | **96** | 100 | 100 | 100 | 1.36 s | 0 | 6 ms |
+| `/nft/nft-01` | mobile | **78** | 100 | 100 | 100 | 4.01 s | 0 | 376 ms |
+| `/nft/nft-01` | desktop | **96** | 100 | 100 | 100 | 1.30 s | 0 | 0 ms |
 
 Metas: Performance ≥ 90 · Accessibility ≥ 95 · Best Practices ≥ 95 · SEO ≥ 90.
 **Atingidas**: Accessibility, Best Practices e SEO em todas as combinações; Performance no desktop.
 **Abaixo da meta**: Performance no perfil mobile (análise abaixo).
 
-Rodada anterior (2026-11-17): mobile 71 (início) e 76 (detalhe), LCP 4,2 s / 4,1 s, TBT 601 / 444 ms. O que mudou
-desde então está em [Otimizações desta rodada](#otimizações-desta-rodada).
+**Variação**: no perfil mobile a mesma build oscila bastante entre execuções nesta máquina (69 a 80 nesta rodada,
+ver [Todas as medições](#todas-as-medições)). Por isso a mediana de 3, e por isso uma medição isolada pode dar
+alguns pontos acima ou abaixo da tabela.
+
+### Regressão encontrada e corrigida antes desta rodada
+
+Uma rodada anterior (2026-11-18 16:10 UTC, commit `edc8b26`, relatórios em
+[`reports/2026-11-18T16-10-14/`](./reports/2026-11-18T16-10-14/)) mediu 82 / 84 no mobile e 99 / 98 no desktop.
+Ao medir de novo antes da entrega, os números tinham caído para 72 / 73 e 91 / 92. Medindo commit a commit, a
+queda veio de um único commit (`46898e6`): os skeletons de espera das rotas (`pendingComponent`) entraram no
+pacote comum, porque o plugin do TanStack Router por padrão só separa `component`, `errorComponent` e
+`notFoundComponent`. Com eles foram as páginas de onde vêm (pagamento, perfil, seções do painel), e o chunk que
+toda página avalia antes de pintar dobrou (144 → 288 kB). Correção em `vite.config.ts`
+(`codeSplittingOptions.defaultBehavior` com `pendingComponent`): o chunk voltou a 147 kB.
 
 ## Ferramentas, ambiente e condições
 
@@ -40,7 +52,7 @@ alternativas sem rodar tudo: `LH_PAGES=inicio LH_PROFILES=mobile LH_RUNS=5 LH_OU
 (a pasta `tmp/` fica fora do controle de versão). Uma medição em que o próprio Lighthouse falha ao gravar o trace
 (`NO_NAVSTART`) é descartada e repetida, até 3 vezes.
 
-## Otimizações desta rodada
+## Otimizações já feitas (rodada de 16:10 UTC)
 
 Medianas do perfil mobile (início / detalhe), 3 medições cada, na ordem em que entraram. A variação entre
 rodadas da mesma build é de 2 a 3 pontos, então só os passos maiores que isso contam como ganho medido.
@@ -53,7 +65,7 @@ rodadas da mesma build é de 2 a 3 pontos, então só os passos maiores que isso
 | Animações (GSAP) e slides extras do destaque só depois da primeira tela com dados (`src/app/app-settled.ts`, `whenIdle` em `src/lib/motion.ts`) | 82 / 82 | 3,65 s | — |
 | Rota inicial começa a buscar destaques e catálogo no `loader`, como o detalhe já fazia (A/B com 5 medições: 83 sem, 84 com; dentro da variação) | 83 / 83 | 3,89 s | 301 / 309 ms |
 | Layout do outro tamanho de tela nem é montado: no celular, sem cabeçalho, rodapé, caixa de filtros lateral e ordenação do desktop; no desktop, sem barra inferior e barra de busca do mobile (`src/lib/use-media-query.ts`). Validação da URL do catálogo com cache (`validateCatalogSearch`), que o roteador refazia a cada `<Link>` para o início | 84 / 87 | 3,83 s | 238 / 209 ms |
-| **Rodada oficial** (acima) | **82 / 84** | 3,84 s | 311 / 242 ms |
+| Rodada de 16:10 UTC | **82 / 84** | 3,84 s | 311 / 242 ms |
 
 Também corrigido nesta rodada (Accessibility e Best Practices tinham caído para 96–97 com commits recentes):
 
@@ -78,7 +90,7 @@ Também corrigido nesta rodada (Accessibility e Best Practices tinham caído par
 
 | Alternativa | Performance mobile (início / detalhe) | Observação |
 | --- | ---: | --- |
-| **Atual**: MSW primeiro, depois o app | 82 / 84 | — |
+| **Atual**: MSW primeiro, depois o app | 82 / 84 (rodada de 16:10) | — |
 | App e mocks baixando em paralelo | 57 / 74 | TBT 380–1200 ms |
 | Renderizar antes e segurar a rede até o MSW ficar pronto | 58 / 50 | TBT 930–2130 ms |
 | `socket.io-client` sob demanda | 67 / 73 | TBT 550–760 ms |
@@ -107,15 +119,15 @@ As alternativas colocam avaliação de JavaScript disputando a CPU com a renderi
 
 | Página | Perfil | # | Perf. | A11y | BP | SEO | LCP | CLS | TBT | FCP |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `/` | mobile | 1 | 81 | 100 | 100 | 100 | 3844 ms | 0 | 323 ms | 950 ms |
-| `/` | mobile | 2 | 82 | 100 | 100 | 100 | 3916 ms | 0 | 290 ms | 956 ms |
-| `/` | mobile | 3 | 82 | 100 | 100 | 100 | 3812 ms | 0 | 311 ms | 952 ms |
-| `/` | desktop | 1 | 99 | 100 | 100 | 100 | 1027 ms | 0 | 0 ms | 291 ms |
-| `/` | desktop | 2 | 99 | 100 | 100 | 100 | 1041 ms | 0 | 0 ms | 295 ms |
-| `/` | desktop | 3 | 98 | 100 | 100 | 100 | 1059 ms | 0 | 0 ms | 384 ms |
-| `/nft/nft-01` | mobile | 1 | 84 | 100 | 100 | 100 | 3799 ms | 0 | 242 ms | 967 ms |
-| `/nft/nft-01` | mobile | 2 | 85 | 100 | 100 | 100 | 3754 ms | 0 | 235 ms | 949 ms |
-| `/nft/nft-01` | mobile | 3 | 83 | 100 | 100 | 100 | 3780 ms | 0 | 294 ms | 950 ms |
-| `/nft/nft-01` | desktop | 1 | 98 | 100 | 100 | 100 | 1063 ms | 0 | 0 ms | 393 ms |
-| `/nft/nft-01` | desktop | 2 | 98 | 100 | 100 | 100 | 1066 ms | 0 | 0 ms | 304 ms |
-| `/nft/nft-01` | desktop | 3 | 98 | 100 | 100 | 100 | 1058 ms | 0 | 0 ms | 384 ms |
+| `/` | mobile | 1 | 73 | 100 | 100 | 100 | 4109 ms | 0 | 520 ms | 996 ms |
+| `/` | mobile | 2 | 80 | 100 | 100 | 100 | 3929 ms | 0 | 335 ms | 974 ms |
+| `/` | mobile | 3 | 76 | 100 | 100 | 100 | 4097 ms | 0 | 450 ms | 991 ms |
+| `/` | desktop | 1 | 96 | 100 | 100 | 100 | 1357 ms | 0 | 13 ms | 333 ms |
+| `/` | desktop | 2 | 96 | 100 | 100 | 100 | 1340 ms | 0 | 0 ms | 430 ms |
+| `/` | desktop | 3 | 96 | 100 | 100 | 100 | 1377 ms | 0 | 6 ms | 336 ms |
+| `/nft/nft-01` | mobile | 1 | 78 | 100 | 100 | 100 | 4013 ms | 0 | 376 ms | 981 ms |
+| `/nft/nft-01` | mobile | 2 | 80 | 100 | 100 | 100 | 3876 ms | 0 | 344 ms | 971 ms |
+| `/nft/nft-01` | mobile | 3 | 69 | 100 | 100 | 100 | 4352 ms | 0 | 630 ms | 1034 ms |
+| `/nft/nft-01` | desktop | 1 | 97 | 100 | 100 | 100 | 1297 ms | 0 | 0 ms | 323 ms |
+| `/nft/nft-01` | desktop | 2 | 96 | 100 | 100 | 100 | 1363 ms | 0 | 3 ms | 334 ms |
+| `/nft/nft-01` | desktop | 3 | 92 | 100 | 100 | 100 | 1155 ms | 0 | 0 ms | 295 ms |
