@@ -22,6 +22,7 @@ import { Route as AdminEntrarRouteImport } from './routes/admin/entrar'
 import { Route as NftNftIdRouteImport } from './routes/nft.$nftId'
 import { Route as AuthPedidoOrderIdRouteImport } from './routes/_auth/pedido.$orderId'
 import { Route as AuthPerfilIndexRouteImport } from './routes/_auth/perfil.index'
+import { Route as AuthPerfilSecaoRouteImport } from './routes/_auth/perfil.$secao'
 import { Route as AuthPerfilCarteirasRouteImport } from './routes/_auth/perfil.carteiras'
 import { Route as AuthPerfilFavoritosRouteImport } from './routes/_auth/perfil.favoritos'
 import { Route as AdminPainelIndexRouteImport } from './routes/admin/_painel/index'
@@ -94,6 +95,11 @@ const AuthPerfilIndexRoute = AuthPerfilIndexRouteImport.update({
   path: '/perfil/',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthPerfilSecaoRoute = AuthPerfilSecaoRouteImport.update({
+  id: '/perfil/$secao',
+  path: '/perfil/$secao',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthPerfilCarteirasRoute = AuthPerfilCarteirasRouteImport.update({
   id: '/perfil/carteiras',
   path: '/perfil/carteiras',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/admin/entrar': typeof AdminEntrarRoute
   '/nft/$nftId': typeof NftNftIdRoute
   '/pedido/$orderId': typeof AuthPedidoOrderIdRoute
+  '/perfil/$secao': typeof AuthPerfilSecaoRoute
   '/perfil/carteiras': typeof AuthPerfilCarteirasRoute
   '/perfil/favoritos': typeof AuthPerfilFavoritosRoute
   '/admin/cupons': typeof AdminPainelCuponsRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/admin/entrar': typeof AdminEntrarRoute
   '/nft/$nftId': typeof NftNftIdRoute
   '/pedido/$orderId': typeof AuthPedidoOrderIdRoute
+  '/perfil/$secao': typeof AuthPerfilSecaoRoute
   '/perfil/carteiras': typeof AuthPerfilCarteirasRoute
   '/perfil/favoritos': typeof AuthPerfilFavoritosRoute
   '/admin/cupons': typeof AdminPainelCuponsRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/admin/entrar': typeof AdminEntrarRoute
   '/nft/$nftId': typeof NftNftIdRoute
   '/_auth/pedido/$orderId': typeof AuthPedidoOrderIdRoute
+  '/_auth/perfil/$secao': typeof AuthPerfilSecaoRoute
   '/_auth/perfil/carteiras': typeof AuthPerfilCarteirasRoute
   '/_auth/perfil/favoritos': typeof AuthPerfilFavoritosRoute
   '/admin/_painel/cupons': typeof AdminPainelCuponsRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/admin/entrar'
     | '/nft/$nftId'
     | '/pedido/$orderId'
+    | '/perfil/$secao'
     | '/perfil/carteiras'
     | '/perfil/favoritos'
     | '/admin/cupons'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/admin/entrar'
     | '/nft/$nftId'
     | '/pedido/$orderId'
+    | '/perfil/$secao'
     | '/perfil/carteiras'
     | '/perfil/favoritos'
     | '/admin/cupons'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/admin/entrar'
     | '/nft/$nftId'
     | '/_auth/pedido/$orderId'
+    | '/_auth/perfil/$secao'
     | '/_auth/perfil/carteiras'
     | '/_auth/perfil/favoritos'
     | '/admin/_painel/cupons'
@@ -366,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthPerfilIndexRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/perfil/$secao': {
+      id: '/_auth/perfil/$secao'
+      path: '/perfil/$secao'
+      fullPath: '/perfil/$secao'
+      preLoaderRoute: typeof AuthPerfilSecaoRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/perfil/carteiras': {
       id: '/_auth/perfil/carteiras'
       path: '/perfil/carteiras'
@@ -421,6 +440,7 @@ declare module '@tanstack/react-router' {
 interface AuthRouteChildren {
   AuthPagamentoRoute: typeof AuthPagamentoRoute
   AuthPedidoOrderIdRoute: typeof AuthPedidoOrderIdRoute
+  AuthPerfilSecaoRoute: typeof AuthPerfilSecaoRoute
   AuthPerfilCarteirasRoute: typeof AuthPerfilCarteirasRoute
   AuthPerfilFavoritosRoute: typeof AuthPerfilFavoritosRoute
   AuthPerfilIndexRoute: typeof AuthPerfilIndexRoute
@@ -429,6 +449,7 @@ interface AuthRouteChildren {
 const AuthRouteChildren: AuthRouteChildren = {
   AuthPagamentoRoute: AuthPagamentoRoute,
   AuthPedidoOrderIdRoute: AuthPedidoOrderIdRoute,
+  AuthPerfilSecaoRoute: AuthPerfilSecaoRoute,
   AuthPerfilCarteirasRoute: AuthPerfilCarteirasRoute,
   AuthPerfilFavoritosRoute: AuthPerfilFavoritosRoute,
   AuthPerfilIndexRoute: AuthPerfilIndexRoute,

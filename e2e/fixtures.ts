@@ -72,6 +72,40 @@ export class App {
     await expect(this.page.getByRole('dialog')).toBeHidden()
   }
 
+  /**
+   * Entra pelo Kurio Admin (/admin/entrar, ou o endereço pedido, que leva até lá sem sessão).
+   * Para admin, espera a casca do painel; para conta comum, quem testa confere a recusa.
+   */
+  async panelLogin(user: keyof typeof USERS = 'admin', from = '/admin/entrar') {
+    const u = USERS[user]
+    await this.goto(from)
+    const form = this.page.getByTestId('panel-login')
+    await form.getByLabel('E-mail').fill(u.email)
+    await form.getByLabel('Senha', { exact: true }).fill(u.password)
+    await form.getByRole('button', { name: 'Entrar', exact: true }).click()
+    if (user === 'admin') await expect(this.page.getByTestId('panel-shell')).toBeVisible()
+  }
+
+  /** Busca global do painel: atalho de teclado no desktop, botão do cabeçalho no celular. */
+  async openPanelSearch() {
+    if (this.isMobile) await this.page.getByRole('button', { name: 'Buscar no painel' }).click()
+    else await this.page.keyboard.press('Control+K')
+    const input = this.page.getByRole('combobox', { name: 'Buscar no painel' })
+    await expect(input).toBeFocused()
+    return input
+  }
+
+  /** Item do trilho (desktop) ou do menu que abre por cima (celular). */
+  async panelNav(name: string | RegExp) {
+    if (this.isMobile) {
+      await this.page.getByRole('button', { name: 'Menu', exact: true }).click()
+      await this.page.getByTestId('panel-mobile-menu').getByRole('link', { name, exact: typeof name === 'string' }).click()
+      await expect(this.page.getByTestId('panel-mobile-menu')).toBeHidden()
+    } else {
+      await this.page.getByRole('navigation', { name: 'Áreas do painel' }).getByRole('link', { name, exact: typeof name === 'string' }).click()
+    }
+  }
+
   /** Adiciona uma edição ao carrinho pela tela de detalhe. */
   async addToCart(nftId: string, opts: { edition?: string; quantity?: number; goToCart?: boolean } = {}) {
     await this.goto(`/nft/${nftId}${opts.edition ? `?edicao=${opts.edition}` : ''}`)

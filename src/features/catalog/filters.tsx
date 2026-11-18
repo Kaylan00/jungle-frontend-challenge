@@ -178,6 +178,12 @@ export function CatalogFilters({
             step={0.01}
             value={range}
             onValueChange={fromSlider}
+            // Enter num dos polegares aplica a faixa, como nos campos (o polegar não envia o formulário sozinho).
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              e.preventDefault()
+              apply()
+            }}
             aria-label="Faixa de preço em ETH"
             thumbLabels={['Preço mínimo', 'Preço máximo']}
             className="ml-[15px] mt-4 w-auto"

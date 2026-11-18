@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Skeleton } from '@/components/ui/skeleton'
 import { announce } from '@/lib/announcer'
 import { ART_SIZES, artSources } from '@/lib/art'
+import { compareEth } from '@/lib/eth'
 import { useIsDesktop } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 import { ActiveFilters } from './active-filters'
@@ -47,7 +48,11 @@ export function HomePage({ search }: { search: CatalogSearch }) {
   )
 }
 
-/** Atualiza a URL do catálogo. Qualquer filtro novo volta para a página 1. */
+/**
+ * Atualiza a URL do catálogo. Qualquer filtro novo volta para a página 1.
+ * A página não rola: filtros, busca, abas e paginação só trocam o conteúdo da grade (o #catalogo fica na
+ * URL para quem recarrega ou compartilha o link, mas sem levar a tela até ele a cada clique ou tecla).
+ */
 function useCatalogUpdate() {
   const navigate = useNavigate()
   return (patch: Partial<CatalogSearch>, opts: { keepPage?: boolean } = {}) =>
@@ -56,20 +61,69 @@ function useCatalogUpdate() {
       search: (prev) => ({ ...prev, ...patch, page: opts.keepPage ? patch.page : undefined }),
       hash: 'catalogo',
       resetScroll: false,
+      hashScrollIntoView: false,
     })
 }
 
-/** Termo de busca com debounce: digitar não dispara uma requisição por tecla. */
+/**
+ * Termo de busca com debounce: digitar não dispara uma requisição por tecla.
+ * O campo só copia a URL quando ela muda por fora (etiqueta removida, voltar do navegador, "Limpar"):
+ * a URL que este próprio campo gravou não volta para ele, senão o eco de "golden" apagaria o espaço de
+ * "golden " ou as letras digitadas enquanto a navegação acontecia.
+ */
 function useSearchTerm(search: CatalogSearch, update: ReturnType<typeof useCatalogUpdate>) {
   const [term, setTerm] = useState(search.q ?? '')
-  useEffect(() => setTerm(search.q ?? ''), [search.q])
+  const pushed = useRef(search.q ?? '')
   useEffect(() => {
-    if ((search.q ?? '') === term.trim()) return
-    const t = setTimeout(() => void update({ q: term.trim() || undefined }), 350)
+    const q = search.q ?? ''
+    if (q === pushed.current) return
+    pushed.current = q
+    setTerm(q)
+  }, [search.q])
+  useEffect(() => {
+    const next = term.trim()
+    if ((search.q ?? '') === next) return
+    const t = setTimeout(() => {
+      pushed.current = next
+      void update({ q: next || undefined })
+    }, 350)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term])
   return [term, setTerm] as const
+}
+
+/**
+ * Altura mínima da área de resultados: a de uma página cheia (3 linhas no desktop) medida na própria tela.
+ * Enquanto se digita ou filtra, a grade não encolhe e cresce de novo a cada resultado (a página não pula).
+ * Nada muda quando a página está cheia: a altura mínima é a altura que a grade já tem.
+ */
+function useStableResultsHeight() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [minHeight, setMinHeight] = useState(0)
+  useEffect(() => {
+    const box = ref.current
+    if (!box) return
+    let width = 0
+    const measure = () => {
+      const grid = box.querySelector<HTMLElement>(':scope > ul')
+      const w = Math.round(box.clientWidth)
+      const full = grid && grid.children.length >= PAGE_SIZE
+      if (full) setMinHeight(grid.offsetHeight)
+      // Largura nova sem uma página cheia para medir: a medida antiga não vale mais.
+      else if (w !== width) setMinHeight(0)
+      width = w
+    }
+    const ro = new ResizeObserver(measure)
+    ro.observe(box)
+    const mo = new MutationObserver(measure)
+    mo.observe(box, { childList: true, subtree: true })
+    return () => {
+      ro.disconnect()
+      mo.disconnect()
+    }
+  }, [])
+  return [ref, minHeight] as const
 }
 
 /** Ícone de filtros do Figma mobile: duas linhas com um círculo em cada ponta. */
@@ -173,10 +227,28 @@ function Catalog({ search }: { search: CatalogSearch }) {
   const activeTab = TABS.findIndex((t) => t.sort === search.sort)
   const hasFilters = activeFilters(search).length > 0
   const tablistRef = useRef<HTMLDivElement>(null)
+  const [resultsRef, resultsMinHeight] = useStableResultsHeight()
   const clearFilters = () => {
     announce('Todos os filtros foram removidos.')
     void update(CLEAR_FILTERS)
   }
+
+  // Chave da grade: muda quando chega o resultado de outra consulta (filtro, aba, ordenação, página) ou, na
+  // busca por nome, quando a lista de NFTs muda. A grade nova é montada de novo e os cards entram em cascata
+  // (camada de movimento, data-reveal-group). Enquanto a consulta nova carrega, a grade antiga continua na tela.
+  const shownKey = `${JSON.stringify({ ...params, q: undefined })}|${list.data?.items.map((n) => n.id).join(',') ?? ''}`
+  const [gridKey, setGridKey] = useState(shownKey)
+  if (list.data && !list.isPlaceholderData && gridKey !== shownKey) setGridKey(shownKey)
+
+  // Preço alterado ao vivo (outra aba, painel): o card é atualizado no cache sem nova consulta. Se ele saiu
+  // da faixa de preço filtrada, a lista é buscada de novo para não mostrar um NFT fora do filtro.
+  const outOfRange = list.data?.items.some(
+    (n) => (params.minPrice !== undefined && compareEth(n.price, params.minPrice) < 0) || (params.maxPrice !== undefined && compareEth(n.price, params.maxPrice) > 0),
+  )
+  const refetchList = list.refetch
+  useEffect(() => {
+    if (outOfRange) void refetchList()
+  }, [outOfRange, refetchList])
 
   return (
     <section id="catalogo" aria-labelledby="catalogo-title" className="container-page mt-[14px] scroll-mt-20 md:mt-24">
@@ -188,9 +260,8 @@ function Catalog({ search }: { search: CatalogSearch }) {
         {isDesktop && (
           <aside className="hidden md:block" aria-label="Filtros do catálogo">
             <div className="mt-px bg-card px-5 pb-5 pt-[15px]">
-              <CatalogFilters search={search} facets={list.data?.facets} onChange={(p) => void update(p)} />
-              {/* A busca por nome não aparece no Figma desktop; fica no fim da caixa de filtros. */}
-              <label className="relative mt-3 block">
+              {/* A busca por nome não aparece no Figma desktop; fica no topo da caixa de filtros, acima de "Coleções". */}
+              <label className="relative mb-5 block">
                 <span className="sr-only">Buscar NFTs por nome</span>
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                 <input
@@ -198,10 +269,12 @@ function Catalog({ search }: { search: CatalogSearch }) {
                   value={term}
                   onChange={(e) => setTerm(e.target.value)}
                   placeholder="Buscar por nome"
+                  autoComplete="off"
                   className="h-10 w-full rounded-[4px] bg-band pl-9 pr-2 text-[15px] placeholder:text-[#b19362]"
                   data-testid="catalog-search"
                 />
               </label>
+              <CatalogFilters search={search} facets={list.data?.facets} onChange={(p) => void update(p)} />
               {hasFilters && (
                 <button type="button" className="mt-4 pl-3 text-[15px] text-highlight underline-offset-4 hover:underline" onClick={clearFilters}>
                   Limpar filtros
@@ -262,46 +335,55 @@ function Catalog({ search }: { search: CatalogSearch }) {
             {list.data ? `${list.data.total} NFTs encontrados. Página ${list.data.page} de ${list.data.totalPages}.` : ''}
           </div>
 
-          {list.isError && !list.data ? (
-            <ErrorState
-              title="Não foi possível carregar o catálogo"
-              message={list.error.message}
-              onRetry={() => void list.refetch()}
-              retrying={list.isFetching}
-            />
-          ) : list.isPending ? (
-            // Mesma grade da lista (inclusive a coluna da direita 32px abaixo no mobile): sem pulo ao carregar.
-            <ul className={CATALOG_GRID} aria-busy="true" aria-label="Carregando NFTs" data-testid="catalog-loading">
-              {Array.from({ length: PAGE_SIZE }, (_, i) => (
-                <li key={i}>
-                  <NftCardSkeleton />
-                </li>
-              ))}
-            </ul>
-          ) : list.data.items.length === 0 ? (
-            <EmptyState
-              title="Nenhum NFT encontrado"
-              message="Tente outra busca ou remova alguns filtros."
-              action={
-                <Button variant="outline" onClick={() => void navigate({ to: '/', search: {}, hash: 'catalogo', resetScroll: false })}>
-                  Limpar busca e filtros
-                </Button>
-              }
-            />
-          ) : (
-            <>
-              {list.isError && (
-                <ErrorState className="mb-4 py-4" title="Falha ao atualizar a lista" message={list.error.message} onRetry={() => void list.refetch()} retrying={list.isFetching} />
-              )}
-              <ul className={cn(CATALOG_GRID, 'transition-opacity', list.isPlaceholderData && 'opacity-60')} aria-busy={list.isFetching} data-testid="catalog-grid" data-reveal-group>
-                {list.data.items.map((nft, i) => (
-                  <li key={nft.id}>
-                    <NftCard nft={nft} priority={i < 3} />
+          {/* Altura mínima estável (ver useStableResultsHeight): a página não encolhe nem pula enquanto a busca e os filtros carregam. */}
+          <div ref={resultsRef} style={resultsMinHeight ? { minHeight: resultsMinHeight } : undefined}>
+            {list.isError && !list.data ? (
+              <ErrorState
+                title="Não foi possível carregar o catálogo"
+                message={list.error.message}
+                onRetry={() => void list.refetch()}
+                retrying={list.isFetching}
+              />
+            ) : list.isPending ? (
+              // Mesma grade da lista (inclusive a coluna da direita 32px abaixo no mobile): sem pulo ao carregar.
+              <ul className={CATALOG_GRID} aria-busy="true" aria-label="Carregando NFTs" data-testid="catalog-loading">
+                {Array.from({ length: PAGE_SIZE }, (_, i) => (
+                  <li key={i}>
+                    <NftCardSkeleton />
                   </li>
                 ))}
               </ul>
-            </>
-          )}
+            ) : list.data.items.length === 0 ? (
+              <EmptyState
+                title="Nenhum NFT encontrado"
+                message="Tente outra busca ou remova alguns filtros."
+                action={
+                  <Button variant="outline" onClick={() => void navigate({ to: '/', search: {}, hash: 'catalogo', resetScroll: false, hashScrollIntoView: false })}>
+                    Limpar busca e filtros
+                  </Button>
+                }
+              />
+            ) : (
+              <>
+                {list.isError && (
+                  <ErrorState className="mb-4 py-4" title="Falha ao atualizar a lista" message={list.error.message} onRetry={() => void list.refetch()} retrying={list.isFetching} />
+                )}
+                <ul
+                  key={gridKey}
+                  className={cn(CATALOG_GRID, 'transition-opacity duration-200', list.isPlaceholderData && 'opacity-60')}
+                  aria-busy={list.isFetching}
+                  data-testid="catalog-grid"
+                  data-reveal-group
+                >
+                  {list.data.items.map((nft, i) => (
+                    <li key={nft.id}>
+                      <NftCard nft={nft} priority={i < 3} />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
 
           {/* Enquanto a primeira página carrega, a paginação já ocupa o seu lugar (o catálogo tem várias páginas). */}
           {list.isPending && !list.isError && (

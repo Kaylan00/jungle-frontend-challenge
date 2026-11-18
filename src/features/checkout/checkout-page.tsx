@@ -415,16 +415,27 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
               placeholder="ENS ou carteira secundária (opcional)"
               containerClassName="lg:pt-6 lg:[&>label]:sr-only"
             />
+            {/* Desktop: a carteira (das suas, cadastradas no perfil) é escolhida aqui, no lugar do select "Tipo de
+                carteira" do Figma; o tipo de carteira (WalletConnect, MetaMask, Coinbase) fica nas três opções de
+                "Carteira e rede", ao lado. Abaixo de lg as carteiras aparecem em cartões (Figma mobile). */}
             <div className="flex flex-col gap-2 max-lg:hidden">
-              <label htmlFor="checkout-provider" className="text-[14px] leading-4">
-                Tipo de carteira
+              <label htmlFor="checkout-wallet" className="text-[14px] leading-4">
+                Carteira
                 <RequiredMark />
               </label>
               <div className="relative">
-                <select id="checkout-provider" {...reg('provider')} className={SELECT}>
-                  {WalletProvider.options.map((p) => (
-                    <option key={p} value={p}>
-                      {PROVIDER_LABEL[p]}
+                <select
+                  id="checkout-wallet"
+                  value={walletId}
+                  onChange={(e) => {
+                    const w = wallets.find((x) => x.id === e.target.value)
+                    if (w) selectWallet(w)
+                  }}
+                  className={SELECT}
+                >
+                  {wallets.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.nickname} · {w.secondaryAddress ?? `${w.address.slice(0, 6)}…${w.address.slice(-4)}`} · {NETWORK_LABEL[w.network]}
                     </option>
                   ))}
                 </select>
@@ -521,7 +532,7 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
                 Trocar carteira
               </Link>
             </div>
-            <div role="radiogroup" aria-label="Carteira" className="space-y-2 max-md:space-y-5 lg:space-y-4">
+            <div role="radiogroup" aria-label="Carteira" className="space-y-2 max-md:space-y-5 lg:hidden">
               {wallets.map((w) => {
                 const checked = w.id === walletId
                 return (
@@ -553,26 +564,25 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
             </div>
             {errors.walletId && <p className="mt-1 text-[12px] text-destructive">⚠ {errors.walletId.message}</p>}
 
-            {/* Mobile (Figma): tipo de carteira em cartões de 65px. No desktop é o select "Tipo de carteira". */}
+            {/* Tipo de carteira: três opções do mesmo jeito (ícone, nome e rádio sempre no mesmo lugar).
+                Mobile (Figma 414): cartões de 65px com o rádio à direita. Desktop (Figma 1440, Frame 313): linhas de
+                405x45 com borda #3F2319 (laranja na escolhida), 16px entre elas e o rádio à esquerda, 12px da borda.
+                No Figma desktop a 1ª linha é o selo "METAMASK • WALLETCONNECT • COINBASE"; aqui ela é a opção
+                WalletConnect, como no mobile. */}
             <p aria-hidden="true" className="mt-3 text-[16px] font-bold leading-6 md:hidden">
               Carteira e rede
             </p>
-            <div role="radiogroup" aria-label="Tipo de carteira" className="mt-3 space-y-2 max-md:mt-[13px] max-md:space-y-4 lg:hidden">
+            <div role="radiogroup" aria-label="Tipo de carteira" className="mt-3 space-y-2 max-md:mt-[13px] max-md:space-y-4 lg:mt-0 lg:space-y-4">
               {PROVIDER_ORDER.map((p) => (
                 <label
                   key={p}
                   className={cn(
-                    'flex cursor-pointer items-center gap-3 rounded-xl bg-card p-3 text-[13px] max-md:h-[65px] max-md:gap-[11px] max-md:py-0 max-md:pl-[14px] max-md:pr-4 max-md:text-[14px]',
-                    provider === p && 'ring-1 ring-primary max-md:ring-0',
+                    'flex cursor-pointer items-center gap-3 rounded-xl bg-card p-3 text-[13px] transition-colors max-md:h-[65px] max-md:gap-[11px] max-md:py-0 max-md:pl-[14px] max-md:pr-4 max-md:text-[14px]',
+                    'lg:h-[45px] lg:gap-[11px] lg:rounded-[2px] lg:border lg:border-[#3f2319] lg:bg-transparent lg:px-[11px] lg:py-0 lg:text-[15px] lg:hover:border-primary/60',
+                    provider === p && 'ring-1 ring-primary max-md:ring-0 lg:border-primary lg:ring-0 lg:hover:border-primary',
                   )}
+                  data-testid="provider-option"
                 >
-                  <span
-                    aria-hidden="true"
-                    className="grid size-8 place-items-center rounded-full border border-primary/40 text-[12px] font-bold text-primary max-md:size-10 max-md:border-[#3f2319] max-md:bg-[#2f1d15] max-md:text-[13px] max-md:text-highlight"
-                  >
-                    {p === 'coinbase' ? <WalletIcon className="size-[18px]" strokeWidth={1.75} /> : PROVIDER_LABEL[p][0]}
-                  </span>
-                  <span className="flex-1">{PROVIDER_LABEL[p]}</span>
                   <input
                     type="radio"
                     name="provider-choice"
@@ -581,8 +591,15 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
                       if (conn.status === 'connected') void disconnect()
                       form.setValue('provider', p)
                     }}
-                    className={cn('size-4 accent-[var(--primary)]', RADIO_MOBILE)}
+                    className={cn(RADIO, 'max-lg:order-last')}
                   />
+                  <span
+                    aria-hidden="true"
+                    className="grid size-8 shrink-0 place-items-center rounded-full border border-primary/40 text-[12px] font-bold text-primary max-md:size-10 max-md:border-[#3f2319] max-md:bg-[#2f1d15] max-md:text-[13px] max-md:text-highlight lg:size-[26px] lg:border-[#3f2319] lg:bg-[#2f1d15] lg:text-[11px] lg:text-highlight"
+                  >
+                    {p === 'coinbase' ? <WalletIcon className="size-[18px] lg:size-[14px]" strokeWidth={1.75} /> : PROVIDER_LABEL[p][0]}
+                  </span>
+                  <span className="flex-1 lg:leading-[18px]">{PROVIDER_LABEL[p]}</span>
                 </label>
               ))}
             </div>
@@ -871,7 +888,7 @@ function CheckoutSkeleton() {
           <FieldSkeleton label="Nome do perfil" />
           <FieldSkeleton label="Endereço da carteira" required={false} />
           <FieldSkeleton label="ENS ou carteira secundária (opcional)" required={false} className="lg:pt-6 lg:[&>p]:hidden" />
-          <FieldSkeleton label="Tipo de carteira" className="max-lg:hidden" />
+          <FieldSkeleton label="Carteira" className="max-lg:hidden" />
           <FieldSkeleton label="Código de indicação" />
           <FieldSkeleton label="E-mail" />
           <FieldSkeleton label="Nome ENS" />
@@ -914,7 +931,7 @@ function CheckoutSkeleton() {
             <p className="text-[16px] font-bold leading-6">Carteira conectada</p>
             <span className="text-[14px] font-bold text-highlight">Trocar carteira</span>
           </div>
-          <div className="space-y-2 max-md:space-y-5 lg:space-y-4">
+          <div className="space-y-2 max-md:space-y-5 lg:hidden">
             {[0, 1].map((i) => (
               <div
                 key={i}
@@ -931,12 +948,15 @@ function CheckoutSkeleton() {
             ))}
           </div>
           <p className="mt-3 text-[16px] font-bold leading-6 md:hidden">Carteira e rede</p>
-          <div className="mt-3 space-y-2 max-md:mt-[13px] max-md:space-y-4 lg:hidden">
+          <div className="mt-3 space-y-2 max-md:mt-[13px] max-md:space-y-4 lg:mt-0 lg:space-y-4">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-3 rounded-xl bg-card p-3 text-[13px] max-md:h-[65px] max-md:gap-[11px] max-md:py-0 max-md:pl-[14px] max-md:pr-4">
-                <Skeleton className="size-8 shrink-0 rounded-full max-md:size-10" />
-                <Line className="h-[19.5px] flex-1 max-md:h-[21px]" bar="w-[130px]" />
-                <Skeleton className="size-4 shrink-0 rounded-full" />
+              <div
+                key={i}
+                className="flex items-center gap-3 rounded-xl bg-card p-3 text-[13px] max-md:h-[65px] max-md:gap-[11px] max-md:py-0 max-md:pl-[14px] max-md:pr-4 lg:h-[45px] lg:gap-[11px] lg:rounded-[2px] lg:border lg:border-[#3f2319] lg:bg-transparent lg:px-[11px] lg:py-0"
+              >
+                <Skeleton className="size-4 shrink-0 rounded-full max-lg:order-last" />
+                <Skeleton className="size-8 shrink-0 rounded-full max-md:size-10 lg:size-[26px]" />
+                <Line className="h-[19.5px] flex-1 max-md:h-[21px] lg:h-[18px]" bar="w-[130px]" />
               </div>
             ))}
           </div>

@@ -40,6 +40,9 @@ export function NftDetailPage({ nftId, editionId }: { nftId: string; editionId?:
   return <DetailView nft={query.data} editionId={editionId} />
 }
 
+/** Largura de cada elipse de edição no Figma (px); outros nomes ficam do tamanho do texto. */
+const EDITION_CHIP_WIDTH: Record<string, number> = { '1/1': 36, '1/10': 42, '1/50': 46, aberta: 66 }
+
 function editionLabel(e: Edition) {
   if (e.status === 'unavailable') return 'indisponível'
   if (e.status === 'sold_out') return 'esgotada'
@@ -222,7 +225,11 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
           <fieldset className="max-md:mt-2 xl:mt-2">
             <legend className="mb-2 text-[14px] font-bold max-md:mb-[5px] max-md:text-[15px] max-md:leading-[22px] xl:mb-3 xl:text-[15px] xl:leading-4">Edição:</legend>
             <div className="xl:flex xl:items-center xl:gap-4">
-              <div role="radiogroup" aria-label="Edição" className="flex flex-wrap gap-2 max-md:gap-3 xl:gap-1.5">
+              {/* Figma (Frame 152–155, Ellipse 24–27): elipses de 28px de altura com borda de 1px (#3F2319), texto de
+                  14px centralizado; larguras 36 (1/1), 42 (1/10), 46 (1/50) e 66 (ABERTA); 6px entre elas no desktop e
+                  12px no mobile. A selecionada tem borda laranja e texto em negrito laranja. Telas largas: a elipse
+                  cresce com o layout (o texto mantém o tamanho). */}
+              <div role="radiogroup" aria-label="Edição" className="flex flex-wrap gap-3 md:gap-1.5 wide:gap-[calc(6*var(--u))]">
                 {nft.editions.map((e) => {
                   const selected = e.id === edition.id
                   return (
@@ -233,12 +240,11 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
                       aria-checked={selected}
                       onClick={() => selectEdition(e.id)}
                       title={`${e.name} · ${formatEth(e.price)} · ${editionLabel(e)}`}
+                      style={{ '--chip-w': EDITION_CHIP_WIDTH[e.name.toLowerCase()] ?? 0 } as React.CSSProperties}
                       className={cn(
-                        'rounded-full border px-3 py-1 text-[12px] uppercase transition-colors max-md:h-7 max-md:px-[6px] max-md:py-0 max-md:text-[13px] xl:h-[28px] xl:px-[5px] xl:py-0 xl:text-[14px]',
-                        selected
-                          ? 'border-primary bg-primary/15 text-primary max-md:bg-transparent max-md:font-bold max-md:text-highlight xl:bg-transparent xl:font-bold xl:text-highlight'
-                          : 'border-border hover:border-primary/60 hover:text-highlight max-md:hover:text-highlight xl:hover:text-highlight max-md:border-[#3f2319] max-md:text-[#c5a984] xl:border-[#3f2319] xl:text-muted-foreground',
-                        e.status !== 'on_sale' && 'line-through decoration-1 text-[#b39463] xl:text-[#b39463]',
+                        'inline-flex h-7 min-w-[calc(var(--chip-w)*1px)] items-center justify-center rounded-[50%] border px-[3px] text-[14px] leading-4 uppercase transition-colors wide:h-[calc(28*var(--u))] wide:min-w-[calc(var(--chip-w)*var(--u))] wide:px-[calc(3*var(--u))]',
+                        selected ? 'border-primary font-bold text-highlight' : 'border-[#3f2319] text-muted-foreground hover:border-primary/60 hover:text-highlight',
+                        e.status !== 'on_sale' && 'line-through decoration-1 text-[#b39463]',
                       )}
                       data-testid="edition-option"
                     >

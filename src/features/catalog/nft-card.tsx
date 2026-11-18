@@ -14,20 +14,25 @@ export function NftCard({ nft, priority = false, className, variant = 'catalog' 
   const soldOut = nft.available === 0
   const detail = variant === 'detail'
   const cart = variant === 'cart'
+  const vitrine = detail || cart
   return (
-    // Hover: a arte cresce um pouco, a caixa ganha borda e brilho laranja e o nome acende. Toque: o card "afunda".
+    // Hover: o destaque fica só na arte (cresce um pouco, ganha contorno e brilho laranja) e o nome acende;
+    // a caixa marrom não muda. Toque: o card "afunda".
     <article className={cn('group relative transition-[scale] duration-150 active:scale-[0.98]', className)} data-testid="nft-card" data-nft-id={nft.id}>
       {/* Figma: caixa marrom 258x300 com a arte 250x250 centrada (cantos de 12px).
           Mobile (Figma 414): caixa de 175x200 com raio de 18px; a arte fica 12px abaixo do topo na coluna
           da esquerda e 20px na da direita (a coluna da direita desce 32px na grade). */}
       <div
         className={cn(
-          'relative overflow-hidden bg-card px-1 pb-5 pt-3 transition-shadow duration-300 group-hover:shadow-[inset_0_0_0_1px_rgba(210,138,76,0.6),0_16px_34px_-16px_rgba(232,155,85,0.6)] max-md:rounded-[18px] max-md:bg-[#271813] max-md:[li:nth-child(even)_&]:pb-3 max-md:[li:nth-child(even)_&]:pt-5 md:py-[25px]',
-          // Detalhe: Frame 197 (255 de altura, padding 16/4/28/4). Carrinho: Artwork 219x255 com a arte 212 centrada.
+          'relative overflow-hidden bg-card px-1 pb-5 pt-3 max-md:rounded-[18px] max-md:bg-[#271813] max-md:[li:nth-child(even)_&]:pb-3 max-md:[li:nth-child(even)_&]:pt-5 md:py-[25px]',
           // Telas largas: o card é ampliado como um todo (arte quadrada maior, respiros na mesma proporção).
-          !detail && !cart && 'wide:px-[calc(4*var(--u))] wide:py-[calc(25*var(--u))]',
-          detail && 'xl:h-[255px] xl:pb-[28px] xl:pt-4 wide:h-auto wide:pb-[calc(28*var(--u))] wide:pt-[calc(16*var(--u))]',
-          cart && 'xl:flex xl:h-[255px] xl:items-center xl:justify-center xl:p-0 wide:h-auto wide:py-[calc(21.5*var(--u))]',
+          !vitrine && 'wide:px-[calc(4*var(--u))] wide:py-[calc(25*var(--u))]',
+          // Vitrines (Figma, cards 2 a 5 das duas telas; o 1º do Figma é mais apertado por engano): caixa 219x255
+          // com a arte 212x212 no centro (3,5 px dos lados, 21,5 px em cima e embaixo). Em proporção, para valer
+          // igual em telas largas: caixa 219/255 e arte com 212/219 da largura.
+          vitrine && 'xl:flex xl:aspect-[219/255] xl:items-center xl:justify-center xl:p-0',
+          // Detalhe (Frame 197): a arte fica 20 px abaixo do topo e 23 px acima da base.
+          detail && 'xl:pb-[3px] wide:pb-[calc(3*var(--u))]',
         )}
       >
         {nft.badge === 'raro' && <span className="sr-only">Raro.</span>}
@@ -52,9 +57,10 @@ export function NftCard({ nft, priority = false, className, variant = 'catalog' 
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
           className={cn(
-            'aspect-square w-full rounded-xl object-cover transition-transform max-md:rounded-[14px] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]',
+            'aspect-square w-full rounded-xl object-cover transition-[scale,box-shadow,filter] max-md:rounded-[14px] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.02] group-hover:shadow-[0_0_0_1.5px_rgba(232,155,85,0.85),0_10px_26px_-10px_rgba(232,155,85,0.55)] group-hover:brightness-[1.06]',
+            vitrine && 'xl:w-[96.8%]',
             detail && 'xl:rounded-[13px]',
-            cart && 'xl:size-[212px] xl:rounded-[17px] wide:h-auto wide:w-[96.7%]',
+            cart && 'xl:rounded-[17px]',
             soldOut && 'opacity-60',
           )}
         />

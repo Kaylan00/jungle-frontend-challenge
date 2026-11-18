@@ -1,24 +1,26 @@
 /**
  * Layout comum das páginas da conta (perfil, carteiras, lista de interesse).
  * No desktop o menu "Meu perfil" fica num card à esquerda (Figma); no celular vira uma faixa
- * horizontal com rolagem acima do conteúdo. Itens fora do escopo do desafio aparecem
- * desativados (aria-disabled + "Em breve") para não parecer que funcionam.
+ * horizontal com rolagem acima do conteúdo. Itens fora do escopo do desafio levam a uma tela
+ * "Em breve" dentro deste layout (coming-soon-page.tsx), sem simular funcionalidade.
  */
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { ArrowDownToLine, Heart, LogOut, MapPin, ShoppingCart, SquareActivity, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { useLogout } from '@/features/auth/use-session'
 import { cn } from '@/lib/utils'
 
-type MenuItem = { label: string; icon: LucideIcon; to?: '/perfil' | '/perfil/carteiras' | '/perfil/favoritos' }
+/** `to`: página da conta. `soon`: seção fora do escopo, que abre a tela "Em breve" (/perfil/<soon>). */
+type MenuItem = { label: string; icon: LucideIcon } & ({ to: '/perfil' | '/perfil/carteiras' | '/perfil/favoritos' } | { soon: string })
 
 const menu: MenuItem[] = [
   { label: 'Dados do perfil', icon: UserRound, to: '/perfil' },
   { label: 'Carteiras', icon: MapPin, to: '/perfil/carteiras' },
-  { label: 'Atividade', icon: ShoppingCart },
+  { label: 'Atividade', icon: ShoppingCart, soon: 'atividade' },
   { label: 'Lista de interesse', icon: Heart, to: '/perfil/favoritos' },
-  { label: 'Ofertas', icon: SquareActivity },
-  { label: 'Arquivos baixados', icon: ArrowDownToLine },
-  { label: 'Suporte', icon: TriangleAlert },
+  { label: 'Ofertas', icon: SquareActivity, soon: 'ofertas' },
+  { label: 'Arquivos baixados', icon: ArrowDownToLine, soon: 'arquivos-baixados' },
+  { label: 'Suporte', icon: TriangleAlert, soon: 'suporte' },
 ]
 
 /** Item do menu no Figma: 45px de altura, texto 15px laranja, ícone 18px bege; no celular vira "chip". */
@@ -32,6 +34,17 @@ export function ProfileLayout({ title, children }: { title: string; children: Re
   const pathname = useRouterState({ select: (s) => s.location.pathname.replace(/\/$/, '') || '/' })
   const logout = useLogout()
   const navigate = useNavigate()
+  const listRef = useRef<HTMLUListElement>(null)
+
+  // Celular: o menu é uma faixa com rolagem lateral; o item da página aberta fica à vista (ex.: "Ofertas").
+  useEffect(() => {
+    const list = listRef.current
+    const current = list?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!list || !current || list.scrollWidth <= list.clientWidth) return
+    const l = list.getBoundingClientRect()
+    const c = current.getBoundingClientRect()
+    list.scrollLeft += c.left - l.left - (l.width - c.width) / 2
+  }, [pathname])
 
   return (
     <div className="container-page grid gap-6 py-6 md:grid-cols-[310px_minmax(0,1fr)] md:gap-7 md:pb-16 md:pt-8 wide:grid-cols-[calc(310*var(--u))_minmax(0,1fr)] wide:gap-x-[calc(28*var(--u))]">
@@ -41,24 +54,19 @@ export function ProfileLayout({ title, children }: { title: string; children: Re
           <h2 id="profile-menu-title" className="hidden pb-1.5 pl-[11px] text-[18px] font-bold leading-6 text-[#f5f1eb] md:block">
             Meu perfil
           </h2>
-          <ul className="flex gap-1 overflow-x-auto p-1.5 md:flex-col md:gap-0 md:overflow-visible md:p-0">
-            {menu.map(({ label, icon: Icon, to }) => {
-              if (!to) {
-                return (
-                  <li key={label} className="shrink-0">
-                    <span aria-disabled="true" title="Em breve" className={cn(itemBase, 'cursor-not-allowed')}>
-                      <Icon className="size-[18px] shrink-0 text-[#b39463]" strokeWidth={1.5} aria-hidden="true" />
-                      {label}
-                      <span className="sr-only"> (em breve)</span>
-                    </span>
-                  </li>
-                )
-              }
-              const active = pathname === to
+          <ul ref={listRef} className="flex gap-1 overflow-x-auto p-1.5 md:flex-col md:gap-0 md:overflow-visible md:p-0">
+            {menu.map((item) => {
+              const { label, icon: Icon } = item
+              const href = 'to' in item ? item.to : `/perfil/${item.soon}`
+              const active = pathname === href
+              const target = 'to' in item ? { to: item.to } : { to: '/perfil/$secao' as const, params: { secao: item.soon } }
               return (
                 <li key={label} className="shrink-0">
                   <Link
-                    to={to}
+                    {...target}
+                    // Só a página exata conta como atual: sem isto o roteador marcaria "Dados do perfil" (/perfil)
+                    // também como aria-current em /perfil/carteiras, /perfil/ofertas etc.
+                    activeOptions={{ exact: true }}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
                       itemBase,
