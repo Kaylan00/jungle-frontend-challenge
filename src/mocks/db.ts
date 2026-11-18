@@ -859,6 +859,20 @@ export function setFavorite(userId: string, nftId: string, value: boolean) {
 
 // ---------- Carrinho ----------
 
+/**
+ * Busca por chave vinda da requisição (cabeçalho, corpo): só chaves próprias do registro, então
+ * "__proto__", "constructor" e afins não devolvem o protótipo de Object no lugar de um carrinho ou cotação.
+ */
+function ownEntry<T>(record: Record<string, T>, key: string | null | undefined): T | undefined {
+  return key && Object.hasOwn(record, key) ? record[key] : undefined
+}
+
+/** Carrinho de visitante pelo id (nunca o carrinho de uma conta, mesmo que o id bata). */
+function findGuestCart(id: string | null | undefined) {
+  const cart = ownEntry(state.carts, id)
+  return cart && !cart.userId ? cart : undefined
+}
+
 export function getOrCreateCart(opts: { userId: string | null; guestCartId: string | null }): StoredCart {
   if (opts.userId) {
     const existing = Object.values(state.carts).find((c) => c.userId === opts.userId)
@@ -868,10 +882,10 @@ export function getOrCreateCart(opts: { userId: string | null; guestCartId: stri
     persist()
     return cart
   }
-  if (opts.guestCartId && state.carts[opts.guestCartId] && !state.carts[opts.guestCartId].userId) {
-    return state.carts[opts.guestCartId]
-  }
-  const cart: StoredCart = { id: nextId('guest'), userId: null, items: [], couponCode: null, version: 1, updatedAt: iso() }
+  const guest = findGuestCart(opts.guestCartId)
+  if (guest) return guest
+  // O id do carrinho de visitante é a credencial dele (vai no X-Cart-Id): aleatório de 128 bits, não sequencial.
+  const cart: StoredCart = { id: `guest-${randomHex(16)}`, userId: null, items: [], couponCode: null, version: 1, updatedAt: iso() }
   state.carts[cart.id] = cart
   persist()
   return cart
@@ -942,8 +956,8 @@ export function acknowledgeCartPrices(cart: StoredCart) {
 }
 
 export function mergeCarts(guestCartId: string, userCart: StoredCart) {
-  const guest = state.carts[guestCartId]
-  if (!guest || guest.userId) return
+  const guest = findGuestCart(guestCartId)
+  if (!guest) return
   for (const gi of guest.items) {
     const e = findNft(gi.nftId)?.editions.find((x) => x.id === gi.editionId)
     if (!e || e.status !== 'on_sale') continue
@@ -1175,7 +1189,7 @@ export function publicQuote(q: StoredQuote): Quote {
 }
 
 export function findQuote(id: string) {
-  return state.quotes[id]
+  return ownEntry(state.quotes, id)
 }
 
 // ---------- Pedidos ----------

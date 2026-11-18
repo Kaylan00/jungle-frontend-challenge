@@ -62,7 +62,7 @@ export const api = {
   signup: (body: SignupRequest) => request(Session, { method: 'POST', url: '/auth/signup', data: body }),
   login: (body: LoginInput) => request(Session, { method: 'POST', url: '/auth/login', data: body }),
   getSession: ({ signal }: Opts = {}) => request(Session, { url: '/auth/session', signal }),
-  logout: () => request(z.any(), { method: 'POST', url: '/auth/logout' }),
+  logout: () => request(z.unknown(), { method: 'POST', url: '/auth/logout' }),
 
   // Recuperação de senha
   requestPasswordReset: (body: PasswordResetRequest) => request(PasswordResetAccepted, { method: 'POST', url: '/auth/password-reset', data: body }),
@@ -78,14 +78,14 @@ export const api = {
 
   // Favoritos
   getFavorites: ({ signal }: Opts = {}) => request(FavoritesResponse, { url: '/favorites', signal }),
-  addFavorite: (nftId: string) => request(FavoritesResponse, { method: 'PUT', url: `/favorites/${nftId}` }),
-  removeFavorite: (nftId: string) => request(FavoritesResponse, { method: 'DELETE', url: `/favorites/${nftId}` }),
+  addFavorite: (nftId: string) => request(FavoritesResponse, { method: 'PUT', url: `/favorites/${encodeURIComponent(nftId)}` }),
+  removeFavorite: (nftId: string) => request(FavoritesResponse, { method: 'DELETE', url: `/favorites/${encodeURIComponent(nftId)}` }),
 
   // Carrinho
   getCart: ({ signal }: Opts = {}) => request(Cart, { url: '/cart', signal }),
   addToCart: (body: AddToCartInput) => request(Cart, { method: 'POST', url: '/cart/items', data: body }),
-  updateCartItem: (itemId: string, quantity: number) => request(Cart, { method: 'PATCH', url: `/cart/items/${itemId}`, data: { quantity } }),
-  removeCartItem: (itemId: string) => request(Cart, { method: 'DELETE', url: `/cart/items/${itemId}` }),
+  updateCartItem: (itemId: string, quantity: number) => request(Cart, { method: 'PATCH', url: `/cart/items/${encodeURIComponent(itemId)}`, data: { quantity } }),
+  removeCartItem: (itemId: string) => request(Cart, { method: 'DELETE', url: `/cart/items/${encodeURIComponent(itemId)}` }),
   applyCoupon: (code: string) => request(Cart, { method: 'POST', url: '/cart/coupon', data: { code } }),
   removeCoupon: () => request(Cart, { method: 'DELETE', url: '/cart/coupon' }),
   acknowledgePrices: () => request(Cart, { method: 'POST', url: '/cart/acknowledge-prices' }),
@@ -104,14 +104,14 @@ export const api = {
   updateProfile: (body: ProfileInput) => request(User, { method: 'PATCH', url: '/profile', data: body }),
   updateAvatar: (dataUrl: string) => request(User, { method: 'PUT', url: '/profile/avatar', data: { dataUrl } }),
   removeAvatar: () => request(User, { method: 'DELETE', url: '/profile/avatar' }),
-  changePassword: (body: PasswordChangeInput) => request(z.any(), { method: 'POST', url: '/profile/password', data: body }),
+  changePassword: (body: PasswordChangeInput) => request(z.unknown(), { method: 'POST', url: '/profile/password', data: body }),
 
   // Carteiras
   getWallets: ({ signal }: Opts = {}) => request(z.object({ items: z.array(Wallet) }), { url: '/wallets', signal }),
   createWallet: (body: WalletInput) => request(Wallet, { method: 'POST', url: '/wallets', data: body }),
-  updateWallet: (id: string, body: WalletInput) => request(Wallet, { method: 'PUT', url: `/wallets/${id}`, data: body }),
-  connectWallet: (id: string, network: Network) => request(WalletConnection, { method: 'POST', url: `/wallets/${id}/connect`, data: { network } }),
-  disconnectWallet: (id: string) => request(z.any(), { method: 'DELETE', url: `/wallets/${id}/connect` }),
+  updateWallet: (id: string, body: WalletInput) => request(Wallet, { method: 'PUT', url: `/wallets/${encodeURIComponent(id)}`, data: body }),
+  connectWallet: (id: string, network: Network) => request(WalletConnection, { method: 'POST', url: `/wallets/${encodeURIComponent(id)}/connect`, data: { network } }),
+  disconnectWallet: (id: string) => request(z.unknown(), { method: 'DELETE', url: `/wallets/${encodeURIComponent(id)}/connect` }),
 
   // Painel administrativo (403 FORBIDDEN para conta comum)
   adminListNfts: (p: AdminNftListParams, { signal }: Opts = {}) =>

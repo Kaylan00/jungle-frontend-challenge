@@ -7,6 +7,7 @@ Solução do [desafio de frontend da Jungle Gaming](https://github.com/junglegam
 - **Aplicação publicada:** https://jungle-frontend-challenge-navy.vercel.app
 - **Arquitetura e decisões:** [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Relatório Lighthouse:** [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md)
+- **Segurança (o que é protegido, limites, como reportar):** [SECURITY.md](./SECURITY.md)
 
 Toda a API (REST e Socket.IO) é simulada com **MSW** na camada de rede. O app não sabe que fala com um mock: as mesmas chamadas funcionariam contra um backend real.
 
@@ -33,7 +34,7 @@ npm run dev            # http://localhost:5173 com mocks ligados
 | `npm run lint` | oxlint em `src/` (testes incluídos), `e2e/`, `api/` e `scripts/` |
 | `npm run test:unit` | Vitest (Node, sem navegador, ~1 s): valores ETH, contratos zod, cliente HTTP, cliente de tempo real, regras do servidor simulado, painel admin pelos handlers MSW (permissão, validação, conflito de versão, cupons) e propagação entre abas (`src/**/*.test.ts`). `test:unit:watch` para o modo observação (Node 22.12+) |
 | `npm run test:api` | Teste isolado da função de envio de e-mail (`api/send-reset-email.ts`), sem rede e sem chave real (Node 22.18+) |
-| `npm run test:e2e` | Playwright: 18 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
+| `npm run test:e2e` | Playwright: 19 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
 | `npm run test:e2e:desktop` / `:mobile` | Só um viewport |
 | `npm run test:e2e:update` | Regrava as baselines visuais |
 | `npm run test:e2e:report` | Abre o relatório HTML (traces das falhas incluídos) |
@@ -173,10 +174,10 @@ src/
   mocks/        servidor simulado: db, handlers REST, servidor Socket.IO, cenários, painel
 api/            Vercel Function de envio real do e-mail de redefinição (Brevo, opcional)
 scripts/        teste isolado da função (npm run test:api)
-e2e/            testes Playwright (18 cenários + visual) e baselines em __screenshots__
+e2e/            testes Playwright (19 cenários + visual) e baselines em __screenshots__
 lighthouse/     script de auditoria e relatórios
 ```
 
 ## Deploy
 
-Vercel (preset Vite). `vercel.json` reescreve todas as rotas para `index.html`, então acesso direto e refresh funcionam em qualquer tela. A função `api/send-reset-email` não é afetada: na Vercel o sistema de arquivos (arquivos estáticos e funções em `api/`) tem precedência sobre os rewrites. O `mockServiceWorker.js` é servido sem cache para não ficar preso em versões antigas.
+Vercel (preset Vite). `vercel.json` reescreve todas as rotas para `index.html`, então acesso direto e refresh funcionam em qualquer tela. A função `api/send-reset-email` não é afetada: na Vercel o sistema de arquivos (arquivos estáticos e funções em `api/`) tem precedência sobre os rewrites. O `mockServiceWorker.js` é servido sem cache para não ficar preso em versões antigas. Todas as rotas recebem cabeçalhos de segurança (CSP, `nosniff`, `frame-ancestors`, `Referrer-Policy`, `Permissions-Policy`, HSTS); o `npm run preview` aplica os mesmos, lidos do `vercel.json`. Ver [SECURITY.md](./SECURITY.md).

@@ -1,9 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { sessionQuery } from '@/api/queries'
-import { RealtimeClient, type RealtimeStatus } from './client'
-
-const RealtimeContext = createContext<RealtimeClient | null>(null)
+import { RealtimeClient } from './client'
+import { RealtimeContext } from './use-realtime'
 
 /**
  * Um único socket por aba. Criado dentro do efeito e destruído na limpeza:
@@ -18,6 +17,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const c = new RealtimeClient(queryClient)
     c.start(null)
+    // Sincronização com um sistema externo (o socket): o cliente nasce e morre com o efeito, e o estado só
+    // publica a instância viva para os filhos. Criar no render vazaria a assinatura da sessão no StrictMode.
+    // oxlint-disable-next-line react/set-state-in-effect
     setClient(c)
     return () => {
       c.dispose()
@@ -30,16 +32,4 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   }, [client, userId])
 
   return <RealtimeContext.Provider value={client}>{children}</RealtimeContext.Provider>
-}
-
-export function useRealtimeClient() {
-  return useContext(RealtimeContext)
-}
-
-const noop = () => () => {}
-const connecting = (): RealtimeStatus => 'connecting'
-
-export function useRealtimeStatus(): RealtimeStatus {
-  const client = useRealtimeClient()
-  return useSyncExternalStore(client?.subscribeStatus ?? noop, client?.getStatus ?? connecting, client?.getStatus ?? connecting)
 }

@@ -25,7 +25,7 @@ import { announce } from '@/lib/announcer'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
-import { useRealtimeClient } from '@/realtime/provider'
+import { useRealtimeClient } from '@/realtime/use-realtime'
 import { rememberPendingOrder } from './order-attempt'
 
 const PROVIDER_LABEL = {

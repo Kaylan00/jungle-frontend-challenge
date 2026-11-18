@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { ChevronLeft, Mail, Search, ShoppingCart, Star, ZoomIn } from 'lucide-react'
 import { LinkedinIcon, TwitterIcon, XIcon } from '@/components/shared/brand-icons'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Edition, NftDetail } from '@/api/contracts'
 import { ApiError } from '@/api/http'
 import { nftDetailQuery, nftListQuery } from '@/api/queries'
@@ -62,10 +62,10 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
   const add = useAddToCart()
   const buyBarRef = useBottomBar()
 
-  // Se o limite cair (evento de estoque, item no carrinho), a quantidade acompanha.
-  useEffect(() => {
-    setQty((q) => Math.max(1, Math.min(q, limit || 1)))
-  }, [limit])
+  // Se o limite cair (evento de estoque, item no carrinho), a quantidade acompanha. Ajuste durante o render
+  // (padrão do React para estado derivado de props): sem efeito, sem um render intermediário com valor inválido.
+  const maxQty = Math.max(1, limit)
+  if (qty > maxQty) setQty(maxQty)
 
   const selectEdition = (id: string) => void navigate({ to: '/nft/$nftId', params: { nftId: nft.id }, search: { edicao: id }, replace: true, resetScroll: false })
 
@@ -257,7 +257,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
           </fieldset>
 
           <div className="hidden flex-wrap items-center justify-between gap-4 md:flex xl:mt-[13px] xl:items-start">
-            <QuantityStepper value={qty} max={Math.max(1, limit)} onChange={setQty} label="Quantidade" disabled={!!unavailableReason} size="lg" />
+            <QuantityStepper value={qty} max={maxQty} onChange={setQty} label="Quantidade" disabled={!!unavailableReason} size="lg" />
             <div className="flex gap-3 xl:gap-2">
               <Button
                 variant="outline"
@@ -389,7 +389,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
         <div className="flex h-7 items-center justify-between">
           <div className="flex items-center gap-[13px] text-[14px] text-muted-foreground">
             Qtd.
-            <QuantityStepper value={qty} max={Math.max(1, limit)} onChange={setQty} label="Quantidade" disabled={!!unavailableReason} size="pill" />
+            <QuantityStepper value={qty} max={maxQty} onChange={setQty} label="Quantidade" disabled={!!unavailableReason} size="pill" />
           </div>
           <p className="text-[20px] font-bold leading-7 text-highlight">{formatEth(edition.price)}</p>
         </div>

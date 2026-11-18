@@ -94,15 +94,23 @@ export const Session = z.object({
 })
 export type Session = z.infer<typeof Session>
 
+/** E-mail de entrada: o endereço tem no máximo 254 caracteres (RFC 5321). */
+const emailRule = z.string().trim().email('Informe um e-mail válido').max(254, 'Máximo de 254 caracteres')
+
+/** Teto dos textos livres curtos (nomes de exibição e de perfil). */
+const NAME_MAX = 50
+const nameMax = `Máximo de ${NAME_MAX} caracteres`
+
 export const LoginInput = z.object({
-  email: z.string().trim().email('Informe um e-mail válido'),
-  password: z.string().min(1, 'Informe sua senha'),
+  email: emailRule,
+  password: z.string().min(1, 'Informe sua senha').max(128, 'Máximo de 128 caracteres'),
 })
 export type LoginInput = z.infer<typeof LoginInput>
 
 const passwordRule = z
   .string()
   .min(8, 'A senha precisa ter pelo menos 8 caracteres')
+  .max(128, 'A senha pode ter até 128 caracteres')
   .regex(/[A-Za-z]/, 'Use pelo menos uma letra')
   .regex(/\d/, 'Use pelo menos um número')
 
@@ -116,7 +124,7 @@ const usernameRule = z
 /** Corpo enviado para POST /auth/signup */
 export const SignupRequest = z.object({
   username: usernameRule,
-  email: z.string().trim().email('Informe um e-mail válido'),
+  email: emailRule,
   password: passwordRule,
 })
 export type SignupRequest = z.infer<typeof SignupRequest>
@@ -132,7 +140,7 @@ export type SignupInput = z.infer<typeof SignupInput>
 
 /** Corpo de POST /auth/password-reset (pedido do link por e-mail). */
 export const PasswordResetRequest = z.object({
-  email: z.string().trim().email('Informe um e-mail válido'),
+  email: emailRule,
 })
 export type PasswordResetRequest = z.infer<typeof PasswordResetRequest>
 
@@ -156,7 +164,7 @@ export type PasswordResetTokenInfo = z.infer<typeof PasswordResetTokenInfo>
 
 /** Corpo de POST /auth/password-reset/confirm. Mesmas regras de senha do cadastro. */
 export const PasswordResetConfirmRequest = z.object({
-  token: z.string().min(1, 'Link inválido'),
+  token: z.string().min(1, 'Link inválido').max(200, 'Link inválido'),
   password: passwordRule,
 })
 export type PasswordResetConfirmRequest = z.infer<typeof PasswordResetConfirmRequest>
@@ -183,9 +191,9 @@ const ensRule = z
   .regex(/^[a-z0-9-]+$/, 'Use letras minúsculas, números e hífen')
 
 export const ProfileInput = z.object({
-  name: z.string().trim().min(2, 'Informe seu nome de exibição'),
+  name: z.string().trim().min(2, 'Informe seu nome de exibição').max(NAME_MAX, nameMax),
   username: usernameRule,
-  email: z.string().trim().email('Informe um e-mail válido'),
+  email: emailRule,
   ensName: ensRule,
   walletNickname: z.string().trim().min(2, 'Informe o apelido da carteira').max(30, 'Máximo de 30 caracteres'),
 })
@@ -193,7 +201,7 @@ export type ProfileInput = z.infer<typeof ProfileInput>
 
 export const PasswordChangeInput = z
   .object({
-    currentPassword: z.string().min(1, 'Informe a senha atual'),
+    currentPassword: z.string().min(1, 'Informe a senha atual').max(128, 'Máximo de 128 caracteres'),
     newPassword: passwordRule,
     confirmPassword: z.string(),
   })
@@ -368,6 +376,21 @@ export const AddToCartInput = z.object({
 })
 export type AddToCartInput = z.infer<typeof AddToCartInput>
 
+/** PATCH /cart/items/:itemId */
+export const CartItemQuantityInput = z.object({
+  quantity: z.number().int().positive(),
+})
+
+/** POST /cart/coupon (o servidor normaliza e confere o código no banco). */
+export const CartCouponInput = z.object({
+  code: z.string({ error: 'Informe um cupom' }).trim().min(1, 'Informe um cupom').max(40, 'Cupom inválido'),
+})
+
+/** POST /cart/merge: carrinho de visitante a juntar ao da conta (null = nenhum). */
+export const CartMergeInput = z.object({
+  guestCartId: z.string().max(100).nullish(),
+})
+
 export const QuoteInput = z.object({
   network: Network,
   couponCode: z.string().nullable(),
@@ -433,18 +456,18 @@ export type Wallet = z.infer<typeof Wallet>
 export const WalletInput = z
   .object({
     role: z.enum(['primary', 'secondary']),
-    displayName: z.string().trim().min(2, 'Informe o nome de exibição'),
+    displayName: z.string().trim().min(2, 'Informe o nome de exibição').max(NAME_MAX, nameMax),
     nickname: z.string().trim().min(2, 'Informe o apelido da carteira').max(30, 'Máximo de 30 caracteres'),
     network: Network,
-    profileName: z.string().trim().min(2, 'Informe o nome do perfil'),
-    address: z.string().trim().min(1, 'Informe o endereço da carteira'),
-    secondaryAddress: z.string().trim().nullable(),
+    profileName: z.string().trim().min(2, 'Informe o nome do perfil').max(NAME_MAX, nameMax),
+    address: z.string().trim().min(1, 'Informe o endereço da carteira').max(100, 'Endereço longo demais'),
+    secondaryAddress: z.string().trim().max(100, 'Máximo de 100 caracteres').nullable(),
     provider: WalletProvider,
     referralCode: z
       .string()
       .trim()
       .regex(/^[A-Za-z0-9-]{4,16}$/, 'Código de indicação: 4 a 16 letras, números ou hífen'),
-    email: z.string().trim().email('Informe um e-mail válido'),
+    email: emailRule,
     ensName: ensRule,
   })
   .superRefine((v, ctx) => {
@@ -476,10 +499,10 @@ export type OrderStatus = z.infer<typeof OrderStatus>
 
 /** "Perfil do colecionador" do checkout (pré-preenchido com a carteira escolhida) */
 export const CollectorInput = z.object({
-  displayName: z.string().trim().min(2, 'Informe o nome de exibição'),
+  displayName: z.string().trim().min(2, 'Informe o nome de exibição').max(NAME_MAX, nameMax),
   username: usernameRule,
-  profileName: z.string().trim().min(2, 'Informe o nome do perfil'),
-  email: z.string().trim().email('Informe um e-mail válido'),
+  profileName: z.string().trim().min(2, 'Informe o nome do perfil').max(NAME_MAX, nameMax),
+  email: emailRule,
   ensName: ensRule,
   referralCode: z
     .string()
@@ -517,7 +540,8 @@ export const Order = z.object({
   networkFee: EthAmount,
   total: EthAmount,
   txHash: z.string().nullable(),
-  explorerUrl: z.string().nullable(),
+  /** Vai direto para um href: só https (uma resposta adulterada não injeta javascript: nem data:). */
+  explorerUrl: z.url({ protocol: /^https$/, error: 'URL do explorador inválida' }).nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   version: z.number().int(),

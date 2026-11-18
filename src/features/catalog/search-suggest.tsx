@@ -77,7 +77,9 @@ export const SearchSuggest = forwardRef<HTMLInputElement, Props>(function Search
   const listId = `${id}-listbox`
   const optionId = (i: number) => `${id}-option-${i}`
   const [open, setOpen] = useState(false)
-  const [active, setActive] = useState(-1)
+  // Opção ativa presa à lista em que foi escolhida (termo + resposta): lista nova = nenhuma opção ativa até a
+  // pessoa usar as setas. Derivado no render, sem efeito para "zerar" depois.
+  const [cursor, setCursor] = useState<{ term: string; data: unknown; index: number }>({ term: '', data: undefined, index: -1 })
 
   const term = value.trim()
   const debounced = useDebounced(term, DEBOUNCE_MS)
@@ -88,8 +90,8 @@ export const SearchSuggest = forwardRef<HTMLInputElement, Props>(function Search
   const showPanel = open && term.length >= SUGGEST_MIN_CHARS
   const showList = showPanel && options.length > 0
 
-  // Lista nova: nenhuma opção ativa até a pessoa usar as setas.
-  useEffect(() => setActive(-1), [debounced, suggest.data])
+  const active = cursor.term === debounced && cursor.data === suggest.data ? cursor.index : -1
+  const setActive = (index: number) => setCursor({ term: debounced, data: suggest.data, index })
 
   const status = !showPanel
     ? ''
@@ -120,7 +122,7 @@ export const SearchSuggest = forwardRef<HTMLInputElement, Props>(function Search
         }
         if (!options.length) return
         const step = e.key === 'ArrowDown' ? 1 : -1
-        setActive((i) => (i === -1 ? (step === 1 ? 0 : options.length - 1) : (i + step + options.length) % options.length))
+        setActive(active === -1 ? (step === 1 ? 0 : options.length - 1) : (active + step + options.length) % options.length)
         return
       }
       case 'Enter':

@@ -9,6 +9,9 @@ import {
   AdminNftListParams,
   AdminNftPatch,
   AvatarInput,
+  CartCouponInput,
+  CartItemQuantityInput,
+  CartMergeInput,
   Category,
   CollectorInput,
   CouponCreateInput,
@@ -314,12 +317,11 @@ export const handlers = [
   route<{ itemId: string }>('patch', '/cart/items/:itemId', async ({ request, params }) => {
     const cart = cartFor(request)
     if (cart instanceof Response) return cart
-    const body = await readJson<{ quantity?: number }>(request)
-    const quantity = Number(body?.quantity)
-    if (!Number.isInteger(quantity) || quantity < 1) {
+    const parsed = CartItemQuantityInput.safeParse(await readJson(request))
+    if (!parsed.success) {
       return apiError('VALIDATION_ERROR', 'Quantidade deve ser um número inteiro maior que zero', { fields: { quantity: 'Quantidade inválida' } })
     }
-    const err = db.updateCartItem(cart, params.itemId, quantity)
+    const err = db.updateCartItem(cart, params.itemId, parsed.data.quantity)
     if (err) return apiError(err.code, err.message, err.code === 'AVAILABILITY_CONFLICT' ? { details: { available: err.available } } : {})
     return HttpResponse.json(db.serializeCart(cart))
   }),
@@ -334,10 +336,12 @@ export const handlers = [
   route('post', '/cart/coupon', async ({ request }) => {
     const cart = cartFor(request)
     if (cart instanceof Response) return cart
-    const body = await readJson<{ code?: string }>(request)
-    const code = String(body?.code ?? '').trim()
-    if (!code) return apiError('VALIDATION_ERROR', 'Informe um cupom', { fields: { code: 'Informe um cupom' } })
-    const check = db.checkCoupon(code)
+    const parsed = CartCouponInput.safeParse(await readJson(request))
+    if (!parsed.success) {
+      const message = parsed.error.issues[0].message
+      return apiError('VALIDATION_ERROR', message, { fields: { code: message } })
+    }
+    const check = db.checkCoupon(parsed.data.code)
     if (!check.ok) return apiError(check.code, check.message, { fields: { code: check.message } })
     db.setCartCoupon(cart, check.coupon.code)
     return HttpResponse.json(db.serializeCart(cart))
@@ -360,9 +364,10 @@ export const handlers = [
   route('post', '/cart/merge', async ({ request }) => {
     const auth = requireUser(request)
     if (auth instanceof Response) return auth
-    const body = await readJson<{ guestCartId?: string }>(request)
+    const parsed = CartMergeInput.safeParse((await readJson(request)) ?? {})
+    if (!parsed.success) return apiError('VALIDATION_ERROR', 'Dados inválidos', { fields: zodFields(parsed.error.issues) })
     const cart = db.getOrCreateCart({ userId: auth.user.id, guestCartId: null })
-    if (body?.guestCartId) db.mergeCarts(body.guestCartId, cart)
+    if (parsed.data.guestCartId) db.mergeCarts(parsed.data.guestCartId, cart)
     return HttpResponse.json(db.serializeCart(cart))
   }),
 

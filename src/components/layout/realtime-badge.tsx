@@ -1,4 +1,4 @@
-import { useRealtimeStatus } from '@/realtime/provider'
+import { useRealtimeStatus } from '@/realtime/use-realtime'
 import { cn } from '@/lib/utils'
 
 const LABEL = {

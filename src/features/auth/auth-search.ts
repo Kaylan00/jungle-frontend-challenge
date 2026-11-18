@@ -1,10 +1,27 @@
 import { z } from 'zod'
 
+const SAME_ORIGIN_PROBE = 'https://kurio.invalid'
+
+/**
+ * Caminho interno do app (evita redirecionamento aberto). Além de "começa com uma barra e não com duas",
+ * recusa o que o navegador transformaria em outro host: "/\evil.com" (a barra invertida vira barra) e
+ * tab/quebra de linha no meio ("/\t/evil.com", que o parser de URL remove). A palavra final é do parser.
+ */
+export function isInternalPath(value: string) {
+  if (!value.startsWith('/') || value.startsWith('//') || /[\\\p{Cc}]/u.test(value)) return false
+  try {
+    return new URL(value, SAME_ORIGIN_PROBE).origin === SAME_ORIGIN_PROBE
+  } catch {
+    return false
+  }
+}
+
 /** `redirect` só aceita caminhos internos (evita redirecionamento aberto para outro site). */
 export const authSearchSchema = z.object({
   redirect: z
     .string()
-    .refine((v) => v.startsWith('/') && !v.startsWith('//'), 'redirect inválido')
+    .max(2048)
+    .refine(isInternalPath, 'redirect inválido')
     .optional()
     .catch(undefined),
   /** expired: sessão expirou · password-reset: senha acabou de ser redefinida */

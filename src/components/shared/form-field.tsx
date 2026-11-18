@@ -1,5 +1,4 @@
 import { forwardRef, useId, useState } from 'react'
-import type { FieldValues, Path, UseFormSetError } from 'react-hook-form'
 import { cn } from '@/lib/utils'
 
 /**
@@ -105,15 +104,4 @@ export function EyeIcon({ off = true, className }: { off?: boolean; className?: 
       {off && <path d="M2.6 14.6 17.4 1.4" />}
     </svg>
   )
-}
-
-/** Aplica no react-hook-form os erros por campo devolvidos pela API (ex.: e-mail já cadastrado). */
-export function applyApiFieldErrors<T extends FieldValues>(fields: Record<string, string>, setError: UseFormSetError<T>, allowed: ReadonlyArray<Path<T>>) {
-  let first = true
-  for (const [name, message] of Object.entries(fields)) {
-    if (!allowed.includes(name as Path<T>)) continue
-    setError(name as Path<T>, { type: 'server', message }, { shouldFocus: first })
-    first = false
-  }
-  return !first
 }

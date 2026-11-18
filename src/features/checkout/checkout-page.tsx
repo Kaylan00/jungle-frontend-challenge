@@ -17,7 +17,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronLeft, Loader2, MoreVertical, Wallet as WalletIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { CollectorInput, Network, WalletProvider, type Cart, type Quote, type Wallet } from '@/api/contracts'
@@ -171,21 +171,21 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
     mode: 'onTouched',
   })
   const { errors } = form.formState
-  const walletId = form.watch('walletId')
-  const network = form.watch('network')
-  const provider = form.watch('provider')
+  const [walletId, network, provider] = useWatch({ control: form.control, name: ['walletId', 'network', 'provider'] })
   const wallet = wallets.find((w) => w.id === walletId)
 
   // Rascunho: sobrevive a refresh e à expiração da sessão (volta preenchido após o login).
   useEffect(() => {
-    const sub = form.watch((values) => {
-      try {
-        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(values))
-      } catch {
-        /* ignore */
-      }
+    return form.subscribe({
+      formState: { values: true },
+      callback: ({ values }) => {
+        try {
+          sessionStorage.setItem(DRAFT_KEY, JSON.stringify(values))
+        } catch {
+          /* ignore */
+        }
+      },
     })
-    return () => sub.unsubscribe()
   }, [form])
 
   // ---- Conexão simulada da carteira ----

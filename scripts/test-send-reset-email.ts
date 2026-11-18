@@ -79,6 +79,25 @@ const tests: Array<[string, () => Promise<void>]> = [
     assert.equal((await call('{quebrado')).status, 400)
     assert.equal((await call({ to: 'pessoa@gmail.com', resetUrl: RESET_URL }, { contentType: 'text/plain' })).status, 415)
   }],
+  ['corpo acima de 4 KB: 413 PAYLOAD_TOO_LARGE, sem chamar o Brevo', async () => {
+    setEnv(enabled)
+    const big = JSON.stringify({ to: 'pessoa@gmail.com', resetUrl: RESET_URL, pad: 'x'.repeat(5000) })
+    const res = await call(big)
+    assert.equal(res.status, 413)
+    assert.equal(await errorCode(res), 'PAYLOAD_TOO_LARGE')
+    // Conta bytes, não caracteres: 2.100 "ç" (2 bytes cada) passam de 4 KB com cerca de 2.250 caracteres.
+    assert.equal((await call(JSON.stringify({ to: 'pessoa@gmail.com', resetUrl: RESET_URL, pad: 'ç'.repeat(2100) }))).status, 413)
+    // Content-Length declarado acima do limite: recusa antes de ler.
+    const declared = await POST(
+      new Request(`${DEPLOY}/api/send-reset-email`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'content-length': '999999', host: new URL(DEPLOY).host, 'x-forwarded-proto': 'https' },
+        body: '{}',
+      }),
+    )
+    assert.equal(declared.status, 413)
+    assert.equal(calls.length, 0)
+  }],
   ['Origin de outro site: 403', async () => {
     setEnv(enabled)
     const res = await call({ to: 'pessoa@gmail.com', resetUrl: RESET_URL }, { origin: 'https://golpe.example.net' })

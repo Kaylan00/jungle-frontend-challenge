@@ -12,6 +12,8 @@
  * - o link tem que ser do próprio deploy (PUBLIC_APP_URL ou o host da requisição), no caminho
  *   /redefinir-senha?token=rst_<48 hex>, e é remontado aqui (o texto recebido nunca vai para o e-mail);
  * - Origin diferente do deploy é recusado (outro site não consegue disparar pelo navegador da vítima);
+ * - só POST (a Vercel responde 405 aos métodos não exportados), só application/json e corpo de até 4 KB,
+ *   lido com limite (413 sem carregar o resto);
  * - domínios de teste (kurio.test, example.*, .test, .invalid...) recebem 202 sem envio;
  * - limite por IP e por destinatário (3 a cada 10 min). É em memória: vale por instância da função e
  *   zera quando ela recicla, então é best-effort. Num backend real seria um store compartilhado.
@@ -37,7 +39,7 @@ const SendResetEmailBody = z.strictObject({
   resetUrl: z.string().max(2048),
 })
 
-type ErrorCode = 'EMAIL_DISABLED' | 'VALIDATION_ERROR' | 'FORBIDDEN_ORIGIN' | 'UNSUPPORTED_MEDIA_TYPE' | 'RATE_LIMITED' | 'EMAIL_SEND_FAILED'
+type ErrorCode = 'EMAIL_DISABLED' | 'VALIDATION_ERROR' | 'FORBIDDEN_ORIGIN' | 'UNSUPPORTED_MEDIA_TYPE' | 'PAYLOAD_TOO_LARGE' | 'RATE_LIMITED' | 'EMAIL_SEND_FAILED'
 
 const NO_STORE = { 'cache-control': 'no-store' }
 
@@ -99,6 +101,36 @@ function canonicalResetUrl(resetUrl: string, allowedOrigin: string) {
   const token = url.searchParams.get('token')
   if (keys.length !== 1 || keys[0] !== 'token' || !token || !TOKEN_PATTERN.test(token)) return null
   return `${allowedOrigin}${RESET_PATH}?token=${token}`
+}
+
+/**
+ * Lê o corpo em bytes, parando assim que passa do limite: um corpo enorme (com ou sem Content-Length,
+ * ou com Content-Length mentiroso) não é carregado inteiro na memória da função. `null` = grande demais.
+ */
+async function readBodyCapped(request: Request, maxBytes: number): Promise<string | null> {
+  const declared = Number(request.headers.get('content-length'))
+  if (Number.isFinite(declared) && declared > maxBytes) return null
+  if (!request.body) return ''
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > maxBytes) {
+      await reader.cancel().catch(() => {})
+      return null
+    }
+    chunks.push(value)
+  }
+  const bytes = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return new TextDecoder().decode(bytes)
 }
 
 // ---------- Limite simples por IP e por destinatário (em memória, best-effort) ----------
@@ -194,8 +226,8 @@ export async function POST(request: Request): Promise<Response> {
   if (origin && origin !== allowedOrigin) return fail(403, 'FORBIDDEN_ORIGIN')
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return fail(415, 'UNSUPPORTED_MEDIA_TYPE')
 
-  const raw = await request.text()
-  if (raw.length > MAX_BODY_BYTES) return fail(400, 'VALIDATION_ERROR')
+  const raw = await readBodyCapped(request, MAX_BODY_BYTES)
+  if (raw === null) return fail(413, 'PAYLOAD_TOO_LARGE')
   let json: unknown
   try {
     json = JSON.parse(raw)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { z } from 'zod'
-import { CreateOrderInput, EthAmount, isValidAddress, PasswordChangeInput, SignupInput, WalletInput } from './contracts'
+import { CreateOrderInput, EthAmount, isValidAddress, LoginInput, Order, PasswordChangeInput, ProfileInput, SignupInput, WalletInput } from './contracts'
 
 /** Mensagens de erro por caminho ("campo" → mensagens), para conferir o que o formulário mostraria. */
 function issuesOf(schema: z.ZodTypeAny, value: unknown) {
@@ -221,5 +221,31 @@ describe('CreateOrderInput', () => {
   it('colecionador inválido acusa cada campo pelo caminho', () => {
     const issues = issuesOf(CreateOrderInput, { ...base, collector: { ...base.collector, username: 'A', email: 'x', referralCode: '!' } })
     expect(Object.keys(issues).sort()).toEqual(['collector.email', 'collector.referralCode', 'collector.username'])
+  })
+})
+
+describe('limites de tamanho nas entradas', () => {
+  it('senha até 128, e-mail até 254, nomes até 50 caracteres', () => {
+    const signup = { username: 'ana_col', email: 'ana@kurio.test', password: 'abc12345', confirmPassword: 'abc12345' }
+    const long = 'a1'.repeat(65)
+    expect(issuesOf(SignupInput, { ...signup, password: long, confirmPassword: long }).password).toEqual(['A senha pode ter até 128 caracteres'])
+    expect(issuesOf(LoginInput, { email: `${'a'.repeat(250)}@kurio.test`, password: 'x' }).email).toBeDefined()
+    expect(issuesOf(LoginInput, { email: 'ana@kurio.test', password: 'x'.repeat(129) }).password).toBeDefined()
+    const profile = { name: 'Ana', username: 'ana_col', email: 'ana@kurio.test', ensName: 'ana-col', walletNickname: 'Principal' }
+    expect(ProfileInput.safeParse({ ...profile, name: 'x'.repeat(50) }).success).toBe(true)
+    expect(issuesOf(ProfileInput, { ...profile, name: 'x'.repeat(51) }).name).toEqual(['Máximo de 50 caracteres'])
+  })
+})
+
+describe('Order.explorerUrl (vai para um href)', () => {
+  const explorer = Order.shape.explorerUrl
+  it('aceita https e null', () => {
+    expect(explorer.safeParse('https://sepolia.etherscan.io/tx/0xabc').success).toBe(true)
+    expect(explorer.safeParse(null).success).toBe(true)
+  })
+  it('recusa javascript:, data: e http', () => {
+    for (const url of ['javascript:alert(1)', 'data:text/html,<script>alert(1)</script>', 'http://sepolia.etherscan.io/tx/0xabc', '/tx/0xabc']) {
+      expect(explorer.safeParse(url).success, url).toBe(false)
+    }
   })
 })

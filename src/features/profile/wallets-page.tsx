@@ -9,15 +9,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ChevronDown } from 'lucide-react'
 import { forwardRef, useEffect, useId, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { WalletInput, type Network, type User, type Wallet, type WalletProvider } from '@/api/contracts'
 import { ApiError } from '@/api/http'
 import { ErrorState } from '@/components/shared/error-state'
-import { applyApiFieldErrors, FormField, RequiredMark } from '@/components/shared/form-field'
+import { FormField, RequiredMark } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from '@/features/auth/use-session'
+import { applyApiFieldErrors } from '@/lib/form-errors'
 import { cn } from '@/lib/utils'
 import { notifyError, notifySuccess, useSaveWallet, useWallets } from './hooks'
 import { EnsSuffix, FieldSkeleton, primaryButton } from './profile-page'
@@ -194,7 +195,7 @@ function WalletForm({
   const [initial] = useState(() => (wallet ? toValues(wallet) : emptyValues(role, user)))
   const form = useForm<WalletInput>({ resolver: zodResolver(WalletInput), defaultValues: initial })
   const { errors, isSubmitting } = form.formState
-  const network = form.watch('network')
+  const network = useWatch({ control: form.control, name: 'network' })
   const id = (field: string) => `${role}-wallet-${field}`
 
   useEffect(() => {
