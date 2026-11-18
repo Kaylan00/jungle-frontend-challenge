@@ -16,7 +16,7 @@ socket.io-client ──► WebSocket ─────────┘   eventos nf
 
 - **Uma fonte de contratos**: `src/api/contracts.ts` (zod). O cliente valida toda resposta na borda (`request()` em `api/http.ts`) e os handlers do MSW montam as respostas com os mesmos tipos. Um mock não consegue devolver um formato que o app não entende sem que o erro apareça na hora.
 - **Mocks só na rede**: componentes, hooks e o cliente Axios não têm dados fictícios nem “se mock, faça X”. Desligar `VITE_ENABLE_MOCKS` e apontar `VITE_API_URL`/`VITE_SOCKET_URL` para um backend real não exige mudar o app.
-- **Rotas** (TanStack Router, por arquivo): `/`, `/nft/$nftId`, `/carrinho`, `/login`, `/cadastro`, `/recuperar-senha`, `/redefinir-senha?token=` e, sob o layout protegido `_auth`, `/pagamento`, `/pedido/$orderId`, `/perfil`, `/perfil/carteiras`, `/perfil/favoritos`. Rota inexistente cai no `NotFound`.
+- **Rotas** (TanStack Router, por arquivo): `/`, `/nft/$nftId`, `/carrinho`, `/login`, `/cadastro`, `/recuperar-senha`, `/redefinir-senha?token=` e, sob o layout protegido `_auth`, `/pagamento`, `/pedido/$orderId`, `/perfil`, `/perfil/carteiras`, `/perfil/favoritos` e `/admin` (painel; o papel é conferido pela API, ver seção 13). Rota inexistente cai no `NotFound`.
 
 ## 2. Contratos REST
 
@@ -46,11 +46,17 @@ Todo erro segue `{ error: { code, message, fields?, details? } }`.
 | | Consultar | `GET /orders/:id` · `GET /orders?status=pending` | 200 · 403 (pedido de outra conta) · 404 |
 | Perfil | Consulta / atualização | `GET /profile` · `PATCH /profile` | 200 · 409 `CONFLICT` (fields) · 422 |
 | | Avatar | `PUT /profile/avatar` `{dataUrl}` · `DELETE /profile/avatar` | 200 · 422 |
+| Painel (admin) | NFTs completos | `GET /admin/nfts?q&page&pageSize` | 200 `{items: NftDetail[], page, pageSize, total, totalPages}` · 401 · **403 `FORBIDDEN`** (conta comum) |
+| | Destaque | `PATCH /admin/nfts/:id` `{version, featured}` | 200 `NftDetail` · 403 · 404 · **409 `CONFLICT`** (`details: {reason: 'VERSION_MISMATCH', current: NftDetail}`) · 422 |
+| | Edição | `PATCH /admin/nfts/:id/editions/:editionId` `{version, price?, available?, status?}` (`status`: `on_sale` ou `unavailable`) | 200 `NftDetail` · 403 · 404 · 409 (versão) · 422 (`fields`: preço decimal > 0 com até 18 casas; disponibilidade inteira de 0 até a tiragem) |
+| | Cupons | `GET /admin/coupons` · `POST /admin/coupons` `{code, kind, value, expiresAt}` (`kind`: `percent` ou `fixed`) · `POST /admin/coupons/:code/deactivate` | 200/201 `AdminCoupon` (`status`: active/expired/inactive) · 403 · 404 · 409 (código repetido, em `fields.code`) · 422 (valor, validade no passado) |
 | | Senha | `POST /profile/password` | 204 · 422 (senha atual incorreta em `fields`) |
 | Carteiras | Consulta / cadastro / edição | `GET /wallets` · `POST /wallets` · `PUT /wallets/:id` | 200/201 · 409 (endereço repetido) · 422 |
 | | Conexão simulada | `POST /wallets/:id/connect` `{network}` · `DELETE /wallets/:id/connect` | 200 · 409 `WALLET_REJECTED` · 422 |
 
 Falhas transitórias (`503 TRANSIENT_FAILURE`, `500`, rede, timeout) são geradas pelos cenários, em qualquer rota.
+
+`User` traz `role: 'user' | 'admin'` (sem o campo, o cliente assume `user`). `Coupon` (carrinho, cotação, pedido) traz `percentOff` **ou** `amountOff` (valor fixo em ETH, nunca maior que o subtotal).
 
 ### Valores em ETH
 
@@ -63,7 +69,8 @@ Transporte: `socket.io-client` real conectando em `VITE_SOCKET_URL`, só com `tr
 ```ts
 // nft.updated  → para todos os conectados
 { eventId, type: 'nft.updated', occurredAt, version, resource: { type: 'nft', id },
-  data: { price, available, editions: [{ id, price, available, status }] } }
+  data: { price, available, editions: [{ id, price, available, status }],
+          featured?, previousPrice? } }   // destaque e preço exibido antes da mudança (opcionais)
 
 // order.updated → só para as conexões do dono do pedido
 { eventId, type: 'order.updated', occurredAt, version, userId, resource: { type: 'order', id },
@@ -76,7 +83,7 @@ Regras do cliente (`src/realtime/client.ts`):
 2. **Ordem**: guarda a maior `version` por recurso (`nft:<id>`, `order:<id>`), inclusive a que veio da REST. Evento com versão menor ou igual é descartado, então um evento atrasado nunca regride o estado.
 3. **Terminal**: pedido `confirmed`/`rejected` nunca volta para `pending` no cache.
 4. **Isolamento**: evento de pedido com `userId` diferente do usuário atual é descartado. Na troca de sessão o socket é desconectado, as versões de pedido e os ids vistos são zerados, e só então reconecta com o novo token.
-5. **Efeitos**: `nft.updated` atualiza direto o cache do detalhe e dos cards (`setQueryData`); se o NFT está no carrinho, o carrinho é buscado de novo (o servidor recalcula totais e avisos) e há um anúncio `aria-live`. `order.updated` atualiza o pedido e invalida pedido, carrinho e catálogo.
+5. **Efeitos**: `nft.updated` atualiza direto o cache do detalhe, dos cards e da lista do painel admin (`setQueryData`); se o destaque mudou, a vitrine é buscada de novo; se o NFT está no carrinho, o carrinho é buscado de novo (o servidor recalcula totais e avisos) e há um anúncio `aria-live`. Se o preço exibido **caiu** e o NFT está nos favoritos do usuário logado (conferido no cache ou na API), nasce o alerta “Preço caiu” (seção 14). `order.updated` atualiza o pedido e invalida pedido, carrinho e catálogo.
 6. **Ciclo de vida**: um socket por aba, criado e destruído pelo `RealtimeProvider`. `dispose()` remove todos os listeners.
 
 ### Reconciliação REST × Socket.IO
@@ -93,7 +100,7 @@ O socket é **aviso**; a REST é a **fonte da verdade**.
 - O `@mswjs/socket.io-binding` responde ao handshake sozinho e **não envia o ping do Engine.IO**. Sem ping, o cliente derruba a conexão após `pingInterval + pingTimeout` (30 s). O servidor simulado envia `"2"` a cada 20 s (`mocks/realtime.ts`).
 - Sem rooms/namespaces no binding: a entrega por usuário é feita filtrando as conexões pelo token do pacote CONNECT (`40{"token":...}`).
 - O `engine.io` guarda a classe `WebSocket` quando o módulo carrega. Por isso o MSW é iniciado **antes** e só depois o app (que contém o `socket.io-client`) é importado (`main.tsx`).
-- O “servidor” roda na própria aba: com duas abas abertas, cada uma tem o seu socket, mas o estado é compartilhado pelo `localStorage`.
+- O “servidor” roda na própria aba: com duas abas abertas, cada uma tem o seu socket e o seu servidor. Estado e eventos são propagados entre elas (seção 15).
 
 ## 4. Sessão
 
@@ -170,7 +177,9 @@ Em produção o envio seria feito **pelo backend**, com um provedor transacional
 - `mocks/real-email.ts`: pedido em segundo plano à função de envio real do e-mail (seção 4, “Envio real opcional”). `/api/send-reset-email` é a única rota sob `/api` que o MSW deixa passar para a rede.
 - Pagamentos pendentes são liquidados por um relógio do “servidor” (`settleDueOrders`, a cada 500 ms e no carregamento), então um pedido continua andando mesmo depois de um refresh.
 - **Ativação por configuração** (`VITE_ENABLE_MOCKS`), disponível no build de demonstração. Sem a flag, nada do MSW entra no bundle.
-- Fixtures: 36 NFTs (9 categorias, 3 redes, edições 1/1 · 1/10 · 1/50 · Aberta, esgotadas e indisponíveis), 2 usuários, 3 cupons, datas fixas (baselines visuais estáveis).
+- Fixtures: 36 NFTs (9 categorias, 3 redes, edições 1/1 · 1/10 · 1/50 · Aberta, esgotadas e indisponíveis), 3 usuários (Ana, Bruno e o admin), 3 cupons (guardados no banco: o painel cria e desativa), datas fixas (baselines visuais estáveis).
+- Estados salvos por versões anteriores são completados na carga (`migrate`): papel `user` para quem não tem, conta admin e cupons da seed, sem apagar o que já existia.
+- Toda escrita passa por `withDb` (transação com trava entre abas) e é propagada às outras abas (seção 15).
 
 ## 9. Interface, responsividade e acessibilidade
 
@@ -219,7 +228,14 @@ Em produção o envio seria feito **pelo backend**, com um provedor transacional
 | 11 | `11-teclado-acessibilidade` | skip link, foco preso no diálogo, Esc, erros ligados aos campos, catálogo por teclado, axe |
 | 12 | `12-carregamento-falhas` | skeletons em rede lenta, erro 500 e sem conexão com “Tentar novamente” |
 | 13 | `13-recuperar-senha` | pedido para a Ana, e-mail simulado, senha nova (validação), login com a nova e recusa da antiga, link reusado (410), token inválido e expirado, resposta neutra para e-mail desconhecido, falha de rede e 500 com “Tentar novamente”, foco inicial (desktop × toque) e X sempre visível no mobile, axe |
+| 14 | `14-filtros-ativos` | etiquetas de filtros ativos (remover um, limpar tudo), preço mín./máx. sincronizados com o slider |
+| 15 | `15-admin` | visitante → login; conta comum → 403 da API e “Sem permissão”; admin muda o preço e **outra aba** do mesmo navegador vê o preço novo pelo socket dela (com o REST do detalhe falhando de propósito nessa aba); conflito de versão com o diálogo aberto (409 e “Usar os valores atuais”); destaque otimista; cupom criado no painel vale no carrinho e deixa de valer ao desativar |
+| 16 | `16-alerta-preco-favoritos` | queda de preço de um favorito: toast com link, `aria-live`, selo na lista; preço que volta a subir tira o selo; quem não favoritou não é avisado |
+| 17 | `17-busca-sugestoes` | combobox: setas, `aria-activedescendant`, Enter abre o NFT, Esc fecha, trecho destacado, vazio, erro 500 e “Tentar de novo” |
+| 18 | `18-compartilhar` | sem Web Share: copia o link canônico (área de transferência) com “Link copiado”; com Web Share: entrega título e link à folha do sistema |
 | — | `visual` | regressão visual de início, detalhe, carrinho e pagamento (desktop e mobile), baselines versionadas |
+
+Testes unitários do servidor simulado novo: `src/mocks/admin.test.ts` (handlers REST de verdade com `msw/node`: 401/403 em todas as rotas do painel, cadastro público nunca cria admin, 422 por campo, 409 de versão sem gravar nem emitir, evento emitido com a versão gravada, cupons percentual/fixo/desativado no carrinho e na cotação) e `src/mocks/sync.test.ts` (duas instâncias do módulo db como duas abas, com o mesmo `localStorage`, trava compartilhada e o BroadcastChannel do Node: mesmo evento nas duas abas sem eco nem laço, escritas simultâneas sem perda, pedido liquidado uma vez só, sessão visível na outra aba, reset propagado).
 
 Fora do Playwright, `npm run test:api` testa a função `api/send-reset-email.ts` isolada (sem chave → 503, link de outro domínio → 400, Origin de outro site → 403, domínio de teste → 202 sem chamar o Brevo, caso válido → corpo certo para o Brevo, limites por IP e destinatário, Brevo fora → 502), com `fetch` falso.
 
@@ -252,3 +268,31 @@ Otimizações mantidas:
 ## 12. Princípios seguidos
 
 Contexto antes de código (enunciado e Figma lidos inteiros antes de começar). Confiabilidade antes de novidade: a REST é a verdade, o socket só avisa, e o pedido é idempotente. Evidência antes de suposição: cada garantia acima tem um teste E2E ou uma medição. Simplicidade: um estado de servidor, um cliente HTTP, um socket.
+
+## 13. Painel administrativo e permissão
+
+- **Papel na conta**: `User.role` (`user` | `admin`). A seed tem `admin@kurio.test`; o cadastro público sempre cria `user` (o corpo da requisição não escolhe papel).
+- **Quem decide é a API**: toda rota `/api/admin/*` passa por `requireAdmin` (`mocks/http.ts`): sem sessão 401 (o guard leva ao login, por cima da página de origem como nas outras rotas privadas), com conta comum **403 `FORBIDDEN`**. A página `/admin` não decide nada sozinha: ela chama a API e, no 403, mostra “Sem permissão”. O link “Painel” (menu da conta no desktop e menu do perfil no celular) aparece só para admin, por conveniência.
+- **Concorrência otimista**: cada gravação manda a `version` do NFT lida. O servidor compara com a atual; diferente → 409 `CONFLICT` com `details.current` (o NFT como está). Qualquer mudança conta (outro admin, outra aba, estoque reservado por uma compra). Com o diálogo aberto, um `nft.updated` que muda a versão já mostra um aviso antes de salvar. O 409 grava o atual no cache e o diálogo oferece usar os valores atuais ou manter os seus (com a versão nova).
+- **Estados da tela**: skeleton com as medidas da lista, erro com “Tentar novamente”, vazio com “Limpar busca”, “Salvando…”/“Criando…”/“Desativando…” nos botões, destaque otimista com rollback, avisos em toast + `aria-live`, abas com setas (`role=tablist`), diálogos com foco preso (Radix). Aba, busca e página ficam na URL.
+- **Mesmo caminho do resto**: a edição chama `updateEdition` do banco (a mesma do painel de cenários): recalcula preço e disponibilidade do NFT, sobe a versão dos carrinhos com o item (totais e avisos são recalculados na leitura) e emite `nft.updated` pelo Socket.IO. Cotações abertas são conferidas pelo `fingerprint` no pedido. Desativar um cupom tira o cupom dos carrinhos e descarta as cotações com ele (o pedido responde `QUOTE_OUTDATED` com a cotação nova, sem o desconto).
+
+## 14. Alerta de preço, busca com sugestões e compartilhar
+
+- **Alerta “Preço caiu”** (`features/favorites/price-drops.ts`): o `RealtimeClient`, depois de aceitar um `nft.updated` (sem duplicata nem evento velho), compara o preço novo com `previousPrice` (ou com o que o cache mostrava). Se caiu e o NFT está nos favoritos do usuário logado, registra o alerta: toast com link para o NFT (no celular este aviso continua tocável), a mesma frase na região `aria-live` e um selo “Caiu de A” no item em `/perfil/favoritos`. Os selos ficam no `sessionStorage` com o id do usuário na chave e são apagados em qualquer troca de sessão; se o usuário muda durante a consulta aos favoritos, o alerta é descartado.
+- **Sugestões de busca** (`features/catalog/search-suggest.tsx`): combobox ARIA 1.2 (lista com `aria-activedescendant`, foco sempre no campo), debounce de 250 ms, mínimo de 2 letras, `GET /nfts?q=&pageSize=5` pelo TanStack Query com o termo na chave e o `signal` no Axios (a busca de um termo abandonado é cancelada), carregando/vazio/erro com “Tentar de novo” e contagem anunciada. No cabeçalho (desktop) e em “Explorar coleções” (celular).
+- **Compartilhar** (`features/nft/share-button.tsx`): `navigator.share` quando existe (cancelar não é erro); sem ele, ou se ele falhar, copia o link canônico (`/nft/:id?edicao=`) com “Link copiado” no botão, em toast e em `aria-live`. Os links de LinkedIn, e-mail e X do Figma continuam (abrem as páginas de compartilhamento reais); nada promete integração que não existe.
+
+## 15. Propagação entre abas do servidor simulado
+
+Cada aba roda o seu MSW e o seu servidor Socket.IO. Antes, cada uma também tinha a sua cópia do estado em memória: uma mudança feita numa aba só chegava às outras depois de recarregar, e uma aba podia sobrescrever o que a outra gravou. Agora (`mocks/db.ts`):
+
+1. **Transação** (`withDb`): todo handler REST, os controles da simulação e o relógio dos pagamentos rodam numa transação. Ela pega a trava `navigator.locks` (`jungle.mock.db`, exclusiva entre as abas da mesma origem), relê o estado salvo se a revisão no `localStorage` for maior que a da memória, executa e, se algo mudou, grava **uma vez** com `rev + 1`. Latência e falhas do cenário ficam fora da trava; o `POST /orders` fecha a transação antes de segurar a resposta (cenário de timeout), para não travar as outras abas.
+2. **Aviso**: depois de gravar, manda pelo `BroadcastChannel` `{from, rev, events, reset?}` com os eventos gerados na transação (mesmos `eventId` e `version`).
+3. **Quem recebe**: recarrega o estado se a `rev` for maior e entrega os eventos aos ouvintes locais, ou seja, ao seu servidor Socket.IO, que os envia pelo socket da aba (pedido só para as conexões do dono). **Receber não grava nem reenvia**: não há eco nem laço (o canal não entrega a quem enviou, e mensagens com o próprio `from` são ignoradas). O cliente deduplica por `eventId` e versão, então um evento repetido não reaplica efeitos.
+4. **Ordem e corrida**: `eventSeq`, `seq` e versões ficam no estado compartilhado e só mudam sob a trava, então ids e versões nunca se repetem entre abas e uma gravação não apaga a outra (testado com escritas simultâneas).
+5. **Pagamentos pendentes**: todas as abas conferem o relógio a cada 500 ms, mas só pegam a trava se houver pedido vencido; dentro dela releem o estado e só liquidam pedido ainda `pending`. A primeira aba liquida e emite `order.updated`; as outras recebem o mesmo evento e não liquidam de novo (idempotente).
+6. **Sessão**: a sessão criada numa aba vale nas outras (a conexão do socket relê o estado antes de identificar o token). Abas do mesmo navegador compartilham o token, como num site real; o `order.updated` continua indo só para as conexões do dono e o cliente ainda descarta evento de outro `userId`.
+7. **Reset** (“Resetar tudo”): a mensagem leva `reset`; as outras abas recarregam a seed e derrubam as conexões (o cliente reconecta e reconcilia pela REST).
+
+**Limitações**: só entre abas do mesmo navegador e perfil (é o `localStorage` + `BroadcastChannel` da origem; outro navegador ou janela anônima é outro “servidor”). Sem Web Locks (navegador antigo ou contexto inseguro) as transações são serializadas só dentro da aba; sem `BroadcastChannel` as outras abas releem o estado na próxima requisição, mas não recebem os eventos ao vivo (reconciliam no foco ou na reconexão). O cenário de rede escolhido no painel vale para a aba onde foi escolhido (e para as que carregarem depois), e a conexão simulada da carteira é da aba (como uma extensão), não do estado compartilhado.

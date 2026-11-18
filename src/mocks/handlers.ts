@@ -5,9 +5,13 @@
 import { http, HttpResponse, passthrough, type DefaultBodyType, type HttpResponseResolver, type PathParams } from 'msw'
 import {
   AddToCartInput,
+  AdminEditionPatch,
+  AdminNftListParams,
+  AdminNftPatch,
   AvatarInput,
   Category,
   CollectorInput,
+  CouponCreateInput,
   CreateOrderInput,
   LoginInput,
   Network,
@@ -19,6 +23,8 @@ import {
   QuoteInput,
   SignupRequest,
   WalletInput,
+  type AdminNftListResponse,
+  type NftDetail,
   type NftListResponse,
   type PasswordResetAccepted,
   type PasswordResetDone,
@@ -27,18 +33,38 @@ import {
 } from '@/api/contracts'
 import { compareEth } from '@/lib/eth'
 import * as db from './db'
-import { apiError, API, bearer, optionalUser, readJson, requireUser, simulateNetwork, zodFields } from './http'
+import { apiError, API, bearer, optionalUser, readJson, requireAdmin, requireUser, simulateNetwork, zodFields } from './http'
 import { REAL_EMAIL_ENDPOINT, sendRealResetEmail } from './real-email'
 import { consumeFlag, getScenario } from './scenario'
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete'
 
-function route<P extends PathParams = PathParams>(method: Method, path: string, resolver: HttpResponseResolver<P, DefaultBodyType>) {
+/**
+ * Rota REST simulada: primeiro as condições de rede do cenário (latência, falhas), fora da trava; depois o
+ * handler numa transação do banco (`db.withDb`): relê o que outra aba gravou, aplica, grava e propaga.
+ * `lock: false` só para quem controla a própria transação (POST /orders, que pode segurar a resposta).
+ */
+function route<P extends PathParams = PathParams>(method: Method, path: string, resolver: HttpResponseResolver<P, DefaultBodyType>, opts: { lock?: boolean } = {}) {
   return http[method]<P>(`${API}${path}`, async (info) => {
     const failed = await simulateNetwork(info.request)
     if (failed) return failed
-    return resolver(info)
+    if (opts.lock === false) return resolver(info)
+    return db.withDb(() => resolver(info))
   })
+}
+
+/** 409 de versão do painel: manda o NFT como está agora, para a tela mostrar e o admin decidir. */
+function versionConflict(current: NftDetail) {
+  return apiError('CONFLICT', 'Este NFT mudou desde que você abriu a edição (outra aba, outro admin ou uma compra). Confira os valores atuais e salve de novo.', {
+    details: { reason: 'VERSION_MISMATCH', current },
+  })
+}
+
+function adminResult(result: db.AdminUpdateResult) {
+  if (result.ok) return HttpResponse.json(result.nft)
+  if (result.code === 'VERSION_MISMATCH') return versionConflict(result.current)
+  if (result.code === 'VALIDATION_ERROR') return apiError('VALIDATION_ERROR', 'Confira os campos destacados', { fields: result.fields })
+  return apiError('NOT_FOUND', result.message)
 }
 
 function sessionBody(user: db.StoredUser, token: string, expiresAt: number): Session {
@@ -408,65 +434,75 @@ export const handlers = [
   }),
 
   // ---------- Pedidos ----------
-  route('post', '/orders', async ({ request }) => {
-    const auth = requireUser(request)
-    if (auth instanceof Response) return auth
-    const key = request.headers.get('idempotency-key')
-    if (!key) return apiError('VALIDATION_ERROR', 'Cabeçalho Idempotency-Key é obrigatório')
-    const body = await readJson(request)
-    const parsed = CreateOrderInput.safeParse(body)
-    if (!parsed.success) return apiError('VALIDATION_ERROR', 'Confira os dados do pedido', { fields: zodFields(parsed.error.issues) })
-    const requestHash = await db.stableHash(parsed.data)
+  route(
+    'post',
+    '/orders',
+    async ({ request }) => {
+      const key = request.headers.get('idempotency-key')
+      const body = await readJson(request)
+      // A transação termina antes de qualquer espera: segurar a resposta (cenário de timeout) não trava as outras abas.
+      const result = await db.withDb(async (): Promise<Response | { order: db.StoredOrder }> => {
+        const auth = requireUser(request)
+        if (auth instanceof Response) return auth
+        if (!key) return apiError('VALIDATION_ERROR', 'Cabeçalho Idempotency-Key é obrigatório')
+        const parsed = CreateOrderInput.safeParse(body)
+        if (!parsed.success) return apiError('VALIDATION_ERROR', 'Confira os dados do pedido', { fields: zodFields(parsed.error.issues) })
+        const requestHash = await db.stableHash(parsed.data)
 
-    // 1) Mesma chave: devolve o mesmo pedido (ou conflito se o conteúdo mudou).
-    const previous = db.findIdempotency(auth.user.id, key)
-    if (previous) {
-      if (previous.requestHash !== requestHash) {
-        return apiError('IDEMPOTENCY_CONFLICT', 'Esta chave de idempotência já foi usada com outro conteúdo')
-      }
-      const order = db.findOrder(previous.orderId)!
-      return HttpResponse.json(db.publicOrder(order), { status: 200, headers: { 'Idempotent-Replayed': 'true' } })
-    }
+        // 1) Mesma chave: devolve o mesmo pedido (ou conflito se o conteúdo mudou).
+        const previous = db.findIdempotency(auth.user.id, key)
+        if (previous) {
+          if (previous.requestHash !== requestHash) {
+            return apiError('IDEMPOTENCY_CONFLICT', 'Esta chave de idempotência já foi usada com outro conteúdo')
+          }
+          const order = db.findOrder(previous.orderId)!
+          return HttpResponse.json(db.publicOrder(order), { status: 200, headers: { 'Idempotent-Replayed': 'true' } })
+        }
 
-    // 2) Carteira conectada na rede escolhida.
-    const conn = walletConnections.get(auth.user.id)
-    const wallet = db.getWallets(auth.user.id).find((w) => w.id === parsed.data.walletId)
-    if (!wallet) return apiError('VALIDATION_ERROR', 'Carteira não encontrada', { fields: { walletId: 'Selecione uma carteira cadastrada' } })
-    if (!conn || conn.walletId !== wallet.id || conn.network !== parsed.data.network) {
-      return apiError('VALIDATION_ERROR', 'Conecte a carteira na rede selecionada antes de confirmar', { fields: { walletId: 'Carteira desconectada' } })
-    }
+        // 2) Carteira conectada na rede escolhida.
+        const conn = walletConnections.get(auth.user.id)
+        const wallet = db.getWallets(auth.user.id).find((w) => w.id === parsed.data.walletId)
+        if (!wallet) return apiError('VALIDATION_ERROR', 'Carteira não encontrada', { fields: { walletId: 'Selecione uma carteira cadastrada' } })
+        if (!conn || conn.walletId !== wallet.id || conn.network !== parsed.data.network) {
+          return apiError('VALIDATION_ERROR', 'Conecte a carteira na rede selecionada antes de confirmar', { fields: { walletId: 'Carteira desconectada' } })
+        }
 
-    // 3) Revalida a cotação contra o estado atual do catálogo, cupom e taxas.
-    const quote = db.findQuote(parsed.data.quoteId)
-    const cart = db.getOrCreateCart({ userId: auth.user.id, guestCartId: null })
-    const fresh = await db.buildQuote(auth.user.id, cart, parsed.data.network, quote?.coupon?.code ?? null)
-    if (!fresh.ok) return apiError(fresh.code, fresh.message, { details: fresh.details })
-    if (!quote || quote.userId !== auth.user.id || fresh.quote.fingerprint !== parsed.data.fingerprint) {
-      return apiError('QUOTE_OUTDATED', 'Preço, disponibilidade ou taxas mudaram. Revise e confirme novamente.', {
-        details: { quote: db.publicQuote(fresh.quote) },
+        // 3) Revalida a cotação contra o estado atual do catálogo, cupom e taxas.
+        const quote = db.findQuote(parsed.data.quoteId)
+        const cart = db.getOrCreateCart({ userId: auth.user.id, guestCartId: null })
+        const fresh = await db.buildQuote(auth.user.id, cart, parsed.data.network, quote?.coupon?.code ?? null)
+        if (!fresh.ok) return apiError(fresh.code, fresh.message, { details: fresh.details })
+        if (!quote || quote.userId !== auth.user.id || fresh.quote.fingerprint !== parsed.data.fingerprint) {
+          return apiError('QUOTE_OUTDATED', 'Preço, disponibilidade ou taxas mudaram. Revise e confirme novamente.', {
+            details: { quote: db.publicQuote(fresh.quote) },
+          })
+        }
+
+        const s = getScenario()
+        const order = db.createOrder({
+          userId: auth.user.id,
+          key,
+          requestHash,
+          quote: fresh.quote,
+          wallet,
+          provider: parsed.data.provider,
+          collector: CollectorInput.parse(parsed.data.collector),
+          outcome: s.payment,
+          paymentDelayMs: s.paymentDelayMs,
+        })
+        return { order }
       })
-    }
+      if (result instanceof Response) return result
 
-    const s = getScenario()
-    const order = db.createOrder({
-      userId: auth.user.id,
-      key,
-      requestHash,
-      quote: fresh.quote,
-      wallet,
-      provider: parsed.data.provider,
-      collector: CollectorInput.parse(parsed.data.collector),
-      outcome: s.payment,
-      paymentDelayMs: s.paymentDelayMs,
-    })
-
-    // Cenário: o pedido foi gravado, mas a resposta não chega a tempo (timeout no cliente).
-    if (consumeFlag('orderTimeoutOnce')) {
-      await new Promise((r) => setTimeout(r, 15_000))
-      return apiError('TRANSIENT_FAILURE', 'Gateway timeout (simulado)')
-    }
-    return HttpResponse.json(db.publicOrder(order), { status: 201 })
-  }),
+      // Cenário: o pedido foi gravado, mas a resposta não chega a tempo (timeout no cliente).
+      if (consumeFlag('orderTimeoutOnce')) {
+        await new Promise((r) => setTimeout(r, 15_000))
+        return apiError('TRANSIENT_FAILURE', 'Gateway timeout (simulado)')
+      }
+      return HttpResponse.json(db.publicOrder(result.order), { status: 201 })
+    },
+    { lock: false },
+  ),
 
   route('get', '/orders', ({ request }) => {
     const auth = requireUser(request)
@@ -538,6 +574,67 @@ export const handlers = [
     }
     await db.setPassword(auth.user, parsed.data.newPassword)
     return new HttpResponse(null, { status: 204 })
+  }),
+
+  // ---------- Painel administrativo ----------
+  // Toda mudança passa pelo mesmo banco e emite os mesmos eventos (nft.updated) que o painel de cenários.
+  route('get', '/admin/nfts', ({ request }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    const sp = new URL(request.url).searchParams
+    const parsed = AdminNftListParams.safeParse({
+      q: sp.get('q') ?? undefined,
+      page: sp.get('page') ? Number(sp.get('page')) : undefined,
+      pageSize: sp.get('pageSize') ? Number(sp.get('pageSize')) : undefined,
+    })
+    if (!parsed.success) return apiError('VALIDATION_ERROR', 'Parâmetros inválidos', { fields: zodFields(parsed.error.issues) })
+    const q = parsed.data.q?.trim().toLowerCase()
+    const items = db.getState().nfts.filter((n) => !q || `${n.name} ${n.collection} ${n.id}`.toLowerCase().includes(q))
+    const pageSize = parsed.data.pageSize ?? 10
+    const totalPages = Math.max(1, Math.ceil(items.length / pageSize))
+    const page = Math.min(parsed.data.page ?? 1, totalPages)
+    const body: AdminNftListResponse = { items: items.slice((page - 1) * pageSize, page * pageSize), page, pageSize, total: items.length, totalPages }
+    return HttpResponse.json(body)
+  }),
+
+  route<{ id: string }>('patch', '/admin/nfts/:id', async ({ request, params }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    const parsed = AdminNftPatch.safeParse(await readJson(request))
+    if (!parsed.success) return apiError('VALIDATION_ERROR', 'Dados inválidos', { fields: zodFields(parsed.error.issues) })
+    return adminResult(db.adminSetFeatured(params.id, parsed.data.version, parsed.data.featured))
+  }),
+
+  route<{ id: string; editionId: string }>('patch', '/admin/nfts/:id/editions/:editionId', async ({ request, params }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    const parsed = AdminEditionPatch.safeParse(await readJson(request))
+    if (!parsed.success) return apiError('VALIDATION_ERROR', 'Confira os campos destacados', { fields: zodFields(parsed.error.issues) })
+    return adminResult(db.adminUpdateEdition(params.id, params.editionId, parsed.data))
+  }),
+
+  route('get', '/admin/coupons', ({ request }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    return HttpResponse.json({ items: db.listCoupons() })
+  }),
+
+  route('post', '/admin/coupons', async ({ request }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    const parsed = CouponCreateInput.safeParse(await readJson(request))
+    if (!parsed.success) return apiError('VALIDATION_ERROR', 'Confira os campos destacados', { fields: zodFields(parsed.error.issues) })
+    const result = db.createCoupon(parsed.data)
+    if (!result.ok) return apiError(result.code, result.code === 'CONFLICT' ? 'Já existe um cupom com este código' : 'Confira os campos destacados', { fields: result.fields })
+    return HttpResponse.json(result.coupon, { status: 201 })
+  }),
+
+  route<{ code: string }>('post', '/admin/coupons/:code/deactivate', ({ request, params }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    const coupon = db.deactivateCoupon(params.code)
+    if (!coupon) return apiError('NOT_FOUND', 'Cupom não encontrado')
+    return HttpResponse.json(coupon)
   }),
 
   // Envio real do e-mail (Vercel Function, não é simulada): segue para a rede, nunca cai no 404 abaixo.

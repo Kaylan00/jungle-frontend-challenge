@@ -12,7 +12,7 @@ export const authSearchSchema = z.object({
 })
 export type AuthSearch = z.infer<typeof authSearchSchema>
 
-const PRIVATE_PREFIXES = ['/pagamento', '/perfil', '/pedido']
+const PRIVATE_PREFIXES = ['/pagamento', '/perfil', '/pedido', '/admin']
 
 /** Página que exige login (layout `_auth`). */
 export const isPrivatePath = (path: string) => PRIVATE_PREFIXES.some((p) => path.startsWith(p))

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NftDetail, NftListResponse, NftUpdatedEvent, Order, OrderUpdatedEvent } from '@/api/contracts'
 import { qk } from '@/api/queries'
 import { sessionStore } from '@/api/session-store'
+import { clearPriceDrops, getPriceDrops, onPriceDropAlert, type PriceDrop } from '@/features/favorites/price-drops'
 import { subscribeAnnouncements } from '@/lib/announcer'
 import { RealtimeClient } from './client'
 
@@ -484,5 +485,75 @@ describe('dispose', () => {
     socket().connectNow()
     expect(qc.getQueryData<NftDetail>(qk.nftDetail(NFT_ID))).toMatchObject({ price: '1' })
     expect(statusListener).not.toHaveBeenCalled()
+  })
+})
+
+describe('favoritos, destaque e painel admin', () => {
+  let drops: PriceDrop[]
+  let offDrops: () => void
+
+  beforeEach(() => {
+    client.start(USER)
+    socket().connectNow()
+    drops = []
+    offDrops = onPriceDropAlert((d) => drops.push(d))
+  })
+
+  afterEach(() => {
+    offDrops()
+    clearPriceDrops()
+  })
+
+  const withData = (e: NftUpdatedEvent, data: Partial<NftUpdatedEvent['data']>): NftUpdatedEvent => ({ ...e, data: { ...e.data, ...data } })
+
+  it('queda de preço de um favorito avisa o dono (uma vez); alta e NFT fora dos favoritos não avisam', async () => {
+    qc.setQueryData(qk.favorites(USER), { nftIds: [NFT_ID] })
+    qc.setQueryData(qk.nftDetail(NFT_ID), nftDetail({ price: '1' }))
+
+    socket().serverEmit('nft.updated', withData(nftEvent('evt-1', 2, '0.8'), { previousPrice: '1' }))
+    await vi.waitFor(() => expect(drops).toHaveLength(1))
+    expect(drops[0]).toMatchObject({ nftId: NFT_ID, name: 'Emerald Ape #042', from: '1', to: '0.8' })
+
+    // Duplicata: nenhum efeito novo.
+    socket().serverEmit('nft.updated', withData(nftEvent('evt-1', 2, '0.8'), { previousPrice: '1' }))
+    // Alta (sem previousPrice: compara com o que o cache mostrava): o selo continua, com o preço atual.
+    socket().serverEmit('nft.updated', nftEvent('evt-2', 3, '0.9'))
+    // Queda, mas o NFT saiu dos favoritos.
+    qc.setQueryData(qk.favorites(USER), { nftIds: [] })
+    socket().serverEmit('nft.updated', nftEvent('evt-3', 4, '0.1'))
+    await new Promise((r) => setTimeout(r, 10))
+    expect(drops).toHaveLength(1)
+    expect(getPriceDrops(USER)[NFT_ID]).toMatchObject({ from: '1', to: '0.1' })
+
+    // Voltou ao preço de antes: o selo some.
+    socket().serverEmit('nft.updated', nftEvent('evt-4', 5, '1'))
+    expect(getPriceDrops(USER)[NFT_ID]).toBeUndefined()
+  })
+
+  it('visitante ou outro usuário não recebem o alerta', async () => {
+    client.setUser(null)
+    qc.setQueryData(qk.favorites(USER), { nftIds: [NFT_ID] })
+    socket().serverEmit('nft.updated', withData(nftEvent('evt-1', 2, '0.5'), { previousPrice: '1' }))
+    client.setUser('usr-bruno')
+    qc.setQueryData(qk.favorites('usr-bruno'), { nftIds: [] })
+    socket().serverEmit('nft.updated', withData(nftEvent('evt-2', 3, '0.4'), { previousPrice: '0.5' }))
+    await new Promise((r) => setTimeout(r, 10))
+    expect(drops).toEqual([])
+  })
+
+  it('destaque novo recarrega a vitrine e a lista do painel aplica o evento inteiro', () => {
+    qc.setQueryData(qk.featured, { items: [] })
+    const adminKey = qk.adminNfts(USER, { pageSize: 8 })
+    qc.setQueryData(adminKey, { items: [nftDetail()], page: 1, pageSize: 8, total: 1, totalPages: 1 })
+
+    socket().serverEmit('nft.updated', withData(nftEvent('evt-1', 2, '1.5'), { featured: true }))
+
+    expect(qc.getQueryState(qk.featured)?.isInvalidated).toBe(true)
+    expect(qc.getQueryData<{ items: NftDetail[] }>(adminKey)?.items[0]).toMatchObject({
+      price: '1.5',
+      featured: true,
+      version: 2,
+      editions: [{ id: 'ed-1', price: '1.5' }, { id: 'ed-2', price: '2' }],
+    })
   })
 })

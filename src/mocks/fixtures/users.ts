@@ -2,9 +2,12 @@
  * Usuários fictícios do cenário padrão (documentados no README).
  * As senhas aqui são só a entrada da seed: o "banco" simulado guarda apenas hash + salt.
  */
-import type { Wallet } from '@/api/contracts'
+import type { CouponKind, UserRole, Wallet } from '@/api/contracts'
 
 type SeedWallet = Omit<Wallet, 'updatedAt'>
+
+/** Conta administradora da seed (painel em /admin). */
+export const ADMIN_USER_ID = 'usr-admin'
 
 export const SEED_USERS: Array<{
   id: string
@@ -12,17 +15,31 @@ export const SEED_USERS: Array<{
   username: string
   email: string
   password: string
+  role: UserRole
   ensName: string
   walletNickname: string
   wallets: SeedWallet[]
   favorites: string[]
 }> = [
   {
+    id: ADMIN_USER_ID,
+    name: 'Kurio Admin',
+    username: 'kurio_admin',
+    email: 'admin@kurio.test',
+    password: 'Kurio#Admin2026',
+    role: 'admin',
+    ensName: 'kurio-admin',
+    walletNickname: 'Operação',
+    favorites: [],
+    wallets: [],
+  },
+  {
     id: 'usr-ana',
     name: 'Ana Colecionadora',
     username: 'ana_nft',
     email: 'ana@kurio.test',
     password: 'Selva2026!',
+    role: 'user',
     ensName: 'ana-kurio',
     walletNickname: 'Principal',
     favorites: ['nft-01', 'nft-10'],
@@ -63,6 +80,7 @@ export const SEED_USERS: Array<{
     username: 'bruno_pixel',
     email: 'bruno@kurio.test',
     password: 'Pixel2026!',
+    role: 'user',
     ensName: 'bruno-pixel',
     walletNickname: 'Carteira de jogos',
     favorites: ['nft-05'],
@@ -70,11 +88,15 @@ export const SEED_USERS: Array<{
   },
 ]
 
-export const COUPONS = [
-  { code: 'KURIO10', description: 'Desconto de lançamento (10%)', percentOff: '10', expiresAt: '2099-12-31T23:59:59.000Z' },
-  { code: 'GENESIS25', description: 'Lançamento gênesis (25%)', percentOff: '25', expiresAt: '2099-12-31T23:59:59.000Z' },
-  { code: 'BLACK2025', description: 'Black Friday 2025', percentOff: '30', expiresAt: '2025-11-30T23:59:59.000Z' },
+/** Cupons da seed. O painel admin cria outros (percentual ou valor fixo) e desativa qualquer um. */
+export const COUPONS: Array<{ code: string; description: string; kind: CouponKind; value: string; expiresAt: string | null }> = [
+  { code: 'KURIO10', description: 'Desconto de lançamento (10%)', kind: 'percent', value: '10', expiresAt: '2099-12-31T23:59:59.000Z' },
+  { code: 'GENESIS25', description: 'Lançamento gênesis (25%)', kind: 'percent', value: '25', expiresAt: '2099-12-31T23:59:59.000Z' },
+  { code: 'BLACK2025', description: 'Black Friday 2025', kind: 'percent', value: '30', expiresAt: '2025-11-30T23:59:59.000Z' },
 ]
+
+/** Data de criação fixa dos cupons da seed (estável para os testes). */
+export const SEED_DATE = '2026-01-10T12:00:00.000Z'
 
 /** Taxa de rede estimada por rede (simulada), em ETH. */
 export const NETWORK_FEES: Record<'ethereum' | 'polygon' | 'solana', string> = {

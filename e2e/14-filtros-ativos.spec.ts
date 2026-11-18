@@ -75,7 +75,7 @@ test.describe('Filtros ativos e preço digitado', () => {
     // Remover a busca limpa o campo de busca também.
     await chips(page).getByRole('button', { name: 'Remover filtro Busca: “Golden”' }).click()
     await expect.poll(() => urlState(page)).toEqual({ network: ['polygon'], onlyAvailable: true, sort: 'price_asc' })
-    const searchBox = app.isMobile ? page.getByRole('searchbox', { name: 'Buscar coleções e NFTs' }) : page.getByTestId('catalog-search')
+    const searchBox = app.isMobile ? page.getByRole('combobox', { name: 'Buscar coleções e NFTs' }) : page.getByTestId('catalog-search')
     await expect(searchBox).toHaveValue('')
     await expect(page.getByTestId('results-summary')).toHaveText(/^11 NFTs encontrados/)
     await expect(cards(page).first()).toContainText('Ivory Knight #256')

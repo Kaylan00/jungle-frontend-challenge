@@ -77,6 +77,17 @@ export function requireUser(request: Request): { user: StoredUser; token: string
   return apiError('UNAUTHENTICATED', 'Faça login para continuar.')
 }
 
+/**
+ * Rotas do painel: sem sessão = 401 (como as outras privadas); com sessão de conta comum = 403 FORBIDDEN.
+ * O papel é lido do banco a cada requisição, nunca do cliente.
+ */
+export function requireAdmin(request: Request): { user: StoredUser; token: string } | Response {
+  const auth = requireUser(request)
+  if (auth instanceof Response) return auth
+  if (auth.user.role !== 'admin') return apiError('FORBIDDEN', 'Esta área é só para administradores da Kurio.')
+  return auth
+}
+
 export function optionalUser(request: Request): StoredUser | null {
   const s = lookupSession(bearer(request))
   return s.status === 'ok' ? s.user : null

@@ -20,6 +20,7 @@ import { ART_SIZES, artSources } from '@/lib/art'
 import { useBottomBar } from '@/lib/bottom-bars'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
+import { ShareButton } from './share-button'
 import { SkeletonLine, VitrineCardSkeleton, VitrineDotsSkeleton } from './vitrine-skeleton'
 
 export function NftDetailPage({ nftId, editionId }: { nftId: string; editionId?: string }) {
@@ -98,7 +99,10 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
         >
           <ChevronLeft className="size-5" strokeWidth={1.75} aria-hidden="true" />
         </button>
-        <FavoriteButton nftId={nft.id} nftName={nft.name} size="sm" className="size-[35px] border-[#3c2218] bg-[#2f1d15] text-highlight" />
+        <div className="flex items-center gap-2">
+          <ShareButton nftId={nft.id} nftName={nft.name} editionId={editionId} variant="round" className="size-[35px] border border-[#3c2218] bg-[#2f1d15] text-highlight" />
+          <FavoriteButton nftId={nft.id} nftName={nft.name} size="sm" className="size-[35px] border-[#3c2218] bg-[#2f1d15] text-highlight" />
+        </div>
       </div>
 
       <nav aria-label="Trilha de navegação" className="mb-3 hidden text-[13px] font-semibold md:block xl:mb-3 xl:text-[15px] xl:font-bold xl:leading-4">
@@ -314,6 +318,8 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
               <XIcon className="size-4 xl:hidden" />
               <TwitterIcon className="hidden h-[13px] w-4 xl:block" />
             </a>
+            {/* Web Share quando existe; senão copia o link (com confirmação). */}
+            <ShareButton nftId={nft.id} nftName={nft.name} editionId={editionId} className="ml-2 text-[13px] xl:ml-[14px] xl:text-[14px]" />
           </div>
         </div>
       </div>

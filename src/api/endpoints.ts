@@ -4,6 +4,9 @@
  */
 import { z } from 'zod'
 import {
+  AdminCoupon,
+  AdminCouponList,
+  AdminNftListResponse,
   Cart,
   FavoritesResponse,
   FeaturedResponse,
@@ -19,6 +22,10 @@ import {
   Wallet,
   WalletConnection,
   type AddToCartInput,
+  type AdminEditionPatch,
+  type AdminNftListParams,
+  type AdminNftPatch,
+  type CouponCreateInput,
   type CreateOrderInput,
   type LoginInput,
   type Network,
@@ -105,4 +112,18 @@ export const api = {
   updateWallet: (id: string, body: WalletInput) => request(Wallet, { method: 'PUT', url: `/wallets/${id}`, data: body }),
   connectWallet: (id: string, network: Network) => request(WalletConnection, { method: 'POST', url: `/wallets/${id}/connect`, data: { network } }),
   disconnectWallet: (id: string) => request(z.any(), { method: 'DELETE', url: `/wallets/${id}/connect` }),
+
+  // Painel administrativo (403 FORBIDDEN para conta comum)
+  adminListNfts: (p: AdminNftListParams, { signal }: Opts = {}) =>
+    request(AdminNftListResponse, {
+      url: '/admin/nfts',
+      params: { ...(p.q ? { q: p.q } : {}), ...(p.page ? { page: String(p.page) } : {}), ...(p.pageSize ? { pageSize: String(p.pageSize) } : {}) },
+      signal,
+    }),
+  adminUpdateNft: (id: string, body: AdminNftPatch) => request(NftDetail, { method: 'PATCH', url: `/admin/nfts/${encodeURIComponent(id)}`, data: body }),
+  adminUpdateEdition: (id: string, editionId: string, body: AdminEditionPatch) =>
+    request(NftDetail, { method: 'PATCH', url: `/admin/nfts/${encodeURIComponent(id)}/editions/${encodeURIComponent(editionId)}`, data: body }),
+  adminListCoupons: ({ signal }: Opts = {}) => request(AdminCouponList, { url: '/admin/coupons', signal }),
+  adminCreateCoupon: (body: CouponCreateInput) => request(AdminCoupon, { method: 'POST', url: '/admin/coupons', data: body }),
+  adminDeactivateCoupon: (code: string) => request(AdminCoupon, { method: 'POST', url: `/admin/coupons/${encodeURIComponent(code)}/deactivate` }),
 }

@@ -14,10 +14,12 @@
  */
 import type { QueryClient } from '@tanstack/react-query'
 import { io, type Socket } from 'socket.io-client'
-import { NftUpdatedEvent, OrderUpdatedEvent, SOCKET_EVENTS, type NftDetail, type NftListResponse, type Order } from '@/api/contracts'
-import { qk } from '@/api/queries'
+import { NftUpdatedEvent, OrderUpdatedEvent, SOCKET_EVENTS, type AdminNftListResponse, type NftDetail, type NftListResponse, type Order } from '@/api/contracts'
+import { favoritesQuery, nftDetailQuery, qk } from '@/api/queries'
 import { sessionStore } from '@/api/session-store'
+import { notePriceChange, recordPriceDrop } from '@/features/favorites/price-drops'
 import { announce } from '@/lib/announcer'
+import { compareEth } from '@/lib/eth'
 import { explorerUrl } from '@/lib/explorer'
 
 export type RealtimeStatus = 'connecting' | 'connected' | 'reconnecting' | 'offline'
@@ -147,32 +149,44 @@ export class RealtimeClient {
     if (cached) this.noteVersion(`nft:${nftId}`, cached.version)
     if (!this.accept(e.eventId, `nft:${nftId}`, e.version)) return
 
-    // Detalhe: aplica direto no cache (sem nova requisição).
-    this.queryClient.setQueryData<NftDetail>(qk.nftDetail(nftId), (old) => {
-      if (!old || old.version >= e.version) return old
-      const editions = old.editions.map((ed) => {
+    // O que a tela mostrava antes (preço e nome), para o alerta de queda nos favoritos.
+    const known = this.knownSummary(nftId)
+    const featured = e.data.featured
+    const summaryPatch = { price: e.data.price, available: e.data.available, version: e.version, ...(featured === undefined ? {} : { featured }) }
+    const applyEditions = <T extends NftDetail>(old: T): T => ({
+      ...old,
+      ...summaryPatch,
+      editions: old.editions.map((ed) => {
         const upd = e.data.editions.find((x) => x.id === ed.id)
         return upd ? { ...ed, ...upd } : ed
-      })
-      return { ...old, price: e.data.price, available: e.data.available, editions, version: e.version }
+      }),
     })
+
+    // Detalhe: aplica direto no cache (sem nova requisição).
+    this.queryClient.setQueryData<NftDetail>(qk.nftDetail(nftId), (old) => (!old || old.version >= e.version ? old : applyEditions(old)))
 
     // Listagens: atualiza o card onde ele aparecer.
     this.queryClient.setQueriesData<NftListResponse>({ queryKey: ['nfts', 'list'] }, (old) =>
-      old
-        ? {
-            ...old,
-            items: old.items.map((n) =>
-              n.id === nftId && n.version < e.version ? { ...n, price: e.data.price, available: e.data.available, version: e.version } : n,
-            ),
-          }
-        : old,
+      old ? { ...old, items: old.items.map((n) => (n.id === nftId && n.version < e.version ? { ...n, ...summaryPatch } : n)) } : old,
     )
-    this.queryClient.setQueryData<{ items: NftListResponse['items'] }>(qk.featured, (old) =>
-      old
-        ? { items: old.items.map((n) => (n.id === nftId && n.version < e.version ? { ...n, price: e.data.price, available: e.data.available, version: e.version } : n)) }
-        : old,
-    )
+    const featuredList = this.queryClient.getQueryData<{ items: NftListResponse['items'] }>(qk.featured)
+    if (featuredList && featured !== undefined && featuredList.items.some((n) => n.id === nftId) !== featured) {
+      // Entrou ou saiu da vitrine de destaques: a lista (e a ordem) vem da API.
+      void this.queryClient.invalidateQueries({ queryKey: qk.featured })
+    } else {
+      this.queryClient.setQueryData<{ items: NftListResponse['items'] }>(qk.featured, (old) =>
+        old ? { items: old.items.map((n) => (n.id === nftId && n.version < e.version ? { ...n, ...summaryPatch } : n)) } : old,
+      )
+    }
+
+    // Painel admin aberto (nesta ou em outra aba): a lista acompanha ao vivo.
+    if (this.userId) {
+      this.queryClient.setQueriesData<AdminNftListResponse>({ queryKey: qk.adminNftLists(this.userId) }, (old) =>
+        old ? { ...old, items: old.items.map((n) => (n.id === nftId && n.version < e.version ? applyEditions(n) : n)) } : old,
+      )
+    }
+
+    this.checkFavoritePrice(nftId, e.data.price, e.data.previousPrice ?? known?.price, known?.name)
 
     // Carrinho: o servidor recalcula totais e avisos; buscamos de novo se o item estiver nele.
     const owner = this.userId ?? 'guest'
@@ -182,6 +196,40 @@ export class RealtimeClient {
       void this.queryClient.invalidateQueries({ queryKey: qk.cart(owner) })
       announce(`Preço ou disponibilidade de ${inCart.name} mudou. O resumo do carrinho foi atualizado.`)
     }
+  }
+
+  /** Nome e preço que o cache conhece (detalhe, listagens ou destaques), antes de aplicar o evento. */
+  private knownSummary(nftId: string): { name: string; price: string } | null {
+    const detail = this.queryClient.getQueryData<NftDetail>(qk.nftDetail(nftId))
+    if (detail) return detail
+    for (const [, data] of this.queryClient.getQueriesData<{ items: NftListResponse['items'] }>({ queryKey: qk.nfts })) {
+      const hit = data?.items?.find((n) => n.id === nftId)
+      if (hit) return hit
+    }
+    return null
+  }
+
+  /**
+   * Alerta "Preço caiu" só para o dono dos favoritos: o evento vai para todos, mas só avisa se o NFT está na
+   * lista do usuário logado agora (consultada na API se ainda não estiver em cache). Troca de usuário no meio
+   * da consulta descarta o alerta.
+   */
+  private checkFavoritePrice(nftId: string, price: string, previous: string | undefined, knownName: string | undefined) {
+    const userId = this.userId
+    if (!userId) return
+    notePriceChange(userId, nftId, price)
+    if (!previous || compareEth(price, previous) >= 0) return
+    void (async () => {
+      try {
+        const favorites = await this.queryClient.ensureQueryData(favoritesQuery(userId))
+        if (this.userId !== userId || !favorites.nftIds.includes(nftId)) return
+        const name = knownName ?? (await this.queryClient.ensureQueryData(nftDetailQuery(nftId))).name
+        if (this.userId !== userId) return
+        recordPriceDrop(userId, { nftId, name, from: previous, to: price })
+      } catch {
+        /* sem favoritos ou sem rede: sem alerta (o preço novo já está na tela) */
+      }
+    })()
   }
 
   private onOrderUpdated = (raw: unknown) => {

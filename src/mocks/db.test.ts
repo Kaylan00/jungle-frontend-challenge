@@ -43,7 +43,7 @@ function collectEvents() {
 
 describe('cupom', () => {
   it('válido, com espaços e minúsculas', () => {
-    expect(db.checkCoupon('KURIO10')).toEqual({ ok: true, coupon: { code: 'KURIO10', description: expect.any(String), percentOff: '10' } })
+    expect(db.checkCoupon('KURIO10')).toEqual({ ok: true, coupon: { code: 'KURIO10', description: expect.any(String), percentOff: '10', amountOff: null } })
     expect(db.checkCoupon('  genesis25 ')).toMatchObject({ ok: true, coupon: { code: 'GENESIS25', percentOff: '25' } })
   })
 
@@ -458,7 +458,7 @@ describe('initDb e estado salvo (isUsableState)', () => {
 
   it('sem estado salvo: cria a seed e persiste', async () => {
     const { mod, storage: s } = await freshDb()
-    expect(mod.getState().users.map((u) => u.id)).toEqual([ANA, BRUNO])
+    expect(mod.getState().users.map((u) => u.id)).toEqual(['usr-admin', ANA, BRUNO])
     expect(mod.getState().nfts).toHaveLength(36)
     expect(JSON.parse(s.getItem(STORAGE_KEY)!).seq).toBe(1000)
   })

@@ -31,9 +31,9 @@ npm run dev            # http://localhost:5173 com mocks ligados
 | `npm run preview` | Serve o build em http://localhost:4173 |
 | `npm run typecheck` | `tsc -b` (app, config, testes e a função de e-mail em `api/`) |
 | `npm run lint` | oxlint em `src/` (testes incluídos), `e2e/`, `api/` e `scripts/` |
-| `npm run test:unit` | Vitest (Node, sem navegador, ~1 s): valores ETH, contratos zod, cliente HTTP, cliente de tempo real e regras do servidor simulado (`src/**/*.test.ts`). `test:unit:watch` para o modo observação (Node 22.12+) |
+| `npm run test:unit` | Vitest (Node, sem navegador, ~1 s): valores ETH, contratos zod, cliente HTTP, cliente de tempo real, regras do servidor simulado, painel admin pelos handlers MSW (permissão, validação, conflito de versão, cupons) e propagação entre abas (`src/**/*.test.ts`). `test:unit:watch` para o modo observação (Node 22.12+) |
 | `npm run test:api` | Teste isolado da função de envio de e-mail (`api/send-reset-email.ts`), sem rede e sem chave real (Node 22.18+) |
-| `npm run test:e2e` | Playwright: 13 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
+| `npm run test:e2e` | Playwright: 18 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
 | `npm run test:e2e:desktop` / `:mobile` | Só um viewport |
 | `npm run test:e2e:update` | Regrava as baselines visuais |
 | `npm run test:e2e:report` | Abre o relatório HTML (traces das falhas incluídos) |
@@ -59,8 +59,36 @@ Variáveis do **servidor** (só da função `api/send-reset-email`, nunca do nav
 | --- | --- | --- | --- |
 | Ana Colecionadora | `ana@kurio.test` | `Selva2026!` | 2 carteiras (principal Ethereum/MetaMask e secundária Polygon/Coinbase), 2 favoritos |
 | Bruno Pixel | `bruno@kurio.test` | `Pixel2026!` | Sem carteiras (bom para testar o cadastro), 1 favorito |
+| Kurio Admin | `admin@kurio.test` | `Kurio#Admin2026` | **Administrador**: acessa o painel em `/admin` (link “Painel” no menu da conta e, no celular, no menu do perfil) |
 
-Cupons: `KURIO10` (10%), `GENESIS25` (25%), `BLACK2025` (expirado). Qualquer outro código é inválido.
+Cupons da seed: `KURIO10` (10%), `GENESIS25` (25%), `BLACK2025` (expirado). O painel cria outros (percentual ou valor fixo em ETH, com ou sem validade) e desativa qualquer um; qualquer código que não esteja no banco é inválido.
+
+## Painel admin (`/admin`)
+
+Entre com `admin@kurio.test` e abra **Painel** no menu da conta.
+
+- **NFTs e edições**: busca (nome, coleção ou id), paginação e, por NFT, **Destacar/Em destaque** (vitrine) e **Edições**: cada edição tem **Editar** com preço (ETH com ponto, até 18 casas), disponibilidade (0 até a tiragem) e status (À venda / Indisponível; com 0 fica “Esgotada”). O salvar mostra “Salvando…”; o destaque é otimista (desfaz se a API recusar).
+- **Cupons**: criar (código, % ou valor fixo, validade opcional), ver o status (Ativo, Expirado, Desativado) e desativar. Carrinhos com o cupom perdem o desconto na hora e uma revisão de compra aberta com ele pede nova confirmação.
+- **Conflito de versão**: cada gravação envia a versão do NFT que está na tela. Se ele mudou depois (outra aba, outro admin, uma compra), a API responde **409** com os valores atuais e o diálogo oferece “Usar os valores atuais” ou “Manter os meus e revisar”. Para ver: abra **Editar** numa edição do Emerald Ape #042, use “Mudar preço” no painel de cenários e salve.
+- **Permissão**: sem sessão, `/admin` leva ao login. Com conta comum (Ana, Bruno), a API responde **403 FORBIDDEN** e a tela mostra “Sem permissão”. O papel é conferido pela API em toda rota `/api/admin/*`; esconder o link é só conveniência.
+
+## Tempo real entre abas
+
+O “servidor” simulado roda em cada aba, mas as abas do mesmo navegador agora compartilham o estado **e os eventos**: toda gravação acontece numa transação com trava entre abas (Web Locks), relê o que outra aba gravou, salva com uma revisão nova e avisa as outras abas (BroadcastChannel). Cada aba recarrega o estado e emite pelo **próprio socket** os mesmos eventos (mesmo `eventId` e versão; o cliente deduplica).
+
+Para ver ao vivo:
+
+1. Aba 1: entre como `admin@kurio.test` e abra `/admin`.
+2. Aba 2 (mesmo navegador): abra `/nft/nft-01?edicao=nft-01-ed-3` (ou o carrinho com esse item).
+3. Na aba 1, **Edições** do Emerald Ape #042 → **Editar** a 1/50 → preço `0.99` → **Salvar**. A aba 2 muda o preço na hora, sem recarregar.
+
+Vale também para compras (o estoque reservado aparece nas outras abas), para o painel de cenários (“Mudar preço”, “Esgotar edição”, “Resetar tudo”) e para pagamentos pendentes (só uma aba liquida cada pedido). As abas do mesmo navegador compartilham a sessão (o token fica no `localStorage`), como em qualquer site.
+
+## Alerta de preço, busca e compartilhar
+
+- **Favoritos**: quando um NFT da sua lista de interesse baixa de preço (evento `nft.updated`), aparece o aviso “Preço caiu: X de A para B” com link para o NFT (também lido pelo leitor de tela) e um selo “Caiu de A” no item em `/perfil/favoritos`. Só para o dono dos favoritos. Para ver: entre como Ana, abra a lista de interesse e use “Mudar preço” com um valor menor (ou o painel admin em outra aba).
+- **Busca com sugestões**: na lupa do cabeçalho (desktop) e em “Explorar coleções” (celular), com 2 letras ou mais aparecem até 5 NFTs (↓/↑ escolhem, Enter abre, Esc fecha). Enter sem sugestão escolhida continua buscando no catálogo.
+- **Compartilhar** (detalhe do NFT): com a folha de compartilhamento do sistema (celulares e alguns desktops) ela é aberta; sem ela, o link é copiado com o aviso “Link copiado”.
 
 ### Recuperar a senha
 
@@ -140,12 +168,12 @@ src/
   app/          QueryClient, router, sincronização de sessão
   realtime/     cliente Socket.IO (deduplicação, versões, reconciliação)
   routes/       rotas (TanStack Router, baseadas em arquivo)
-  features/     telas por domínio (catalog, nft, cart, checkout, auth, profile, favorites)
+  features/     telas por domínio (catalog, nft, cart, checkout, auth, profile, favorites, admin)
   components/   layout, componentes compartilhados e ui/ (shadcn)
   mocks/        servidor simulado: db, handlers REST, servidor Socket.IO, cenários, painel
 api/            Vercel Function de envio real do e-mail de redefinição (Brevo, opcional)
 scripts/        teste isolado da função (npm run test:api)
-e2e/            testes Playwright (13 cenários + visual) e baselines em __screenshots__
+e2e/            testes Playwright (18 cenários + visual) e baselines em __screenshots__
 lighthouse/     script de auditoria e relatórios
 ```
 

@@ -16,6 +16,7 @@ import { ActiveFilters } from './active-filters'
 import { CatalogFilters } from './filters'
 import { Hero } from './hero'
 import { NftCard, NftCardSkeleton } from './nft-card'
+import { SearchSuggest } from './search-suggest'
 import { activeFilters, CLEAR_FILTERS, PAGE_SIZE, SORT_LABEL, toListParams, type CatalogSearch } from './search-params'
 
 /**
@@ -83,6 +84,7 @@ function FiltersIcon() {
 
 /** Mobile (Figma 414): busca "Explorar coleções" e botão de filtros no topo, acima do destaque. */
 function MobileCatalogBar({ search }: { search: CatalogSearch }) {
+  const navigate = useNavigate()
   const update = useCatalogUpdate()
   const [term, setTerm] = useSearchTerm(search, update)
   // Mesma consulta do catálogo (mesma chave = mesmo cache): só para as contagens dos filtros.
@@ -91,30 +93,38 @@ function MobileCatalogBar({ search }: { search: CatalogSearch }) {
   const activeCount = activeFilters(search).length
   return (
     <div className="container-page flex items-center gap-2 pt-10 md:hidden">
-      <label className="relative flex-1">
-        <span className="sr-only">Buscar coleções e NFTs</span>
-        <svg
-          viewBox="0 0 22 22"
-          width="22"
-          height="22"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          aria-hidden="true"
-          className="pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2 text-[#b39463]"
-        >
-          <circle cx="10" cy="10" r="8.2" />
-          <path d="M16 16l4.4 4.4" />
-        </svg>
-        <input
-          type="search"
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          placeholder="Explorar coleções"
-          className="h-[45px] w-full rounded-[8px] bg-card pl-[42px] pr-3 text-[14px] font-medium placeholder:text-[#b39463]"
-        />
+      {/* A lista abaixo já filtra enquanto digita; as sugestões levam direto ao NFT. */}
+      <label htmlFor="mobile-search" className="sr-only">
+        Buscar coleções e NFTs
       </label>
+      <SearchSuggest
+        id="mobile-search"
+        type="search"
+        value={term}
+        onValueChange={setTerm}
+        onPick={(nft) => void navigate({ to: '/nft/$nftId', params: { nftId: nft.id } })}
+        // Enter sem sugestão: fecha o painel e mostra a lista já filtrada (fecha o teclado virtual).
+        onSubmitTerm={() => (document.activeElement as HTMLElement | null)?.blur()}
+        placeholder="Explorar coleções"
+        className="flex-1"
+        inputClassName="h-[45px] w-full rounded-[8px] bg-card pl-[42px] pr-3 text-[14px] font-medium placeholder:text-[#b39463]"
+        leading={
+          <svg
+            viewBox="0 0 22 22"
+            width="22"
+            height="22"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            aria-hidden="true"
+            className="pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2 text-[#b39463]"
+          >
+            <circle cx="10" cy="10" r="8.2" />
+            <path d="M16 16l4.4 4.4" />
+          </svg>
+        }
+      />
       <Sheet>
         <SheetTrigger asChild>
           <button

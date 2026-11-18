@@ -14,7 +14,7 @@
 import { toSocketIo } from '@mswjs/socket.io-binding'
 import { ws } from 'msw'
 import { SOCKET_EVENTS } from '@/api/contracts'
-import { initDb, lookupSession, onDbEvent } from './db'
+import { initDb, lookupSession, onDbEvent, onRemoteReset, refreshFromStorage } from './db'
 import { getScenario } from './scenario'
 
 export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'wss://realtime.jungle.mock'
@@ -38,7 +38,11 @@ export function connectionCount() {
   return connections.size
 }
 
-// Encaminha cada evento do "banco" para os sockets certos.
+// Outra aba restaurou a seed: as conexões desta aba caem e o cliente reconecta e reconcilia pela REST.
+onRemoteReset(() => dropAllConnections())
+
+// Encaminha cada evento do "banco" para os sockets certos: os gerados nesta aba e os que chegam de outra aba
+// (mesmo eventId e versão; o cliente deduplica). Pedido continua indo só para as conexões do dono.
 onDbEvent((event) => {
   connections.forEach((c) => {
     if (event.type === 'order.updated') {
@@ -74,6 +78,8 @@ export const realtimeHandlers = [
     client.addEventListener('message', async (event) => {
       if (typeof event.data !== 'string' || !event.data.startsWith('40')) return
       await initDb()
+      // A sessão pode ter sido criada em outra aba (login lá, token compartilhado pelo localStorage).
+      refreshFromStorage()
       try {
         const auth = JSON.parse(event.data.slice(2) || '{}') as { token?: string }
         const s = lookupSession(auth.token ?? null)

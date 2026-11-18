@@ -6,18 +6,25 @@
  */
 import { useQueries } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { TrendingDown } from 'lucide-react'
 import { ApiError } from '@/api/http'
 import { nftDetailQuery } from '@/api/queries'
 import { EmptyState, ErrorState } from '@/components/shared/error-state'
 import { buttonVariants } from '@/components/ui/button'
 import { NftCard, NftCardSkeleton } from '@/features/catalog/nft-card'
+import { useSession } from '@/features/auth/use-session'
 import { useFavorites } from '@/features/favorites/hooks'
+import { usePriceDrops } from '@/features/favorites/price-drops'
+import { formatEth } from '@/lib/eth'
 import { ProfileLayout } from './profile-layout'
 
 const gridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4'
 
 export function FavoritesPage() {
   const favorites = useFavorites()
+  const { user } = useSession()
+  // Selo "Preço caiu" dos favoritos que baixaram de preço nesta sessão (ver features/favorites/price-drops.ts).
+  const drops = usePriceDrops(user?.id ?? null)
   const ids = favorites.data?.nftIds ?? []
   const details = useQueries({ queries: ids.map((id) => nftDetailQuery(id)) })
 
@@ -63,11 +70,28 @@ export function FavoritesPage() {
       ) : (
         <>
           <ul className={gridClass} data-testid="favorites-grid" aria-busy={loadingCount > 0 || undefined} data-reveal-group>
-            {loaded.map((nft) => (
-              <li key={nft.id}>
-                <NftCard nft={nft} />
-              </li>
-            ))}
+            {loaded.map((nft) => {
+              const drop = drops[nft.id]
+              return (
+                <li key={nft.id}>
+                  <NftCard nft={nft} />
+                  {drop && (
+                    <p
+                      className="mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[12px] font-semibold leading-4 text-success max-md:mx-2"
+                      data-testid="price-drop-badge"
+                    >
+                      <TrendingDown className="size-3.5 shrink-0" aria-hidden="true" />
+                      <span className="truncate" aria-hidden="true">
+                        Caiu de {formatEth(drop.from)}
+                      </span>
+                      <span className="sr-only">
+                        Preço caiu de {formatEth(drop.from)} para {formatEth(drop.to)}
+                      </span>
+                    </p>
+                  )}
+                </li>
+              )
+            })}
             {Array.from({ length: loadingCount }, (_, i) => (
               <li key={`loading-${i}`} aria-hidden="true">
                 <NftCardSkeleton />

@@ -8,7 +8,7 @@
  * então uma resposta atrasada de outra busca nunca aparece na tela atual.
  */
 import { keepPreviousData, queryOptions } from '@tanstack/react-query'
-import type { NftListParams, Session } from './contracts'
+import type { AdminNftListParams, NftListParams, Session } from './contracts'
 import { api } from './endpoints'
 import { ApiError } from './http'
 import { sessionStore } from './session-store'
@@ -28,7 +28,37 @@ export const qk = {
   orders: (owner: Owner) => ['private', owner, 'orders'] as const,
   profile: (owner: Owner) => ['private', owner, 'profile'] as const,
   wallets: (owner: Owner) => ['private', owner, 'wallets'] as const,
+  /** Sugestões da busca (5 primeiros resultados); a chave inclui o termo. */
+  nftSuggest: (q: string) => ['nfts', 'suggest', q] as const,
+  /** Painel: privado (some no logout) e por usuário, como o resto. */
+  admin: (owner: Owner) => ['private', owner, 'admin'] as const,
+  adminNftLists: (owner: Owner) => ['private', owner, 'admin', 'nfts'] as const,
+  adminNfts: (owner: Owner, p: AdminNftListParams) => ['private', owner, 'admin', 'nfts', p] as const,
+  adminCoupons: (owner: Owner) => ['private', owner, 'admin', 'coupons'] as const,
 }
+
+export const ADMIN_PAGE_SIZE = 8
+
+export const adminNftsQuery = (owner: Owner, p: AdminNftListParams) =>
+  queryOptions({
+    queryKey: qk.adminNfts(owner, p),
+    queryFn: ({ signal }) => api.adminListNfts(p, { signal }),
+    placeholderData: keepPreviousData,
+  })
+
+export const adminCouponsQuery = (owner: Owner) =>
+  queryOptions({
+    queryKey: qk.adminCoupons(owner),
+    queryFn: ({ signal }) => api.adminListCoupons({ signal }),
+  })
+
+/** Sugestões: o `signal` cancela a busca quando o termo muda (a consulta antiga fica sem observador). */
+export const nftSuggestQuery = (q: string) =>
+  queryOptions({
+    queryKey: qk.nftSuggest(q),
+    queryFn: ({ signal }) => api.listNfts({ q, pageSize: 5 }, { signal }),
+    staleTime: 30_000,
+  })
 
 export const sessionQuery = queryOptions({
   queryKey: qk.session,

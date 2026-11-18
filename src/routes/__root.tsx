@@ -11,6 +11,7 @@ import { hasMobileNav } from '@/components/layout/mobile-nav-routes'
 import { RealtimeBadge } from '@/components/layout/realtime-badge'
 import { useAuthOverlay } from '@/features/auth/auth-overlay'
 import { AuthOverlayHost } from '@/features/auth/auth-overlay-host'
+import { PriceDropNotifier } from '@/features/favorites/price-drop-notifier'
 import { refreshBottomBars } from '@/lib/bottom-bars'
 import { cn } from '@/lib/utils'
 
@@ -78,6 +79,7 @@ function RootLayout() {
       </div>
       {authOverlay && <AuthOverlayHost overlay={authOverlay} />}
       <LiveAnnouncer />
+      <PriceDropNotifier />
       <MotionBoot />
       <Toaster
         theme="dark"

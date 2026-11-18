@@ -5,7 +5,7 @@
 import { setupWorker } from 'msw/browser'
 import { setNetworkRecovery } from '@/api/http'
 import { exposeMockControls } from './controls'
-import { initDb, settleDueOrders } from './db'
+import { initDb, settleDueOrdersShared, startDbSync } from './db'
 import { handlers } from './handlers'
 import { realtimeHandlers } from './realtime'
 import { applyScenarioFromUrl } from './scenario'
@@ -13,6 +13,8 @@ import { applyScenarioFromUrl } from './scenario'
 export async function startMocks() {
   applyScenarioFromUrl(window.location.search)
   await initDb()
+  // Mudanças feitas em outra aba (admin, compra, cenários) chegam aqui e saem pelo socket desta aba.
+  startDbSync()
   const worker = setupWorker(...handlers, ...realtimeHandlers)
   const options = {
     onUnhandledRequest: 'bypass' as const,
@@ -34,8 +36,9 @@ export async function startMocks() {
     })()
     return restarting
   })
-  // Pagamentos pendentes avançam mesmo após refresh (o "servidor" confere o relógio).
-  settleDueOrders()
-  setInterval(settleDueOrders, 500)
+  // Pagamentos pendentes avançam mesmo após refresh (o "servidor" confere o relógio). Com várias abas, cada
+  // uma confere, mas a liquidação roda sob a trava entre abas e é idempotente: só a primeira liquida.
+  void settleDueOrdersShared()
+  setInterval(() => void settleDueOrdersShared(), 500)
   exposeMockControls()
 }

@@ -5,11 +5,14 @@
  * desativados (aria-disabled + "Em breve") para não parecer que funcionam.
  */
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { ArrowDownToLine, Heart, LogOut, MapPin, ShoppingCart, SquareActivity, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react'
-import { useLogout } from '@/features/auth/use-session'
+import { ArrowDownToLine, Heart, LayoutDashboard, LogOut, MapPin, ShoppingCart, SquareActivity, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react'
+import { useLogout, useSession } from '@/features/auth/use-session'
 import { cn } from '@/lib/utils'
 
-type MenuItem = { label: string; icon: LucideIcon; to?: '/perfil' | '/perfil/carteiras' | '/perfil/favoritos' }
+type MenuItem = { label: string; icon: LucideIcon; to?: '/perfil' | '/perfil/carteiras' | '/perfil/favoritos' | '/admin' }
+
+/** Só para admin (no celular não há o menu da conta do cabeçalho): atalho para o painel. A API confere o papel. */
+const adminItem: MenuItem = { label: 'Painel', icon: LayoutDashboard, to: '/admin' }
 
 const menu: MenuItem[] = [
   { label: 'Dados do perfil', icon: UserRound, to: '/perfil' },
@@ -32,6 +35,8 @@ export function ProfileLayout({ title, children }: { title: string; children: Re
   const pathname = useRouterState({ select: (s) => s.location.pathname.replace(/\/$/, '') || '/' })
   const logout = useLogout()
   const navigate = useNavigate()
+  const { user } = useSession()
+  const items = user?.role === 'admin' ? [...menu, adminItem] : menu
 
   return (
     <div className="container-page grid gap-6 py-6 md:grid-cols-[310px_minmax(0,1fr)] md:gap-7 md:pb-16 md:pt-8 wide:grid-cols-[calc(310*var(--u))_minmax(0,1fr)] wide:gap-x-[calc(28*var(--u))]">
@@ -42,7 +47,7 @@ export function ProfileLayout({ title, children }: { title: string; children: Re
             Meu perfil
           </h2>
           <ul className="flex gap-1 overflow-x-auto p-1.5 md:flex-col md:gap-0 md:overflow-visible md:p-0">
-            {menu.map(({ label, icon: Icon, to }) => {
+            {items.map(({ label, icon: Icon, to }) => {
               if (!to) {
                 return (
                   <li key={label} className="shrink-0">

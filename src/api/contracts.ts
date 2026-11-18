@@ -69,6 +69,10 @@ export type ApiErrorBody = z.infer<typeof ApiErrorBody>
 
 // ---------- Usuário e sessão ----------
 
+/** Papel da conta. `admin` acessa o painel (/admin); a API confere o papel em cada rota administrativa. */
+export const UserRole = z.enum(['user', 'admin'])
+export type UserRole = z.infer<typeof UserRole>
+
 export const User = z.object({
   id: z.string(),
   name: z.string(),
@@ -78,6 +82,8 @@ export const User = z.object({
   walletNickname: z.string(),
   avatarUrl: z.string().nullable(),
   createdAt: z.string(),
+  /** Sem o campo (backend antigo), a conta é comum: nunca vira admin por omissão. */
+  role: UserRole.default('user'),
 })
 export type User = z.infer<typeof User>
 
@@ -329,8 +335,10 @@ export type CartItem = z.infer<typeof CartItem>
 export const Coupon = z.object({
   code: z.string(),
   description: z.string(),
-  /** Percentual de desconto, ex.: "10" */
-  percentOff: z.string(),
+  /** Percentual de desconto, ex.: "10" (null quando o cupom é de valor fixo) */
+  percentOff: z.string().nullable(),
+  /** Desconto fixo em ETH, ex.: "0.05" (null nos percentuais; nunca passa do subtotal) */
+  amountOff: EthAmount.nullable().default(null),
 })
 export type Coupon = z.infer<typeof Coupon>
 
@@ -533,6 +541,10 @@ export const NftUpdatedEvent = EventBase.extend({
     price: EthAmount,
     available: z.number().int().nonnegative(),
     editions: z.array(Edition.pick({ id: true, price: true, available: true, status: true })),
+    /** Destaque na vitrine (o painel admin liga e desliga) */
+    featured: z.boolean().optional(),
+    /** Preço exibido (o menor à venda) antes desta mudança: base do alerta "Preço caiu" dos favoritos */
+    previousPrice: EthAmount.optional(),
   }),
 })
 export type NftUpdatedEvent = z.infer<typeof NftUpdatedEvent>
@@ -547,6 +559,125 @@ export const OrderUpdatedEvent = EventBase.extend({
 export type OrderUpdatedEvent = z.infer<typeof OrderUpdatedEvent>
 
 export type RealtimeEvent = NftUpdatedEvent | OrderUpdatedEvent
+
+// ---------- Painel administrativo (/admin) ----------
+// Toda rota /admin/* exige sessão (401) e papel admin (403 FORBIDDEN).
+
+/** Preço definido no painel: string decimal com ponto, maior que zero, até 18 casas. */
+export const AdminPrice = z
+  .string()
+  .trim()
+  .min(1, 'Informe o preço')
+  .regex(/^\d+(\.\d{1,18})?$/, 'Use um valor decimal com ponto, ex.: 1.25 (até 18 casas)')
+  .refine((v) => Number(v) > 0, 'O preço precisa ser maior que zero')
+  .refine((v) => Number(v) <= 1_000_000, 'Máximo de 1.000.000 ETH')
+
+/** Status que o painel escolhe. "Esgotada" não se escolhe: é consequência de disponibilidade 0. */
+export const AdminEditionStatus = z.enum(['on_sale', 'unavailable'])
+export type AdminEditionStatus = z.infer<typeof AdminEditionStatus>
+
+/**
+ * PATCH /admin/nfts/:id/editions/:editionId. `version` é a versão do NFT lida antes de editar: se o NFT mudou
+ * desde então (outra aba, outra pessoa, uma compra), a API recusa com 409 CONFLICT e manda o estado atual.
+ */
+export const AdminEditionPatch = z.object({
+  version: z.number().int().nonnegative(),
+  price: AdminPrice.optional(),
+  available: z.number({ error: 'Informe a disponibilidade' }).int('Use um número inteiro').min(0, 'Não pode ser negativa').optional(),
+  status: AdminEditionStatus.optional(),
+})
+export type AdminEditionPatch = z.infer<typeof AdminEditionPatch>
+
+/** Formulário de edição do painel (campos de texto; a disponibilidade vira número no envio). */
+export const AdminEditionForm = z.object({
+  price: AdminPrice,
+  available: z.string().trim().regex(/^\d+$/, 'Use um número inteiro (0 ou mais)'),
+  status: AdminEditionStatus,
+})
+export type AdminEditionForm = z.infer<typeof AdminEditionForm>
+
+/** PATCH /admin/nfts/:id: destaque na vitrine, com a mesma checagem de versão. */
+export const AdminNftPatch = z.object({
+  version: z.number().int().nonnegative(),
+  featured: z.boolean(),
+})
+export type AdminNftPatch = z.infer<typeof AdminNftPatch>
+
+export const AdminNftListParams = z.object({
+  q: z.string().optional(),
+  page: z.number().int().min(1).optional(),
+  pageSize: z.number().int().min(1).max(50).optional(),
+})
+export type AdminNftListParams = z.infer<typeof AdminNftListParams>
+
+/** GET /admin/nfts: NFTs completos (todas as edições, inclusive as fora de venda). */
+export const AdminNftListResponse = Paginated(NftDetail)
+export type AdminNftListResponse = z.infer<typeof AdminNftListResponse>
+
+/** `details` do 409 de versão: o NFT como está agora no servidor. */
+export const AdminVersionConflict = z.object({ reason: z.literal('VERSION_MISMATCH'), current: NftDetail })
+
+export const CouponKind = z.enum(['percent', 'fixed'])
+export type CouponKind = z.infer<typeof CouponKind>
+
+export const AdminCoupon = z.object({
+  code: z.string(),
+  description: z.string(),
+  kind: CouponKind,
+  /** Percentual ("15") ou valor em ETH ("0.05"), conforme `kind` */
+  value: EthAmount,
+  /** Fim da validade (ISO) ou null = sem validade */
+  expiresAt: z.string().nullable(),
+  active: z.boolean(),
+  createdAt: z.string(),
+  /** Calculado pelo servidor, no relógio dele */
+  status: z.enum(['active', 'inactive', 'expired']),
+})
+export type AdminCoupon = z.infer<typeof AdminCoupon>
+
+export const AdminCouponList = z.object({ items: z.array(AdminCoupon) })
+
+const couponCodeRule = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z0-9-]{3,20}$/, 'Use de 3 a 20 letras, números ou hífen')
+
+/** Confere o valor do cupom conforme o tipo (percentual até 100, valor fixo até 1.000 ETH). */
+function checkCouponValue(kind: CouponKind, value: string, ctx: z.RefinementCtx) {
+  if (!/^\d+(\.\d{1,18})?$/.test(value)) {
+    ctx.addIssue({ code: 'custom', path: ['value'], message: 'Use um número com ponto decimal, ex.: 10 ou 0.05' })
+    return
+  }
+  const n = Number(value)
+  if (kind === 'percent') {
+    if (!/^\d+(\.\d{1,2})?$/.test(value) || n <= 0 || n > 100) ctx.addIssue({ code: 'custom', path: ['value'], message: 'Percentual entre 0.01 e 100 (até 2 casas)' })
+  } else if (n <= 0 || n > 1000) {
+    ctx.addIssue({ code: 'custom', path: ['value'], message: 'Valor maior que 0 e até 1000 ETH' })
+  }
+}
+
+/** POST /admin/coupons. Validade no passado é recusada pelo servidor (no relógio dele). */
+export const CouponCreateInput = z
+  .object({
+    code: couponCodeRule,
+    kind: CouponKind,
+    value: z.string().trim().min(1, 'Informe o valor do desconto'),
+    expiresAt: z.iso.datetime({ offset: true, error: 'Data de validade inválida' }).nullable(),
+  })
+  .superRefine((v, ctx) => checkCouponValue(v.kind, v.value, ctx))
+export type CouponCreateInput = z.infer<typeof CouponCreateInput>
+
+/** Formulário de cupom do painel: validade como data do calendário (AAAA-MM-DD) ou vazia. */
+export const CouponForm = z
+  .object({
+    code: couponCodeRule,
+    kind: CouponKind,
+    value: z.string().trim().min(1, 'Informe o valor do desconto'),
+    expiresOn: z.union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida')]),
+  })
+  .superRefine((v, ctx) => checkCouponValue(v.kind, v.value, ctx))
+export type CouponForm = z.infer<typeof CouponForm>
 
 export const SOCKET_EVENTS = {
   nftUpdated: 'nft.updated',

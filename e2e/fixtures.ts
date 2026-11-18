@@ -13,6 +13,7 @@ import type { MockControls } from '../src/mocks/controls'
 export const USERS = {
   ana: { email: 'ana@kurio.test', password: 'Selva2026!', username: 'ana_nft', name: 'Ana Colecionadora' },
   bruno: { email: 'bruno@kurio.test', password: 'Pixel2026!', username: 'bruno_pixel', name: 'Bruno Pixel' },
+  admin: { email: 'admin@kurio.test', password: 'Kurio#Admin2026', username: 'kurio_admin', name: 'Kurio Admin' },
 }
 
 type Scenario = Record<string, unknown>

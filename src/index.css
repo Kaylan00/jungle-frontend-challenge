@@ -255,6 +255,7 @@ html.lenis body {
   }
   [data-slot='dropdown-menu-content'][data-state='open'],
   [data-slot='select-content'][data-state='open'],
+  [data-slot='suggest-panel'],
   [data-slot='tooltip-content']:not([data-state='closed']) {
     animation: kurio-menu-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -330,5 +331,9 @@ html.lenis body {
   [data-sonner-toaster],
   [data-sonner-toaster] [data-sonner-toast] {
     pointer-events: none !important;
+  }
+  /* Exceção: aviso com link (ex.: "Preço caiu" de um favorito, que leva ao NFT) continua tocável. */
+  [data-sonner-toaster] [data-sonner-toast].kurio-toast-link {
+    pointer-events: auto !important;
   }
 }

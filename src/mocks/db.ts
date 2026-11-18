@@ -7,11 +7,21 @@
  *
  * Persistência: localStorage, para sobreviver ao refresh. `resetDb()` restaura a seed.
  * Senhas: só hash SHA-256 com salt aleatório por usuário; nunca em claro.
+ *
+ * Várias abas, um "servidor" (ver "Transações e propagação entre abas" abaixo): cada aba roda o seu MSW e o
+ * seu servidor Socket.IO, mas todas leem e gravam o mesmo estado. Cada escrita acontece numa transação
+ * (`withDb`) com trava entre abas (Web Locks), relê o estado salvo antes de mexer nele, grava com uma revisão
+ * nova (`rev`) e avisa as outras abas por BroadcastChannel, levando os eventos gerados. Quem recebe recarrega
+ * o estado e entrega os MESMOS eventos (mesmo eventId e versão) aos sockets da própria aba, sem reenviar.
  */
 import type {
+  AdminCoupon,
+  AdminEditionPatch,
   Cart,
   CartItem,
   Coupon,
+  CouponCreateInput,
+  CouponKind,
   Network,
   NftDetail,
   NftSummary,
@@ -24,10 +34,10 @@ import type {
   Wallet,
 } from '@/api/contracts'
 import { NftDetail as NftDetailSchema } from '@/api/contracts'
-import { addEth, compareEth, mulEth, percentOf, subEth } from '@/lib/eth'
+import { addEth, compareEth, mulEth, percentOf, subEth, toEthString } from '@/lib/eth'
 import { explorerUrl } from '@/lib/explorer'
 import { buildNftFixtures } from './fixtures/nfts'
-import { COUPONS, NETWORK_FEES, SEED_USERS } from './fixtures/users'
+import { COUPONS, NETWORK_FEES, SEED_DATE, SEED_USERS } from './fixtures/users'
 
 // ---------- Tipos internos (o que o "servidor" guarda) ----------
 
@@ -64,7 +74,7 @@ interface StoredQuote extends Quote {
   cartId: string
 }
 
-interface StoredOrder extends Order {
+export interface StoredOrder extends Order {
   /** Resultado decidido na criação a partir do cenário; aplicado quando settleAt passa */
   outcome: 'approve' | 'reject'
   settleAt: number
@@ -102,6 +112,18 @@ export interface SimulatedEmail {
   sentAt: string
 }
 
+/** Cupom guardado no servidor (seed ou criado no painel). */
+export interface StoredCoupon {
+  code: string
+  description: string
+  kind: CouponKind
+  /** Percentual ("10") ou valor em ETH ("0.05") */
+  value: string
+  expiresAt: string | null
+  active: boolean
+  createdAt: string
+}
+
 export interface DbState {
   schema: 1
   users: StoredUser[]
@@ -109,6 +131,8 @@ export interface DbState {
   /** Opcionais: estados salvos antes da recuperação de senha não têm esses campos. */
   passwordResets?: StoredPasswordReset[]
   outbox?: SimulatedEmail[]
+  /** Opcional: estados salvos antes do painel admin recebem os cupons da seed na carga (migrate). */
+  coupons?: StoredCoupon[]
   nfts: NftDetail[]
   favorites: Record<string, string[]>
   carts: Record<string, StoredCart>
@@ -118,9 +142,15 @@ export interface DbState {
   idempotency: IdempotencyRecord[]
   seq: number
   eventSeq: number
+  /** Revisão do estado salvo: cresce a cada gravação; as abas comparam para saber se o que têm ficou velho. */
+  rev?: number
 }
 
 const STORAGE_KEY = 'jungle.mock.db.v1'
+/** Só a revisão, para conferir barato (sem ler o JSON inteiro) se outra aba gravou algo. */
+const REV_KEY = 'jungle.mock.db.rev'
+const LOCK_NAME = 'jungle.mock.db'
+const CHANNEL_NAME = 'jungle.mock.db'
 
 let state: DbState
 let ready: Promise<void> | null = null
@@ -153,18 +183,160 @@ export async function stableHash(value: unknown) {
   return Array.from(new Uint8Array(digest).slice(0, 12), (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-function persist() {
+// ---------- Transações e propagação entre abas ----------
+//
+// - `withDb(fn)`: trava entre abas (navigator.locks; sem ele, só uma fila nesta aba), relê o estado salvo se
+//   outra aba gravou depois (rev maior), roda `fn` e, se algo mudou, grava UMA vez com rev + 1 e avisa as abas.
+// - Fora de transação (testes unitários chamando o db direto), cada `persist()` grava na hora, como antes.
+// - Mensagem entre abas: { from, rev, events, reset }. Quem recebe recarrega (se a rev for maior) e entrega os
+//   eventos aos ouvintes locais (o servidor Socket.IO da aba) SEM reenviar: não há eco nem laço. O próprio
+//   BroadcastChannel não entrega a mensagem a quem enviou; `from` é uma segunda garantia.
+
+type DbEvent = NftUpdatedEvent | OrderUpdatedEvent
+
+export interface SyncMessage {
+  from: string
+  rev: number
+  events: DbEvent[]
+  reset?: boolean
+}
+
+/** Identidade desta aba (desta instância do servidor simulado). */
+export const TAB_ID = `tab-${Math.random().toString(36).slice(2, 10)}`
+
+let inTx = false
+let dirty = false
+let pendingEvents: DbEvent[] = []
+let pendingReset = false
+let channel: BroadcastChannel | null = null
+let localQueue: Promise<unknown> = Promise.resolve()
+
+function readStoredRev() {
+  try {
+    const raw = localStorage.getItem(REV_KEY)
+    return raw === null ? -1 : Number(raw) || 0
+  } catch {
+    return -1
+  }
+}
+
+function post(message: Omit<SyncMessage, 'from'>) {
+  try {
+    channel?.postMessage({ ...message, from: TAB_ID } satisfies SyncMessage)
+  } catch {
+    /* canal fechado: as outras abas reconciliam ao reconectar ou no foco */
+  }
+}
+
+/** Grava o estado com uma revisão nova e avisa as outras abas (com os eventos desta transação). */
+function commit() {
+  dirty = false
+  state.rev = Math.max(state.rev ?? 0, readStoredRev()) + 1
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem(REV_KEY, String(state.rev))
   } catch {
     /* storage cheio ou indisponível: segue só em memória */
   }
+  const events = pendingEvents
+  const reset = pendingReset
+  pendingEvents = []
+  pendingReset = false
+  post({ rev: state.rev, events, reset: reset || undefined })
+}
+
+function persist() {
+  if (inTx) {
+    dirty = true
+    return
+  }
+  commit()
+}
+
+/**
+ * Recarrega o estado salvo se outra aba gravou uma revisão mais nova. Barato quando nada mudou (lê só a rev).
+ * Nunca roda no meio de uma transação desta aba: lá o estado já foi relido ao pegar a trava.
+ */
+export function refreshFromStorage() {
+  if (inTx || !state) return false
+  const stored = readStoredRev()
+  if (stored <= (state.rev ?? 0)) return false
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    const parsed = raw ? (JSON.parse(raw) as DbState) : null
+    if (!isUsableState(parsed)) return false
+    state = parsed
+    state.rev = Math.max(state.rev ?? 0, stored)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Maior revisão anunciada por outra aba (pode chegar antes de o storage desta aba refletir a gravação). */
+let knownRev = 0
+
+/**
+ * Entre processos do navegador o localStorage pode refletir a gravação de outra aba um pouco depois do aviso
+ * pelo BroadcastChannel. Relê por até ~1 s até alcançar a revisão anunciada.
+ */
+async function catchUp(target: number) {
+  for (let i = 0; i < 50 && (state.rev ?? 0) < target; i++) {
+    await new Promise((r) => setTimeout(r, 20))
+    refreshFromStorage()
+  }
+  // Não chegou (ex.: a outra aba ficou sem espaço no storage): segue com o que há, sem esperar de novo.
+  if ((state.rev ?? 0) < knownRev) knownRev = state.rev ?? 0
+}
+
+type LockRequest = <T>(name: string, callback: () => Promise<T>) => Promise<T>
+
+function crossTabLock(): LockRequest | null {
+  const locks = (globalThis as { navigator?: { locks?: { request: LockRequest } } }).navigator?.locks
+  return locks ? locks.request.bind(locks) : null
+}
+
+/** Uma transação por vez nesta aba (fila) e, com Web Locks, uma por vez entre todas as abas. */
+function withLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = () => {
+    const lock = crossTabLock()
+    return lock ? lock(LOCK_NAME, fn) : fn()
+  }
+  const result = localQueue.then(run, run)
+  localQueue = result.catch(() => undefined)
+  return result
+}
+
+/**
+ * Transação do servidor simulado. Todo handler REST, os controles da simulação e o relógio dos pagamentos
+ * passam por aqui. Não aninhe: dentro de `fn` chame as funções do db diretamente.
+ */
+export async function withDb<T>(fn: () => T | Promise<T>): Promise<T> {
+  await initDb()
+  return withLock(async () => {
+    refreshFromStorage()
+    // Outra aba já avisou de uma revisão que o storage desta ainda não mostra: espera chegar (nunca grava por cima).
+    if ((state.rev ?? 0) < knownRev) await catchUp(knownRev)
+    inTx = true
+    try {
+      return await fn()
+    } finally {
+      inTx = false
+      if (dirty) commit()
+      else if (pendingEvents.length) {
+        // Só eventos (ex.: "Duplicar evento"): nada para gravar, mas as outras abas também os entregam.
+        const events = pendingEvents
+        pendingEvents = []
+        post({ rev: state.rev ?? 0, events })
+      }
+    }
+  })
 }
 
 // ---------- Eventos ----------
 
-type DbEvent = NftUpdatedEvent | OrderUpdatedEvent
 const eventListeners = new Set<(e: DbEvent) => void>()
+const resetListeners = new Set<() => void>()
 let lastEvent: DbEvent | null = null
 
 export function onDbEvent(fn: (e: DbEvent) => void) {
@@ -172,13 +344,56 @@ export function onDbEvent(fn: (e: DbEvent) => void) {
   return () => eventListeners.delete(fn)
 }
 
+/** Outra aba restaurou a seed: o servidor Socket.IO desta aba derruba as conexões (o cliente reconcilia). */
+export function onRemoteReset(fn: () => void) {
+  resetListeners.add(fn)
+  return () => resetListeners.delete(fn)
+}
+
 export function getLastEvent() {
   return lastEvent
 }
 
+/** Entrega aos ouvintes desta aba e, se o evento nasceu aqui, leva junto na próxima mensagem às outras abas. */
+function deliver(event: DbEvent) {
+  eventListeners.forEach((fn) => fn(event))
+  if (inTx) pendingEvents.push(event)
+  else post({ rev: state.rev ?? 0, events: [event] })
+}
+
 function emit(event: DbEvent) {
   lastEvent = event
-  eventListeners.forEach((fn) => fn(event))
+  deliver(event)
+}
+
+/** Mensagem de outra aba: recarrega se ficou para trás e entrega os mesmos eventos aqui, sem reenviar. */
+export function receiveSyncMessage(message: SyncMessage) {
+  if (!message || message.from === TAB_ID || !state) return
+  if ((message.rev ?? 0) > (state.rev ?? 0)) {
+    knownRev = Math.max(knownRev, message.rev)
+    // Os eventos já trazem os dados novos; o estado acompanha assim que o storage desta aba refletir a gravação.
+    if (!refreshFromStorage() || (state.rev ?? 0) < message.rev) void catchUp(message.rev)
+  }
+  if (message.reset) {
+    lastEvent = null
+    resetListeners.forEach((fn) => fn())
+  }
+  for (const event of message.events ?? []) {
+    lastEvent = event
+    eventListeners.forEach((fn) => fn(event))
+  }
+}
+
+/** Liga a propagação entre abas (no navegador, em mocks/browser.ts). */
+export function startDbSync() {
+  if (channel || typeof BroadcastChannel === 'undefined') return
+  channel = new BroadcastChannel(CHANNEL_NAME)
+  channel.onmessage = (e: MessageEvent<SyncMessage>) => receiveSyncMessage(e.data)
+}
+
+export function stopDbSync() {
+  channel?.close()
+  channel = null
 }
 
 function nextEventId() {
@@ -188,25 +403,34 @@ function nextEventId() {
 
 // ---------- Seed / reset ----------
 
+async function seedUser(u: (typeof SEED_USERS)[number]): Promise<StoredUser> {
+  const salt = randomHex(16)
+  return {
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    email: u.email,
+    ensName: u.ensName,
+    walletNickname: u.walletNickname,
+    avatarUrl: null,
+    createdAt: SEED_DATE,
+    role: u.role,
+    salt,
+    passwordHash: await hashPassword(u.password, salt),
+  }
+}
+
+function seedCoupons(): StoredCoupon[] {
+  return COUPONS.map((c) => ({ ...c, active: true, createdAt: SEED_DATE }))
+}
+
 async function buildSeed(): Promise<DbState> {
   const users: StoredUser[] = []
   const wallets: Record<string, Wallet[]> = {}
   const favorites: Record<string, string[]> = {}
   for (const u of SEED_USERS) {
-    const salt = randomHex(16)
-    users.push({
-      id: u.id,
-      name: u.name,
-      username: u.username,
-      email: u.email,
-      ensName: u.ensName,
-      walletNickname: u.walletNickname,
-      avatarUrl: null,
-      createdAt: '2026-01-10T12:00:00.000Z',
-      salt,
-      passwordHash: await hashPassword(u.password, salt),
-    })
-    wallets[u.id] = u.wallets.map((w) => ({ ...w, updatedAt: '2026-01-10T12:00:00.000Z' }))
+    users.push(await seedUser(u))
+    wallets[u.id] = u.wallets.map((w) => ({ ...w, updatedAt: SEED_DATE }))
     favorites[u.id] = [...u.favorites]
   }
   return {
@@ -215,6 +439,7 @@ async function buildSeed(): Promise<DbState> {
     sessions: [],
     passwordResets: [],
     outbox: [],
+    coupons: seedCoupons(),
     nfts: buildNftFixtures(),
     favorites,
     carts: {},
@@ -240,9 +465,37 @@ function isUsableState(s: DbState | null): s is DbState {
   )
 }
 
+/**
+ * Completa um estado salvo por uma versão anterior do app (sem papéis, sem a conta admin, sem cupons no
+ * banco), sem apagar o que a pessoa já fez. Devolve true se mudou algo.
+ */
+async function migrate(s: DbState) {
+  let changed = false
+  for (const u of s.users) {
+    if (u.role !== 'admin' && u.role !== 'user') {
+      ;(u as StoredUser).role = 'user'
+      changed = true
+    }
+  }
+  for (const seed of SEED_USERS) {
+    if (seed.role === 'admin' && !s.users.some((u) => u.id === seed.id)) {
+      s.users.push(await seedUser(seed))
+      s.favorites[seed.id] ??= []
+      s.wallets[seed.id] ??= []
+      changed = true
+    }
+  }
+  if (!Array.isArray(s.coupons)) {
+    s.coupons = seedCoupons()
+    changed = true
+  }
+  return changed
+}
+
 export function initDb() {
   if (!ready) {
-    ready = (async () => {
+    // Sob a trava: duas abas abertas ao mesmo tempo num navegador novo não criam duas seeds diferentes.
+    ready = withLock(async () => {
       try {
         const raw = localStorage.getItem(STORAGE_KEY)
         if (raw) {
@@ -251,6 +504,8 @@ export function initDb() {
           // versão anterior (ou corrompido) faria a API simulada responder fora do contrato.
           if (isUsableState(parsed)) {
             state = parsed
+            state.rev = Math.max(state.rev ?? 0, readStoredRev(), 0)
+            if (await migrate(state)) persist()
             return
           }
         }
@@ -258,15 +513,21 @@ export function initDb() {
         /* estado corrompido: recria */
       }
       state = await buildSeed()
+      state.rev = Math.max(readStoredRev(), 0)
       persist()
-    })()
+    })
   }
   return ready
 }
 
+/** Restaura a seed. Numa transação, as outras abas recebem `reset` e recarregam. */
 export async function resetDb() {
+  const rev = Math.max(state?.rev ?? 0, readStoredRev(), 0)
   state = await buildSeed()
+  state.rev = rev
   lastEvent = null
+  pendingEvents = []
+  pendingReset = true
   persist()
 }
 
@@ -304,6 +565,8 @@ export async function createUser(input: { username: string; email: string; passw
     walletNickname: 'Principal',
     avatarUrl: null,
     createdAt: iso(),
+    // Cadastro público nunca cria admin: o papel não vem do corpo da requisição.
+    role: 'user',
     salt,
     passwordHash: await hashPassword(input.password, salt),
   }
@@ -461,7 +724,7 @@ function recomputeNft(n: NftDetail) {
   n.version += 1
 }
 
-function emitNftUpdated(n: NftDetail) {
+function emitNftUpdated(n: NftDetail, previousPrice: string) {
   emit({
     type: 'nft.updated',
     eventId: nextEventId(),
@@ -472,26 +735,83 @@ function emitNftUpdated(n: NftDetail) {
       price: n.price,
       available: n.available,
       editions: n.editions.map(({ id, price, available, status }) => ({ id, price, available, status })),
+      featured: n.featured,
+      previousPrice,
     },
   })
 }
 
-/** Altera preço e/ou estoque de uma edição e publica `nft.updated`. */
-export function updateEdition(nftId: string, editionId: string, patch: { price?: string; available?: number }) {
+/** Carrinhos com este NFT: totais e avisos são recalculados na leitura; a versão sobe para quem compara. */
+function touchCartsWith(nftId: string) {
+  Object.values(state.carts).forEach((c) => {
+    if (c.items.some((i) => i.nftId === nftId)) touchCart(c)
+  })
+}
+
+export type EditionPatch = { price?: string; available?: number; status?: 'on_sale' | 'unavailable' }
+
+/** Altera preço, estoque e/ou status de uma edição, recalcula o NFT e os carrinhos afetados e publica `nft.updated`. */
+export function updateEdition(nftId: string, editionId: string, patch: EditionPatch) {
   const n = findNft(nftId)
   const e = n?.editions.find((x) => x.id === editionId)
   if (!n || !e) return null
-  if (patch.price !== undefined) e.price = patch.price
+  const previousPrice = n.price
+  if (patch.price !== undefined) e.price = toEthString(patch.price)
   if (patch.available !== undefined) e.available = Math.max(0, patch.available)
+  // "À venda" volta a valer pelo estoque (0 = esgotada); "Indisponível" tira de venda mesmo com estoque.
+  if (patch.status !== undefined) e.status = patch.status === 'unavailable' ? 'unavailable' : e.available > 0 ? 'on_sale' : 'sold_out'
   recomputeNft(n)
+  touchCartsWith(n.id)
   persist()
-  emitNftUpdated(n)
+  emitNftUpdated(n, previousPrice)
   return n
+}
+
+/** Liga/desliga o destaque na vitrine e publica `nft.updated` (com `featured`). */
+export function setFeatured(nftId: string, featured: boolean) {
+  const n = findNft(nftId)
+  if (!n) return null
+  n.featured = featured
+  n.version += 1
+  persist()
+  emitNftUpdated(n, n.price)
+  return n
+}
+
+// ---------- Painel administrativo ----------
+
+export type AdminUpdateResult =
+  | { ok: true; nft: NftDetail }
+  | { ok: false; code: 'NOT_FOUND'; message: string }
+  | { ok: false; code: 'VERSION_MISMATCH'; current: NftDetail }
+  | { ok: false; code: 'VALIDATION_ERROR'; fields: Record<string, string> }
+
+/**
+ * Edição pelo painel, com controle de concorrência otimista: `version` é a versão do NFT que o admin leu.
+ * Se o NFT mudou desde então (outra aba, outro admin, uma compra que reservou estoque), recusa e devolve o atual.
+ */
+export function adminUpdateEdition(nftId: string, editionId: string, patch: AdminEditionPatch): AdminUpdateResult {
+  const n = findNft(nftId)
+  const e = n?.editions.find((x) => x.id === editionId)
+  if (!n || !e) return { ok: false, code: 'NOT_FOUND', message: 'NFT ou edição não encontrada' }
+  if (patch.version !== n.version) return { ok: false, code: 'VERSION_MISMATCH', current: n }
+  if (patch.available !== undefined && patch.available > e.supply) {
+    return { ok: false, code: 'VALIDATION_ERROR', fields: { available: `Máximo de ${e.supply} (tiragem da edição)` } }
+  }
+  const { version: _v, ...changes } = patch
+  return { ok: true, nft: updateEdition(nftId, editionId, changes)! }
+}
+
+export function adminSetFeatured(nftId: string, version: number, featured: boolean): AdminUpdateResult {
+  const n = findNft(nftId)
+  if (!n) return { ok: false, code: 'NOT_FOUND', message: 'NFT não encontrado' }
+  if (version !== n.version) return { ok: false, code: 'VERSION_MISMATCH', current: n }
+  return { ok: true, nft: setFeatured(nftId, featured)! }
 }
 
 /** Envia de novo o último evento (mesmo eventId) — testa tolerância a duplicatas. */
 export function reemitLastEvent() {
-  if (lastEvent) eventListeners.forEach((fn) => fn(lastEvent!))
+  if (lastEvent) deliver(lastEvent)
   return lastEvent
 }
 
@@ -511,7 +831,7 @@ export function emitStaleNftEvent(nftId: string) {
       editions: n.editions.map(({ id, status }) => ({ id, price: '999', available: 0, status })),
     },
   }
-  eventListeners.forEach((fn) => fn(event))
+  deliver(event)
   return event
 }
 
@@ -639,11 +959,90 @@ export function mergeCarts(guestCartId: string, userCart: StoredCart) {
 
 export type CouponCheck = { ok: true; coupon: Coupon } | { ok: false; code: 'COUPON_INVALID' | 'COUPON_EXPIRED'; message: string }
 
+function getCoupons() {
+  return (state.coupons ??= seedCoupons())
+}
+
+function findCoupon(code: string) {
+  const normalized = code.trim().toUpperCase()
+  return getCoupons().find((x) => x.code === normalized)
+}
+
+function isExpired(c: StoredCoupon) {
+  return c.expiresAt !== null && new Date(c.expiresAt).getTime() < now()
+}
+
+function publicCoupon(c: StoredCoupon): Coupon {
+  return {
+    code: c.code,
+    description: c.description,
+    percentOff: c.kind === 'percent' ? c.value : null,
+    amountOff: c.kind === 'fixed' ? c.value : null,
+  }
+}
+
 export function checkCoupon(code: string): CouponCheck {
-  const c = COUPONS.find((x) => x.code === code.trim().toUpperCase())
+  const c = findCoupon(code)
   if (!c) return { ok: false, code: 'COUPON_INVALID', message: 'Cupom inválido' }
-  if (new Date(c.expiresAt).getTime() < now()) return { ok: false, code: 'COUPON_EXPIRED', message: 'Este cupom expirou' }
-  return { ok: true, coupon: { code: c.code, description: c.description, percentOff: c.percentOff } }
+  if (!c.active) return { ok: false, code: 'COUPON_INVALID', message: 'Este cupom foi desativado' }
+  if (isExpired(c)) return { ok: false, code: 'COUPON_EXPIRED', message: 'Este cupom expirou' }
+  return { ok: true, coupon: publicCoupon(c) }
+}
+
+// ---------- Cupons (painel) ----------
+
+export function adminCoupon(c: StoredCoupon): AdminCoupon {
+  return { ...c, status: !c.active ? 'inactive' : isExpired(c) ? 'expired' : 'active' }
+}
+
+/** Mais recentes primeiro; os da seed (mesma data) por código. */
+export function listCoupons() {
+  return [...getCoupons()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.code.localeCompare(b.code)).map(adminCoupon)
+}
+
+export type CouponCreateResult = { ok: true; coupon: AdminCoupon } | { ok: false; code: 'CONFLICT' | 'VALIDATION_ERROR'; fields: Record<string, string> }
+
+export function createCoupon(input: CouponCreateInput): CouponCreateResult {
+  if (findCoupon(input.code)) return { ok: false, code: 'CONFLICT', fields: { code: 'Já existe um cupom com este código' } }
+  if (input.expiresAt && new Date(input.expiresAt).getTime() <= now()) {
+    return { ok: false, code: 'VALIDATION_ERROR', fields: { expiresAt: 'A validade precisa ser uma data futura' } }
+  }
+  const value = toEthString(input.value)
+  const coupon: StoredCoupon = {
+    code: input.code,
+    kind: input.kind,
+    value,
+    description: input.kind === 'percent' ? `${value}% de desconto` : `${value} ETH de desconto`,
+    expiresAt: input.expiresAt ? new Date(input.expiresAt).toISOString() : null,
+    active: true,
+    createdAt: iso(),
+  }
+  getCoupons().push(coupon)
+  persist()
+  return { ok: true, coupon: adminCoupon(coupon) }
+}
+
+/**
+ * Desativa (idempotente). Carrinhos com o cupom perdem o desconto (recalculados) e as cotações abertas com
+ * ele são descartadas: confirmar o pedido responde 409 QUOTE_OUTDATED com a cotação nova, sem o desconto.
+ */
+export function deactivateCoupon(code: string) {
+  const c = findCoupon(code)
+  if (!c) return null
+  if (c.active) {
+    c.active = false
+    Object.values(state.carts).forEach((cart) => {
+      if (cart.couponCode === c.code) {
+        cart.couponCode = null
+        touchCart(cart)
+      }
+    })
+    Object.entries(state.quotes).forEach(([id, q]) => {
+      if (q.coupon?.code === c.code) delete state.quotes[id]
+    })
+    persist()
+  }
+  return adminCoupon(c)
 }
 
 export function setCartCoupon(cart: StoredCart, code: string | null) {
@@ -660,8 +1059,15 @@ function priceLines(items: StoredCartItem[]) {
   })
 }
 
-function totals(subtotal: string, couponPercent: string | null, network: Network | null, hasItems: boolean) {
-  const discount = couponPercent ? percentOf(subtotal, couponPercent) : '0'
+/** Desconto do cupom: percentual (arredondado para baixo) ou valor fixo, nunca maior que o subtotal. */
+function discountOf(subtotal: string, coupon: Coupon | null) {
+  if (coupon?.percentOff) return percentOf(subtotal, coupon.percentOff)
+  if (coupon?.amountOff) return compareEth(coupon.amountOff, subtotal) < 0 ? toEthString(coupon.amountOff) : subtotal
+  return '0'
+}
+
+function totals(subtotal: string, coupon: Coupon | null, network: Network | null, hasItems: boolean) {
+  const discount = discountOf(subtotal, coupon)
   const networkFee = hasItems ? NETWORK_FEES[network ?? 'ethereum'] : '0'
   const total = addEth(subEth(subtotal, discount), networkFee)
   return { subtotal, discount, networkFee, total }
@@ -705,7 +1111,7 @@ export function serializeCart(cart: StoredCart): Cart {
     owner: cart.userId ? 'user' : 'guest',
     items,
     coupon,
-    summary: totals(subtotal, coupon?.percentOff ?? null, null, items.length > 0),
+    summary: totals(subtotal, coupon, null, items.length > 0),
     version: cart.version,
     updatedAt: cart.updatedAt,
   }
@@ -745,7 +1151,7 @@ export async function buildQuote(userId: string, cart: StoredCart, network: Netw
     unitPrice: edition.price,
     lineTotal,
   }))
-  const t = totals(addEth(...quoteLines.map((l) => l.lineTotal)), coupon?.percentOff ?? null, network, true)
+  const t = totals(addEth(...quoteLines.map((l) => l.lineTotal)), coupon, network, true)
   const fingerprint = await stableHash({ quoteLines, coupon: coupon?.code ?? null, network, ...t })
   const quote: StoredQuote = {
     id: nextId('qt'),
@@ -800,10 +1206,12 @@ export function createOrder(params: {
 }) {
   const { quote } = params
   // Reserva o estoque enquanto o pagamento é processado (evita vender a mesma unidade duas vezes).
+  const previousPrices = new Map<string, string>()
   for (const line of quote.lines) {
     const n = findNft(line.nftId)
     const e = n?.editions.find((x) => x.id === line.editionId)
     if (n && e) {
+      if (!previousPrices.has(n.id)) previousPrices.set(n.id, n.price)
       e.available = Math.max(0, e.available - line.quantity)
       recomputeNft(n)
     }
@@ -837,16 +1245,23 @@ export function createOrder(params: {
   persist()
   for (const line of quote.lines) {
     const n = findNft(line.nftId)
-    if (n) emitNftUpdated(n)
+    if (n) emitNftUpdated(n, previousPrices.get(n.id) ?? n.price)
   }
   return order
 }
 
-/** Processa pagamentos cujo prazo venceu. Chamado periodicamente e na carga da página. */
+function dueOrders() {
+  return state ? state.orders.filter((o) => o.status === 'pending' && o.settleAt <= now()) : []
+}
+
+/**
+ * Processa pagamentos cujo prazo venceu. Idempotente: só mexe em pedido ainda `pending`.
+ * No navegador roda dentro de `withDb` (ver `settleDueOrdersShared`): com várias abas abertas, a primeira a
+ * pegar a trava liquida; as outras releem o estado, já não veem o pedido pendente e não fazem nada.
+ */
 export function settleDueOrders() {
   if (!state) return
-  const due = state.orders.filter((o) => o.status === 'pending' && o.settleAt <= now())
-  for (const order of due) {
+  for (const order of dueOrders()) {
     if (order.outcome === 'approve') {
       order.status = 'confirmed'
       order.txHash = `0x${randomHex(32)}`
@@ -871,9 +1286,10 @@ export function settleDueOrders() {
         const n = findNft(line.nftId)
         const e = n?.editions.find((x) => x.id === line.editionId)
         if (n && e) {
+          const previousPrice = n.price
           e.available += line.quantity
           recomputeNft(n)
-          emitNftUpdated(n)
+          emitNftUpdated(n, previousPrice)
         }
       }
     }
@@ -889,6 +1305,21 @@ export function settleDueOrders() {
       userId: order.userId,
       data: { status: order.status, failureReason: order.failureReason, txHash: order.txHash },
     })
+  }
+}
+
+let settling = false
+
+/** Relógio dos pagamentos no navegador: confere barato e só pega a trava quando há pedido vencido. */
+export async function settleDueOrdersShared() {
+  if (settling || !state) return
+  refreshFromStorage()
+  if (dueOrders().length === 0) return
+  settling = true
+  try {
+    await withDb(() => settleDueOrders())
+  } finally {
+    settling = false
   }
 }
 

@@ -1,11 +1,12 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { User, X } from 'lucide-react'
+import { LayoutDashboard, User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { authNavigation, canHostAuthOverlay } from '@/features/auth/auth-overlay'
 import { useLogout, useSession } from '@/features/auth/use-session'
 import { useCartCount } from '@/features/cart/hooks'
+import { SearchSuggest } from '@/features/catalog/search-suggest'
 import { cn } from '@/lib/utils'
 
 // Figma: itens em branco 16px, ativo em laranja negrito com sublinhado de 3px sobre a linha divisória.
@@ -94,6 +95,7 @@ export function Header() {
 
         <div className="flex items-center gap-2 md:gap-[26px] xl:ml-auto xl:mt-6 xl:h-[35px]">
           {searchOpen ? (
+            // Enter sem sugestão escolhida envia o formulário: busca no catálogo, como antes.
             <form
               role="search"
               className="flex items-center gap-1"
@@ -106,15 +108,26 @@ export function Header() {
               <label htmlFor="header-search" className="sr-only">
                 Buscar NFTs
               </label>
-              <input
+              <SearchSuggest
                 id="header-search"
                 ref={inputRef}
                 value={term}
-                onChange={(e) => setTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Escape' && setSearchOpen(false)}
+                onValueChange={setTerm}
+                onPick={(nft) => {
+                  setSearchOpen(false)
+                  setTerm('')
+                  void navigate({ to: '/nft/$nftId', params: { nftId: nft.id } })
+                }}
+                onEscape={() => setSearchOpen(false)}
                 placeholder="Buscar NFTs…"
-                className="h-9 w-40 rounded-md border border-border bg-card px-3 text-sm md:w-56"
+                className="w-40 md:w-56"
+                inputClassName="h-9 w-full rounded-md border border-border bg-card px-3 text-sm"
+                panelClassName="left-auto right-0 w-[min(380px,calc(100vw-32px))]"
+                aria-describedby="header-search-hint"
               />
+              <span id="header-search-hint" className="sr-only">
+                Digite ao menos 2 letras para ver sugestões. Enter busca no catálogo.
+              </span>
               <button type="button" className="rounded-md p-2 hover:bg-secondary" onClick={() => setSearchOpen(false)} aria-label="Fechar busca">
                 <X className="size-4" aria-hidden="true" />
               </button>
@@ -154,6 +167,16 @@ export function Header() {
                 <DropdownMenuItem onSelect={() => void navigate({ to: '/perfil' })}>Dados do perfil</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void navigate({ to: '/perfil/carteiras' })}>Carteiras</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void navigate({ to: '/perfil/favoritos' })}>Lista de interesse</DropdownMenuItem>
+                {/* Atalho visual só para admin; quem decide o acesso é a API (403 para conta comum). */}
+                {user.role === 'admin' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => void navigate({ to: '/admin' })}>
+                      <LayoutDashboard className="size-4" aria-hidden="true" />
+                      Painel
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() =>

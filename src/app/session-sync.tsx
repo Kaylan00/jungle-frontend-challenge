@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { qk } from '@/api/queries'
 import { sessionStore } from '@/api/session-store'
 import { authNavigation, readAuthOverlay } from '@/features/auth/auth-overlay'
+import { clearPriceDrops } from '@/features/favorites/price-drops'
 import { announce } from '@/lib/announcer'
 import type { createAppRouter } from './router'
 
@@ -19,6 +20,8 @@ export function SessionSync({ router }: { router: ReturnType<typeof createAppRou
 
   useEffect(() => {
     return sessionStore.subscribe(({ reason }) => {
+      // Selos de "Preço caiu" são da conta que estava logada: nada passa para a próxima.
+      clearPriceDrops()
       if (reason === 'login') return // o fluxo de login cuida do cache
       queryClient.removeQueries({ queryKey: qk.private })
       queryClient.setQueryData(qk.session, null)
