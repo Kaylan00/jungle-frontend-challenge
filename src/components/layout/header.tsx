@@ -176,7 +176,8 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger className="hidden h-[35px] min-w-[100px] items-center justify-center gap-1.5 rounded-[5px] bg-primary px-2.5 text-base text-primary-foreground transition-colors hover:bg-primary-hover md:inline-flex" aria-label={`Menu da conta de ${user.name}`}>
                 {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="size-5 rounded-full object-cover" /> : <User className="size-[18px]" aria-hidden="true" />}
-                <span className="max-w-28 truncate">{user.username}</span>
+                {/* Até xl o cabeçalho divide 768 px com o menu: nome longo é cortado antes de empurrar a página. */}
+                <span className="max-w-20 truncate xl:max-w-28">{user.username}</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>

@@ -46,6 +46,9 @@ Todo erro segue `{ error: { code, message, fields?, details? } }`.
 | | Consultar | `GET /orders/:id` · `GET /orders?status=pending` | 200 · 403 (pedido de outra conta) · 404 |
 | Perfil | Consulta / atualização | `GET /profile` · `PATCH /profile` | 200 · 409 `CONFLICT` (fields) · 422 |
 | | Avatar | `PUT /profile/avatar` `{dataUrl}` · `DELETE /profile/avatar` | 200 · 422 |
+| | Senha | `POST /profile/password` | 204 · 422 (senha atual incorreta em `fields`) |
+| Carteiras | Consulta / cadastro / edição | `GET /wallets` · `POST /wallets` · `PUT /wallets/:id` | 200/201 · 409 (endereço repetido, em `fields.address`) · 404 · 422 |
+| | Conexão simulada | `POST /wallets/:id/connect` `{network}` · `DELETE /wallets/:id/connect` | 200 · 409 `WALLET_REJECTED` · 422 |
 | Painel (admin) | NFTs completos | `GET /admin/nfts?q&page&pageSize` | 200 `{items: NftDetail[], page, pageSize, total, totalPages}` · 401 · **403 `FORBIDDEN`** (conta comum) |
 | | Destaque | `PATCH /admin/nfts/:id` `{version, featured}` | 200 `NftDetail` · 403 · 404 · **409 `CONFLICT`** (`details: {reason: 'VERSION_MISMATCH', current: NftDetail}`) · 422 |
 | | Edição | `PATCH /admin/nfts/:id/editions/:editionId` `{version, price?, available?, status?}` (`status`: `on_sale` ou `unavailable`) | 200 `NftDetail` · 403 · 404 · 409 (versão) · 422 (`fields`: preço decimal > 0 com até 18 casas; disponibilidade inteira de 0 até a tiragem) |
@@ -56,10 +59,9 @@ Todo erro segue `{ error: { code, message, fields?, details? } }`.
 | | Pedidos (todos) | `GET /admin/orders?status&q&page&pageSize` (`q`: número ou cliente) | 200 `{items: AdminOrder[], page, pageSize, total, totalPages, counts {all, pending, confirmed, rejected}}` — sem o perfil do colecionador nem a carteira · 401 · 403 · 422 |
 | | Usuários | `GET /admin/users?q&page&pageSize` | 200 `{items: AdminUser[], …}` (`emailMasked`, `role`, contagem de pedidos e favoritos; sem senha, sessões, carteiras, avatar nem e-mail completo) · 401 · 403 · 422 |
 
-Os contratos do painel novo ficam em `api/admin-contracts.ts` (o `contracts.ts` é o contrato da loja); as leituras do painel sobre o banco simulado, em `mocks/admin-db.ts`.
-| | Senha | `POST /profile/password` | 204 · 422 (senha atual incorreta em `fields`) |
-| Carteiras | Consulta / cadastro / edição | `GET /wallets` · `POST /wallets` · `PUT /wallets/:id` | 200/201 · 409 (endereço repetido) · 422 |
-| | Conexão simulada | `POST /wallets/:id/connect` `{network}` · `DELETE /wallets/:id/connect` | 200 · 409 `WALLET_REJECTED` · 422 |
+Os contratos do painel ficam em `api/admin-contracts.ts` (o `contracts.ts` é o contrato da loja); as leituras do painel sobre o banco simulado, em `mocks/admin-db.ts`.
+
+**Tipos de erro** (todos no formato acima, `code` estável para a interface decidir): validação `422 VALIDATION_ERROR` (com `fields`), sessão inválida `401 UNAUTHENTICATED` / `SESSION_EXPIRED`, falta de permissão `403 FORBIDDEN`, recurso inexistente `404 NOT_FOUND`, conflito de disponibilidade `409 AVAILABILITY_CONFLICT` (e os outros 409: `EMAIL_TAKEN`, `CONFLICT`, `QUOTE_OUTDATED`, `IDEMPOTENCY_CONFLICT`, `WALLET_REJECTED`), falha transitória `503 TRANSIENT_FAILURE` / `500 INTERNAL_ERROR` / rede / timeout (as únicas que o cliente repete).
 
 Falhas transitórias (`503 TRANSIENT_FAILURE`, `500`, rede, timeout) são geradas pelos cenários, em qualquer rota.
 
@@ -91,8 +93,8 @@ Regras do cliente (`src/realtime/client.ts`):
 3. **Terminal**: pedido `confirmed`/`rejected` nunca volta para `pending` no cache.
 4. **Isolamento**: evento de pedido com `userId` diferente do usuário atual é descartado. Na troca de sessão o socket é desconectado, as versões de pedido e os ids vistos são zerados, e só então reconecta com o novo token.
 5. **`admin.activity`** (só para conexões de contas admin; o servidor confere o papel da sessão ao conectar): leva uma linha do feed do painel (`AdminActivity`). O cliente deduplica por `eventId`, põe a linha no topo do feed em cache (sem nova requisição) e invalida a visão geral e, conforme o recurso, a lista de pedidos ou de cupons. O banco registra a atividade com `deliver` (e não `emit`), para o “último evento” dos controles de duplicata continuar sendo o de catálogo/pedido.
-6. **Efeitos**: `nft.updated` atualiza direto o cache do detalhe, dos cards e da lista do painel admin (`setQueryData`); se o destaque mudou, a vitrine é buscada de novo; se o NFT está no carrinho, o carrinho é buscado de novo (o servidor recalcula totais e avisos) e há um anúncio `aria-live`. Se o preço exibido **caiu** e o NFT está nos favoritos do usuário logado (conferido no cache ou na API), nasce o alerta “Preço caiu” (seção 14). `order.updated` atualiza o pedido e invalida pedido, carrinho e catálogo.
-6. **Ciclo de vida**: um socket por aba, criado e destruído pelo `RealtimeProvider`. `dispose()` remove todos os listeners.
+6. **Efeitos**: `nft.updated` atualiza direto o cache do detalhe, dos cards e da lista do painel admin (`setQueryData`); se o destaque mudou, a vitrine é buscada de novo; se o NFT está no carrinho, o carrinho é buscado de novo (o servidor recalcula totais e avisos) e há um anúncio `aria-live`. Se o preço exibido **caiu** e o NFT está nos favoritos do usuário logado (conferido no cache ou na API), nasce o alerta “Preço caiu” (seção 14). `order.updated` atualiza o pedido e invalida pedido, carrinho e catálogo. Com o detalhe do NFT aberto (fora do carrinho), o preço novo também é anunciado na região `aria-live`, sem aviso visual extra.
+7. **Ciclo de vida**: um socket por aba, criado e destruído pelo `RealtimeProvider`. `dispose()` remove todos os listeners.
 
 ### Reconciliação REST × Socket.IO
 
@@ -216,6 +218,29 @@ Em produção o envio seria feito **pelo backend**, com um provedor transacional
 - **Indicador “Ao vivo/Reconectando”** no cabeçalho (desktop largo): não está no Figma, mas dá feedback do tempo real.
 - **Fundo escurecido atrás das telas de conta (desktop)**: no Figma a página inicial aparece sem escurecer por trás da janela de entrar/criar conta. Um comentário no próprio Figma apontou que o fundo deveria escurecer para dar foco e contraste, e foi seguido: véu preto a 58% com desfoque leve (2 px), entrando com o mesmo fade dos outros diálogos (desligado com movimento reduzido). No mobile a janela é tela cheia e nada muda.
 - **Contraste**: os textos secundários em marrom-claro do Figma foram levemente clareados (`#C9A785`) para manter contraste ≥ 4.5:1 sobre o fundo.
+- **Alvos de toque**: os pontos de navegação do destaque, de “Mais desta coleção” e do carrinho viraram botões de 24 × 24 px com o mesmo ponto visível dentro (Lighthouse `target-size`); o X das telas de conta no mobile tem 44 × 44 px.
+- **Estados não desenhados** (pedido pendente e recusado, skeletons, erro com “Tentar novamente”, vazio, 404, “Em breve” do perfil, recuperação de senha, painel admin): seguem as cores, a tipografia e os cantos das telas desenhadas.
+- **Kurio Admin** (`/admin`): não existe no Figma. É uma aplicação à parte com casca própria, no **mesmo origin** da loja porque o “servidor” simulado (banco no `localStorage`, `BroadcastChannel`, Web Locks e service worker do MSW) é isolado por origem: num subdomínio o painel teria outro banco e não veria as compras nem mudaria os preços da loja (seção 13).
+
+#### Comentários públicos no arquivo do Figma
+
+O arquivo do Figma tem comentários de outras pessoas que fizeram o desafio (lidos em 17/11/2026). Os que apontavam problemas reais do layout viraram decisões aqui:
+
+| Comentário (nº no Figma) | O que foi feito |
+| --- | --- |
+| #58 — modal de criar conta sem escurecer o fundo | Fundo escurecido com desfoque leve (item acima) |
+| #4 — filtros combinados difíceis de visualizar | Etiquetas de filtros ativos acima do catálogo, cada uma removível, e “Limpar tudo” (`catalog/active-filters.tsx`, `e2e/14`) |
+| #5 — slider de preço impreciso no mobile | Campos de mínimo e máximo ao lado do slider, sincronizados com ele (`e2e/14`) |
+| #19 — pendente e recusado não desenhados | Seguem o padrão visual da confirmação (`checkout/order-page.tsx`) |
+| #10 — “−” deveria ficar desabilitado na quantidade mínima | Desabilitado no mínimo, “+” desabilitado no limite da edição/pedido (`shared/quantity-stepper.tsx`) |
+| #7 — falta voltar de página na paginação | “Página anterior” aparece a partir da página 2 |
+| #21 — ID do token diferente entre telas | Dados vêm da API, então o mesmo NFT mostra o mesmo ID em card, detalhe, carrinho e recibo |
+| #20 — mobile do pagamento sem o formulário do colecionador | O formulário existe no mobile, abaixo da escolha de carteira |
+| #60, #61, #69, #71 — grade de cards irregular, cards sem nome ou preço | Grade uniforme; todo card tem arte, nome e preço |
+| #66, #68 — círculos e retângulos soltos nos banners | Considerados sobras do arquivo e não copiados |
+| #11 — borda inferior do cabeçalho só em algumas telas | Mantido como no Figma (sem linha nas telas do Mercado) |
+| #14 — botão “Entrar” continua depois do login | Logado, vira o botão da conta (nome de usuário, menu com perfil e sair) |
+| #3 — sem frames mobile de confirmação, perfil e carteiras | Implementados no mesmo estilo das telas mobile existentes |
 
 ## 10. Testes
 
@@ -230,7 +255,7 @@ Em produção o envio seria feito **pelo backend**, com um provedor transacional
 | 5 | `05-carrinho` | quantidades e limite, cupom inválido/expirado/válido, valores exatos, remoção, refresh, merge no login |
 | 6 | `06-compra` | catálogo → detalhe → carrinho → pagamento → pendente → recibo confirmado; recibo imutável |
 | 7 | `07-falhas-pagamento` | recusa, clique repetido, timeout com recuperação, refresh no meio do envio, contrato de idempotência (201/200 replay/409) |
-| 8 | `08-perfil-carteiras` | perfil (validação, conflito, persistência), avatar, senha (erros e troca), carteira (endereço inválido, cadastro) |
+| 8 | `08-perfil-carteiras` | perfil (validação, conflito, persistência), avatar, senha (erros e troca), carteiras: endereço inválido, principal cadastrada (espera o `201` antes do refresh), secundária com o endereço da principal recusada pela API (409 no campo) e depois cadastrada, edição da principal (`PUT`) e as duas persistidas após refresh |
 | 9 | `09-tempo-real-checkout` | mudança de preço/esgotamento via Socket.IO no carrinho e na revisão; recusa do servidor sem o evento |
 | 10 | `10-eventos-reconexao` | duplicata e evento antigo, queda e reconciliação, pedido pendente com socket fora e refresh |
 | 11 | `11-teclado-acessibilidade` | skip link, foco preso no diálogo, Esc, erros ligados aos campos, catálogo por teclado, axe |
@@ -241,8 +266,8 @@ Em produção o envio seria feito **pelo backend**, com um provedor transacional
 | 16 | `16-alerta-preco-favoritos` | queda de preço de um favorito: toast com link, `aria-live`, selo na lista; preço que volta a subir tira o selo; quem não favoritou não é avisado |
 | 17 | `17-busca-sugestoes` | combobox: setas, `aria-activedescendant`, Enter abre o NFT, Esc fecha, trecho destacado, vazio, erro 500 e “Tentar de novo” |
 | 18 | `18-compartilhar` | sem Web Share: copia o link canônico (área de transferência) com “Link copiado”; com Web Share: entrega título e link à folha do sistema |
-| 20 | `20-painel-casca` | Kurio Admin: conta comum barrada pelo 403 no login do painel sem deixar sessão; senha errada; redirect para o endereço pedido; trilho com `aria-current`, recolher lembrado; menu do celular com foco preso e Esc; usuários sem dado sensível; sair; busca global (Ctrl+K/Ctrl+F, setas, `aria-activedescendant`, área, NFT abre com as edições, cupom marcado, vazio, Esc); axe WCAG A/AA na entrada, nas cinco seções, na busca e no menu do celular; **pedidos ao vivo** (compra de outra conta pela API: feed pelo socket com o REST do feed falhando de propósito, indicadores, Processando → Confirmado na lista sem recarregar) |
 | 19 | `19-seguranca` | cabeçalhos de segurança em qualquer rota; app inteiro sob a CSP de produção sem violação (service worker, REST, socket, login); script inline injetado bloqueado |
+| 20 | `20-painel-casca` | Kurio Admin: conta comum barrada pelo 403 no login do painel sem deixar sessão; senha errada; redirect para o endereço pedido; trilho com `aria-current`, recolher lembrado; menu do celular com foco preso e Esc; usuários sem dado sensível; sair; busca global (Ctrl+K/Ctrl+F, setas, `aria-activedescendant`, área, NFT abre com as edições, cupom marcado, vazio, Esc); axe WCAG A/AA na entrada, nas cinco seções, na busca e no menu do celular; **pedidos ao vivo** (compra de outra conta pela API: feed pelo socket com o REST do feed falhando de propósito, indicadores, Processando → Confirmado na lista sem recarregar) |
 | — | `visual` | regressão visual de início, detalhe, carrinho e pagamento (desktop e mobile), baselines versionadas |
 
 Testes unitários do servidor simulado novo: `src/mocks/admin.test.ts` (handlers REST de verdade com `msw/node`: 401/403 em todas as rotas do painel, cadastro público nunca cria admin, 422 por campo, 409 de versão sem gravar nem emitir, evento emitido com a versão gravada, cupons percentual/fixo/desativado no carrinho e na cotação) e `src/mocks/sync.test.ts` (duas instâncias do módulo db como duas abas, com o mesmo `localStorage`, trava compartilhada e o BroadcastChannel do Node: mesmo evento nas duas abas sem eco nem laço, escritas simultâneas sem perda, pedido liquidado uma vez só, sessão visível na outra aba, reset propagado). `src/mocks/isolation.test.ts` cobre o isolamento entre contas pelos handlers (pedido, cotação, chave de idempotência, carteira e favoritos de outra conta; carrinho de conta pelo `X-Cart-Id` ou pelo merge; ids hostis como `__proto__`; corpos fora do contrato) e `src/features/auth/auth-search.test.ts` o `redirect` do login. `src/mocks/admin-panel.test.ts` cobre as rotas novas do Kurio Admin pelos handlers (401/403 com a mensagem da API, `/admin/me` sem hash, visão geral na seed e acompanhando pedidos e esgotados, pedidos de todas as contas sem dados do colecionador, filtros, busca, paginação e 422, usuários com e-mail mascarado, feed na ordem certa com o mesmo conteúdo do evento `admin.activity`, limite do feed) e `src/realtime/client.test.ts` o tratamento do `admin.activity` no cliente.
@@ -350,3 +375,25 @@ Revisão feita antes da entrega com o checklist do OWASP (Top 10 2025 / ASVS ní
 - `picomatch` (ReDoS, alto) só nas dependências de desenvolvimento, sem versão corrigida publicada; `msw` 3 (major) não foi adotado agora.
 - Arquivos grandes: `mocks/db.ts` (~1.370 linhas), `mocks/handlers.ts` (~650) e `checkout-page.tsx` (~970). As funções em si são curtas e agrupadas por domínio com cabeçalhos; quebrar em módulos agora mexeria em todo o servidor simulado e nos testes sem mudar comportamento. Seria o primeiro passo se o projeto continuasse (um módulo por domínio: sessão, catálogo, carrinho, pedidos).
 - `GET /orders/:id` de outra conta responde 403 (e a tela mostra "não encontrado"). 404 esconderia até a existência do id; como os ids não são sequenciais, ficou 403, que o contrato e os testes já usam.
+
+## 17. Limitações conhecidas e decisões de UX (resumo)
+
+Reunidas aqui para quem avalia; o detalhe está em cada seção.
+
+**Limitações**
+- **Servidor simulado no navegador**: o banco é o `localStorage` da origem e roda na aba. Quem controla o próprio navegador pode editá-lo (SECURITY.md). Outra janela anônima ou outro navegador é outro “servidor”.
+- **Tempo real entre abas** só no mesmo navegador e perfil (`BroadcastChannel` + Web Locks); sem Web Locks as transações são serializadas só dentro da aba (seção 15).
+- **Transporte do socket**: só `websocket` (o MSW não intercepta o long-polling do Engine.IO); o binding não envia ping (o servidor simulado envia a cada 20 s) e não tem rooms (seção 3).
+- **Conexão de carteira** é da aba, como uma extensão: recarregar a página desconecta.
+- **Performance mobile** 82/84 (meta 90): causa medida e alternativas descartadas na seção 11 e em `lighthouse/RESULTADOS.md`.
+- **Assets** extraídos do protótipo do Figma (arquivo só em visualização) e convertidos para WebP (seção 9).
+- **Envio real de e-mail** é opcional e depende das variáveis do Brevo na Vercel; sem elas vale só a caixa de saída simulada (seção 4).
+
+**Decisões de UX que não estão no Figma**
+- Revisão do pedido em diálogo antes de confirmar e trava de confirmação quando a cotação muda (seção 6).
+- Bloco de conexão da carteira (conectar, recusa, desconectar) no pagamento.
+- Login e cadastro por cima da página de origem, com retorno ao fluxo (seção 9).
+- Avisos em toast **e** em região `aria-live` para mutations e eventos de tempo real; no detalhe do NFT a mudança de preço por evento é anunciada só ao leitor de tela (sem aviso visual que o Figma não tem).
+- Indicador “Ao vivo/Reconectando” no cabeçalho largo.
+- Ações fora do escopo desabilitadas ou com aviso “em breve”, nunca simulando sucesso.
+- No cabeçalho entre 768 e 1279 px o nome de usuário é cortado com reticências a partir de ~8 caracteres (o nome completo está no rótulo do botão), para não empurrar a página; acima disso, como no Figma.

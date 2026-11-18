@@ -20,7 +20,8 @@ test.describe('Perfil e carteiras', () => {
 
     await form.getByLabel('Nome de usuário').fill('ana_atualizada')
     await form.getByRole('button', { name: 'Salvar' }).click()
-    await expect(page.getByText(/salvo|atualizado/i).first()).toBeVisible()
+    // Texto exato do aviso: um regex solto casava com o próprio formulário ('Salvar') antes da resposta.
+    await expect(page.getByText('Perfil atualizado', { exact: true }).first()).toBeVisible()
     await page.reload()
     await expect(page.getByTestId('profile-form').getByLabel('Nome de exibição')).toHaveValue('Ana Atualizada')
     await expect(page.getByTestId('profile-form').getByLabel('Nome de usuário')).toHaveValue('ana_atualizada')
@@ -47,7 +48,7 @@ test.describe('Perfil e carteiras', () => {
 
     await form.getByLabel(/^Senha atual/).fill(USERS.ana.password)
     await form.getByRole('button', { name: 'Alterar senha' }).click()
-    await expect(page.getByText(/senha (alterada|atualizada)/i).first()).toBeVisible()
+    await expect(page.getByText('Senha alterada', { exact: true }).first()).toBeVisible()
 
     await page.getByRole('button', { name: 'Sair' }).click()
     await page.waitForFunction(() => !localStorage.getItem('jungle.session.token'))
@@ -71,9 +72,42 @@ test.describe('Perfil e carteiras', () => {
     await expect(primary.getByText(/Endereço inválido/)).toBeVisible()
 
     await primary.getByLabel('Endereço da carteira').fill('0x1111111111111111111111111111111111111111')
+    // Espera a resposta da API e o aviso exato. O regex antigo (/Carteira .*salva/i) casava com o próprio
+    // formulário ("Carteira principal" ... "Salvar carteira") e o teste recarregava com o POST ainda em voo:
+    // a requisição era abortada e a carteira nunca era gravada (falha intermitente no mobile).
+    const saved = page.waitForResponse((r) => r.url().endsWith('/api/wallets') && r.request().method() === 'POST')
     await primary.getByRole('button', { name: 'Salvar carteira' }).click()
-    await expect(page.getByText(/Carteira .*salva/i).first()).toBeVisible()
+    expect((await saved).status()).toBe(201)
+    await expect(page.getByText('Carteira principal salva', { exact: true }).first()).toBeVisible()
     await page.reload()
     await expect(page.getByTestId('wallet-form-primary').getByLabel('Endereço da carteira')).toHaveValue('0x1111111111111111111111111111111111111111')
+
+    // Secundária: o mesmo endereço da principal é recusado pela API (409 no campo); com outro, é cadastrada.
+    await page.getByRole('button', { name: 'Adicionar carteira secundária' }).first().click()
+    const secondary = page.getByTestId('wallet-form-secondary')
+    await expect(secondary.getByLabel('Nome de exibição')).toBeFocused()
+    await secondary.getByLabel('Apelido da carteira').fill('Reserva')
+    await secondary.getByLabel('Nome do perfil').fill('bruno.reserva')
+    await secondary.getByLabel('Endereço da carteira').fill('0x1111111111111111111111111111111111111111')
+    await secondary.getByLabel('Código de indicação').fill('KURIO-BRU2')
+    await secondary.getByRole('button', { name: 'Salvar carteira' }).click()
+    await expect(secondary.getByText(/Endereço já cadastrado como principal/)).toBeVisible()
+    await expect(secondary.getByLabel('Endereço da carteira')).toHaveAttribute('aria-invalid', 'true')
+
+    await secondary.getByLabel('Endereço da carteira').fill('0x2222222222222222222222222222222222222222')
+    const created = page.waitForResponse((r) => r.url().endsWith('/api/wallets') && r.request().method() === 'POST')
+    await secondary.getByRole('button', { name: 'Salvar carteira' }).click()
+    expect((await created).status()).toBe(201)
+    await expect(page.getByText('Carteira secundária salva', { exact: true }).first()).toBeVisible()
+
+    // Edição da principal (PUT /wallets/:id) e persistência das duas após o refresh.
+    await page.getByTestId('wallet-form-primary').getByLabel('Apelido da carteira').fill('Jogos e arte')
+    const updated = page.waitForResponse((r) => /\/api\/wallets\/[^/]+$/.test(r.url()) && r.request().method() === 'PUT')
+    await page.getByTestId('wallet-form-primary').getByRole('button', { name: 'Salvar carteira' }).click()
+    expect((await updated).status()).toBe(200)
+    await expect(page.getByText('Carteira principal salva', { exact: true }).first()).toBeVisible()
+    await page.reload()
+    await expect(page.getByTestId('wallet-form-primary').getByLabel('Apelido da carteira')).toHaveValue('Jogos e arte')
+    await expect(page.getByTestId('wallet-form-secondary').getByLabel('Endereço da carteira')).toHaveValue('0x2222222222222222222222222222222222222222')
   })
 })

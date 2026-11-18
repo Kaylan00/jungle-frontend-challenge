@@ -295,6 +295,21 @@ describe('nft.updated', () => {
     expect(announced).toEqual(['Preço ou disponibilidade de Emerald Ape #042 mudou. O resumo do carrinho foi atualizado.'])
   })
 
+  it('detalhe aberto (fora do carrinho): anuncia o preço novo só enquanto a tela observa a consulta', () => {
+    qc.setQueryData(qk.nftDetail(NFT_ID), nftDetail({ name: 'Emerald Ape #042' }))
+    socket().serverEmit('nft.updated', nftEvent('evt-1', 2, '1.5', 3))
+    expect(announced).toEqual([])
+
+    const observer = new QueryObserver(qc, { queryKey: qk.nftDetail(NFT_ID), queryFn: () => nftDetail(), staleTime: Infinity })
+    const stop = observer.subscribe(() => {})
+    socket().serverEmit('nft.updated', nftEvent('evt-2', 3, '0.99', 2))
+    expect(announced).toEqual(['Emerald Ape #042: preço ou disponibilidade atualizados agora. 0.99 ETH, 2 disponíveis.'])
+    // Duplicata não repete o aviso.
+    socket().serverEmit('nft.updated', nftEvent('evt-2', 3, '0.99', 2))
+    expect(announced).toHaveLength(1)
+    stop()
+  })
+
   it('NFT fora do carrinho não mexe no carrinho', () => {
     const cartKey = qk.cart('guest')
     qc.setQueryData(cartKey, { items: [{ nftId: 'outro', name: 'Outro' }] })

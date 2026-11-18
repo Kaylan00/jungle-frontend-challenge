@@ -8,6 +8,7 @@ Solução do [desafio de frontend da Jungle Gaming](https://github.com/junglegam
 - **Arquitetura e decisões:** [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Relatório Lighthouse:** [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md)
 - **Segurança (o que é protegido, limites, como reportar):** [SECURITY.md](./SECURITY.md)
+- **Conferência do enunciado, item por item:** [CHECKLIST_DESAFIO.md](./CHECKLIST_DESAFIO.md)
 
 Toda a API (REST e Socket.IO) é simulada com **MSW** na camada de rede. O app não sabe que fala com um mock: as mesmas chamadas funcionariam contra um backend real.
 
@@ -34,13 +35,25 @@ npm run dev            # http://localhost:5173 com mocks ligados
 | `npm run lint` | oxlint em `src/` (testes incluídos), `e2e/`, `api/` e `scripts/` |
 | `npm run test:unit` | Vitest (Node, sem navegador, ~1 s): valores ETH, contratos zod, cliente HTTP, cliente de tempo real, regras do servidor simulado, painel admin pelos handlers MSW (permissão, validação, conflito de versão, cupons, visão geral, pedidos, usuários e feed de atividade) e propagação entre abas (`src/**/*.test.ts`). `test:unit:watch` para o modo observação (Node 22.12+) |
 | `npm run test:api` | Teste isolado da função de envio de e-mail (`api/send-reset-email.ts`), sem rede e sem chave real (Node 22.18+) |
-| `npm run test:e2e` | Playwright: 19 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
+| `npm run test:e2e` | Playwright: 20 arquivos de cenário + regressão visual, desktop e mobile (sobe build + preview sozinho na porta 4173) |
 | `npm run test:e2e:desktop` / `:mobile` | Só um viewport |
 | `npm run test:e2e:update` | Regrava as baselines visuais |
 | `npm run test:e2e:report` | Abre o relatório HTML (traces das falhas incluídos) |
 | `npm run lighthouse` | 3 medições por página/perfil, mediana em `lighthouse/reports/<data>/summary.md` (rode `npm run build` antes) |
 
-Primeira execução dos testes: `npx playwright install chromium`.
+Primeira execução dos testes: `npx playwright install chromium` (no Linux sem as bibliotecas do navegador: `npx playwright install --with-deps chromium`).
+
+**A partir de um checkout limpo** (o mesmo que a CI faz, sem serviço privado nem backend):
+
+```bash
+git clone <repositório> kurio && cd kurio
+npm ci
+npx playwright install chromium
+npm run typecheck && npm run lint && npm run test:unit && npm run test:api && npm run build
+npm run test:e2e
+```
+
+A conferência do enunciado item por item, com a evidência de cada um, está em [CHECKLIST_DESAFIO.md](./CHECKLIST_DESAFIO.md).
 
 ## Variáveis de ambiente
 
@@ -96,7 +109,9 @@ Para ver ao vivo:
 
 Vale também para compras (o estoque reservado aparece nas outras abas), para o painel de cenários (“Mudar preço”, “Esgotar edição”, “Resetar tudo”) e para pagamentos pendentes (só uma aba liquida cada pedido). As abas do mesmo navegador compartilham a sessão (o token fica no `localStorage`), como em qualquer site.
 
-## Alerta de preço, busca e compartilhar
+## Filtros, alerta de preço, busca e compartilhar
+
+- **Filtros ativos**: cada filtro aplicado (busca, categoria, rede, faixa de preço, “Somente disponíveis”) vira uma etiqueta acima do catálogo, com X para remover só aquele, e “Limpar tudo”. A faixa de preço tem campos de mínimo e máximo sincronizados com o slider (mais preciso no celular). Tudo fica na URL: refresh, voltar/avançar e link compartilhado restauram a mesma busca, e mudar um filtro volta para a página 1.
 
 - **Favoritos**: quando um NFT da sua lista de interesse baixa de preço (evento `nft.updated`), aparece o aviso “Preço caiu: X de A para B” com link para o NFT (também lido pelo leitor de tela) e um selo “Caiu de A” no item em `/perfil/favoritos`. Só para o dono dos favoritos. Para ver: entre como Ana, abra a lista de interesse e use “Mudar preço” com um valor menor (ou o painel admin em outra aba).
 - **Busca com sugestões**: na lupa do cabeçalho (desktop) e em “Explorar coleções” (celular), com 2 letras ou mais aparecem até 5 NFTs (↓/↑ escolhem, Enter abre, Esc fecha). Enter sem sugestão escolhida continua buscando no catálogo.
@@ -132,7 +147,7 @@ Sem `BREVO_API_KEY` e `BREVO_SENDER_EMAIL` a função responde `503` e tudo segu
 
 Há três jeitos de escolher o cenário (todos mudam o **servidor simulado**, nunca a interface):
 
-1. **Painel de cenários**: botão “Cenários” no canto inferior esquerdo da aplicação (também na versão publicada).
+1. **Painel de cenários**: aba discreta com um frasco na borda esquerda da tela, a meia altura (“Abrir painel de cenários da simulação”), também na versão publicada. Tem os presets abaixo, “Mudar preço”, “Esgotar edição”, “Duplicar evento”, “Evento antigo”, “Derrubar socket”, “Desligar socket”, “Expirar sessão” e “Resetar tudo”.
 2. **URL**: `?mock=<preset>` ao abrir qualquer página, por exemplo `/?mock=lento` ou `/?mock=latency:variable,payment:reject`.
 3. **Testes / console**: `window.__jungleMock.setScenario({...})`.
 
@@ -169,6 +184,11 @@ O cenário fica salvo no `localStorage` (sobrevive ao refresh). **Reset**: botã
 | Sessão expirada | Logado, Painel → “Expirar sessão” e navegue (ou esteja no checkout): login com aviso e retorno ao mesmo ponto, com o formulário preservado. |
 | Carteira recusa conexão | `?mock=carteira-recusa` e clique em “Conectar” no pagamento. |
 | Erros de API | `?mock=catalogo-500` ou `?mock=sem-conexao`: mensagem de erro com “Tentar novamente”. |
+| Falha em uma rota só | No console: `__jungleMock.setScenario({ faults: [{ route: 'PUT /api/favorites/*', kind: 'http500', times: 1 }] })` e favorite um NFT: o coração volta (rollback do otimista) com aviso. `kind`: `http500`, `http503`, `network` ou `timeout`; `times: -1` = sempre. |
+| Carregamento lento e skeletons | `?mock=lento` (2,5 s por requisição) ou `?mock=latencia-variavel`. |
+| Respostas fora de ordem | `?mock=fora-de-ordem` e digite rápido na busca: só o resultado do último termo aparece. |
+| Sessão curta | `?mock=sessao-curta`, entre e espere 60 s navegando: login com aviso e retorno ao mesmo ponto. |
+| Tempo real fora do ar | `?mock=tempo-real-offline`: o indicador mostra “Reconectando”; ao religar, tudo é conferido pela REST. |
 | Conflito de cadastro | Crie conta com `ana@kurio.test` ou usuário `ana_nft`. |
 | Recuperação de senha com falha | `?mock=sem-conexao` em `/recuperar-senha` (ou `?mock=lento` para ver o carregamento): mensagem com “Tentar novamente”, sem perder o que foi digitado. Link inválido, usado ou expirado: ver “Recuperar a senha” acima. |
 
@@ -185,7 +205,7 @@ src/
   mocks/        servidor simulado: db, handlers REST, servidor Socket.IO, cenários, painel
 api/            Vercel Function de envio real do e-mail de redefinição (Brevo, opcional)
 scripts/        teste isolado da função (npm run test:api)
-e2e/            testes Playwright (20 cenários + visual) e baselines em __screenshots__
+e2e/            testes Playwright (20 arquivos de cenário + visual) e baselines em __screenshots__
 lighthouse/     script de auditoria e relatórios
 ```
 

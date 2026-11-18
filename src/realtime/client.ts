@@ -20,7 +20,7 @@ import { ADMIN_ACTIVITY_LIMIT, favoritesQuery, nftDetailQuery, qk } from '@/api/
 import { sessionStore } from '@/api/session-store'
 import { notePriceChange, recordPriceDrop } from '@/features/favorites/price-drops'
 import { announce } from '@/lib/announcer'
-import { compareEth } from '@/lib/eth'
+import { compareEth, formatEth } from '@/lib/eth'
 import { explorerUrl } from '@/lib/explorer'
 
 export type RealtimeStatus = 'connecting' | 'connected' | 'reconnecting' | 'offline'
@@ -197,7 +197,15 @@ export class RealtimeClient {
     if (inCart) {
       void this.queryClient.invalidateQueries({ queryKey: qk.cart(owner) })
       announce(`Preço ou disponibilidade de ${inCart.name} mudou. O resumo do carrinho foi atualizado.`)
+    } else if (cached && cached.version < e.version && this.isOnScreen(qk.nftDetail(nftId)) && (cached.price !== e.data.price || cached.available !== e.data.available)) {
+      // Detalhe aberto (fora do carrinho): o preço muda na tela sem aviso visual extra; o leitor de tela também sabe.
+      announce(`${cached.name}: preço ou disponibilidade atualizados agora. ${formatEth(e.data.price)}, ${e.data.available} disponíveis.`)
     }
+  }
+
+  /** A consulta tem alguém observando (a tela que a usa está montada). */
+  private isOnScreen(queryKey: readonly unknown[]) {
+    return (this.queryClient.getQueryCache().find({ queryKey, exact: true })?.getObserversCount() ?? 0) > 0
   }
 
   /** Nome e preço que o cache conhece (detalhe, listagens ou destaques), antes de aplicar o evento. */

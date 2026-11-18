@@ -77,5 +77,17 @@ test.describe('Teclado e acessibilidade', () => {
       }
     }
   })
+
+  test('nome de usuário longo não empurra o cabeçalho em 768 px', async ({ app, page }) => {
+    test.skip(app.isMobile, 'Botão da conta só existe a partir de 768 px')
+    await page.setViewportSize({ width: 768, height: 900 })
+    await app.login('admin') // kurio_admin: o nome mais longo da seed
+    for (const path of ['/', '/nft/nft-01', '/carrinho']) {
+      await app.goto(path)
+      await expect(page.getByRole('button', { name: /Menu da conta de/ })).toBeVisible()
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow, `${path} em 768px`).toBeLessThanOrEqual(0)
+    }
+  })
 })
 
