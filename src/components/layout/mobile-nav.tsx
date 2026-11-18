@@ -21,11 +21,13 @@ function HeartIcon() {
 }
 
 function CartIcon() {
+  // Carrinho cheio, como os outros ícones da barra no Figma (alça em traço, cesto preenchido, rodas).
   return (
-    <svg viewBox="0 0 20 18" width="20" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M.8 1h2.4l2.2 10.2h10.8l2.2-7.4H4" />
-      <circle cx="7" cy="15.6" r="1.4" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="15.6" r="1.4" fill="currentColor" stroke="none" />
+    <svg viewBox="0 0 22 20" width="22" height="20" fill="none" aria-hidden="true">
+      <path d="M1 1.4h2.1c.45 0 .84.31.93.75L6 12.2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4.5 4h15.3c.66 0 1.13.64.94 1.27l-1.95 6.5A1.7 1.7 0 0 1 17.16 13H7.1a1.7 1.7 0 0 1-1.66-1.34z" fill="currentColor" />
+      <circle cx="8.2" cy="17.1" r="1.6" fill="currentColor" />
+      <circle cx="16.4" cy="17.1" r="1.6" fill="currentColor" />
     </svg>
   )
 }
@@ -103,15 +105,6 @@ export function MobileNav() {
         <NotchPiece />
         <div className="flex-1 rounded-tr-[40px] bg-card" />
       </div>
-      {/* Indicador do item ativo: um ponto laranja que desliza até o ícone da página atual. */}
-      <span
-        aria-hidden="true"
-        className={cn(
-          'pointer-events-none absolute left-1/2 top-[76px] size-[5px] rounded-full bg-highlight shadow-[0_0_8px_rgba(232,155,85,0.8)] transition-[translate,opacity] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
-          !active && 'opacity-0',
-        )}
-        style={{ translate: `${INDICATOR_X[active ?? 'home'] - 2.5}px 0` }}
-      />
       <Link to="/" className={cn(item(active === 'home'), 'left-[calc(50%-161px)]')} aria-label="Início" aria-current={active === 'home' ? 'page' : undefined}>
         <HomeIcon />
       </Link>
@@ -126,7 +119,7 @@ export function MobileNav() {
       <Link
         to="/"
         hash="catalogo"
-        className="absolute -top-[25px] left-1/2 grid size-16 -translate-x-1/2 place-items-center rounded-full bg-[linear-gradient(180deg,#70492a,#c78349)] text-foreground transition-[filter,scale] duration-200 hover:brightness-115 active:scale-90"
+        className="absolute -top-[25px] left-1/2 grid size-16 -translate-x-1/2 place-items-center rounded-full bg-[linear-gradient(180deg,rgba(210,138,76,0.45),rgba(210,138,76,0.95))] text-foreground transition-[filter,scale] duration-200 hover:brightness-115 active:scale-90"
         aria-label="Explorar catálogo"
       >
         <ScanIcon />
@@ -155,5 +148,3 @@ export function MobileNav() {
   )
 }
 
-/** Posição (a partir do centro da barra) de cada ícone que pode estar ativo. */
-const INDICATOR_X = { home: -161, favorites: -89, profile: 157 } as const
