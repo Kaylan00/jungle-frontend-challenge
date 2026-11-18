@@ -23,6 +23,7 @@ import type {
   User,
   Wallet,
 } from '@/api/contracts'
+import { NftDetail as NftDetailSchema } from '@/api/contracts'
 import { addEth, compareEth, mulEth, percentOf, subEth } from '@/lib/eth'
 import { buildNftFixtures } from './fixtures/nfts'
 import { COUPONS, NETWORK_FEES, SEED_USERS } from './fixtures/users'
@@ -225,6 +226,19 @@ async function buildSeed(): Promise<DbState> {
   }
 }
 
+function isUsableState(s: DbState | null): s is DbState {
+  return (
+    !!s &&
+    s.schema === 1 &&
+    Array.isArray(s.users) &&
+    Array.isArray(s.sessions) &&
+    Array.isArray(s.orders) &&
+    Array.isArray(s.nfts) &&
+    s.nfts.length > 0 &&
+    s.nfts.every((n) => NftDetailSchema.safeParse(n).success)
+  )
+}
+
 export function initDb() {
   if (!ready) {
     ready = (async () => {
@@ -232,7 +246,9 @@ export function initDb() {
         const raw = localStorage.getItem(STORAGE_KEY)
         if (raw) {
           const parsed = JSON.parse(raw) as DbState
-          if (parsed.schema === 1) {
+          // Só reaproveita o estado salvo se ele ainda segue os contratos atuais. Um estado de uma
+          // versão anterior (ou corrompido) faria a API simulada responder fora do contrato.
+          if (isUsableState(parsed)) {
             state = parsed
             return
           }
