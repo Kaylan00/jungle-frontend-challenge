@@ -10,7 +10,10 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
+  // Na CI um teste que falha tem uma segunda tentativa, mas só para gerar o trace: se passar na segunda, ele é
+  // "flaky" e a execução reprova mesmo assim (failOnFlakyTests). Instabilidade nunca passa escondida.
   retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: Boolean(process.env.CI),
   workers: process.env.CI ? 2 : undefined,
   timeout: 45_000,
   expect: {
@@ -33,6 +36,12 @@ export default defineConfig({
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     { name: 'mobile', use: { ...devices['Pixel 7'], viewport: { width: 390, height: 844 } } },
+    // Tablet (768, a terceira largura pedida no desafio): os fluxos principais, no layout de 768 px.
+    {
+      name: 'tablet',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 768, height: 1024 }, hasTouch: true },
+      testMatch: /(01-catalogo|02-detalhe|05-carrinho|06-compra|12-carregamento-falhas)\.spec\.ts$/,
+    },
   ],
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,

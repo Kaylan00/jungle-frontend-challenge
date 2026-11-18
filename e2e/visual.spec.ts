@@ -18,6 +18,10 @@ async function settle(page: Page) {
 const hide = (page: Page) => [page.getByRole('button', { name: /painel de cenários/ }), page.getByTestId('realtime-status'), page.locator('[data-sonner-toaster]')]
 
 test.describe('Regressão visual', () => {
+  // As baselines foram geradas no Linux, como na CI: a renderização de fontes muda entre sistemas e faria os
+  // prints falharem sem nenhuma mudança real. No Windows, rode estes testes pelo WSL.
+  test.skip(process.platform !== 'linux', 'Baselines do Linux (as mesmas da CI). No Windows, rode pelo WSL.')
+
   test('início', async ({ app, page }) => {
     await app.goto('/')
     await settle(page)

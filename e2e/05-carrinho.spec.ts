@@ -42,11 +42,13 @@ test.describe('Carrinho', () => {
     await app.cartItems().filter({ hasText: 'Golden Beat #207' }).getByRole('button', { name: /Remover Golden Beat/ }).click()
     await expect(app.cartItems()).toHaveCount(1)
 
-    // Login preserva os itens do visitante
+    // Login preserva os itens e o cupom do visitante (a conta não tinha cupom) e o resumo segue a API
     await app.login('bruno')
     await app.goto('/carrinho')
     await expect(app.cartItems()).toHaveCount(1)
     await expect(app.cartItems().first()).toContainText('Sage Nomad #009')
+    await expect(page.getByTestId('applied-coupon')).toContainText('KURIO10')
+    await expect(page.getByTestId('summary-discount')).toBeVisible()
   })
 
   test('sem conta, "Conectar e finalizar" abre o login por cima do carrinho e segue para o pagamento', async ({ app, page }) => {

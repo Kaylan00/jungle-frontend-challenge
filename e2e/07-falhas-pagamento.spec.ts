@@ -43,8 +43,11 @@ test.describe('Falhas no pagamento', () => {
   test('refresh no meio do envio recupera o mesmo pedido sem duplicar', async ({ app, page }) => {
     await app.setScenario({ orderTimeoutOnce: true })
     await connectAndReview(page)
+    const orderSent = page.waitForRequest((r) => r.method() === 'POST' && new URL(r.url()).pathname === '/api/orders')
     await page.getByTestId('confirm-purchase').click()
-    await page.waitForTimeout(500)
+    await orderSent
+    // O servidor simulado já criou o pedido e segura a resposta (timeout): o refresh acontece com o envio em voo.
+    await expect.poll(() => app.mock('getOrders')).toHaveLength(1)
     await page.reload()
     await expect(page).toHaveURL(/\/pedido\//, { timeout: 15_000 })
     expect(await app.mock('getOrders')).toHaveLength(1)

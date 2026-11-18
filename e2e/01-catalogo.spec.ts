@@ -61,17 +61,31 @@ test.describe('Catálogo', () => {
 
   test('respostas fora de ordem não sobrescrevem a busca atual', async ({ app, page }) => {
     test.skip(app.isMobile, 'Comportamento de cache independe do viewport')
+    // Relógio da página controlado: a latência das respostas simuladas corre no tempo que o teste avança.
+    await page.clock.install()
     await app.goto('/')
     // A 1ª busca demora 1,6 s e a 2ª 0,2 s: a resposta antiga chega por último.
     await app.setScenario({ outOfOrder: true, latency: 'off' })
     const search = page.getByTestId('catalog-search')
+    const isGolden = (r: { url(): string }) => r.url().includes('q=Golden')
+    // Fim da requisição antiga, seja a resposta chegando ou o app cancelando a requisição obsoleta.
+    const staleSettled = Promise.race([page.waitForResponse(isGolden), page.waitForEvent('requestfailed', isGolden)])
     await search.fill('Golden')
-    await page.waitForRequest((r) => r.url().includes('q=Golden'))
+    await page.waitForRequest(isGolden)
     await search.fill('Emerald')
     const cards = page.getByTestId('catalog-grid').getByTestId('nft-card')
+    const notEmerald = cards.filter({ hasNotText: 'Emerald' })
+    // A busca atual chegou primeiro: todos os cards são da busca "Emerald".
+    await expect(page).toHaveURL(/q=Emerald/)
     await expect(cards.first()).toContainText('Emerald')
-    await page.waitForTimeout(2_000) // tempo para a resposta atrasada de "Golden" chegar
+    await expect(notEmerald).toHaveCount(0)
+    // Passa o tempo em que o servidor simulado responde "Golden" (1,6 s) e espera essa requisição terminar.
+    await page.clock.runFor(2_000)
+    await staleSettled
+    await page.clock.runFor(100)
+    // A resposta antiga não sobrescreveu a busca atual.
+    await expect(page).toHaveURL(/q=Emerald/)
+    await expect(notEmerald).toHaveCount(0)
     await expect(cards.first()).toContainText('Emerald')
-    for (const text of await cards.allTextContents()) expect(text).toContain('Emerald')
   })
 })

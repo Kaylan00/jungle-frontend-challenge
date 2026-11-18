@@ -4,7 +4,7 @@
  * eventos). A interface do app continua recebendo tudo por REST e Socket.IO.
  */
 import { FlaskConical, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { mockControls } from './controls'
 import { PRESETS, subscribeScenario, type Scenario } from './scenario'
 
@@ -25,16 +25,10 @@ const PRESET_LABEL: Record<string, string> = {
 
 export default function ScenarioPanel() {
   const [open, setOpen] = useState(false)
-  const [scenario, setScenario] = useState<Scenario>(mockControls.getScenario())
+  // Loja externa: o React se inscreve e confere o valor atual no mesmo passo, então uma mudança feita enquanto
+  // o painel ainda montava (teste, outra aba, ?mock=) nunca fica de fora.
+  const scenario: Scenario = useSyncExternalStore(subscribeScenario, mockControls.getScenario)
   const [log, setLog] = useState('')
-  useEffect(() => {
-    const unsubscribe = subscribeScenario(setScenario)
-    // Uma mudança entre a primeira renderização e esta inscrição não chegou por aviso: relê agora.
-    setScenario(mockControls.getScenario())
-    return () => {
-      unsubscribe()
-    }
-  }, [])
 
   const act = (msg: string, fn: () => unknown) => {
     fn()

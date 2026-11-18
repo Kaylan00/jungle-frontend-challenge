@@ -41,11 +41,12 @@ test.describe('Alerta de preço nos favoritos', () => {
     await app.mock('changePrice', 'nft-01', 'nft-01-ed-3', '0.99')
     // O evento chegou (o card do catálogo mudou), mas sem aviso de queda.
     await expect(page.locator('[data-nft-id="nft-01"]').first().getByTestId('nft-price')).toHaveText('0.99 ETH')
-    await page.waitForTimeout(400)
-    await expect(page.getByText(/Preço caiu/)).toHaveCount(0)
 
     // O favorito dele baixa: aí sim.
     await app.mock('changePrice', 'nft-05', 'nft-05-ed-2', '0.5')
     await expect(page.locator('[data-sonner-toast]').getByText('Preço caiu: Violet Nomad #314 de 0.69 ETH para 0.50 ETH')).toBeVisible()
+    // Os eventos chegam em ordem: o do nft-01 já foi processado, e nenhum aviso foi para ele.
+    await expect(page.locator('[data-sonner-toast]').getByText(/Preço caiu/)).toHaveCount(1)
+    await expect(page.getByText(/Preço caiu: Emerald Ape/)).toHaveCount(0)
   })
 })

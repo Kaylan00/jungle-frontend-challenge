@@ -16,6 +16,7 @@ test.describe('Socket.IO: desligar e religar pelo painel', () => {
   })
 
   test('"Ligar socket" reconecta em até 6 s, mesmo depois de muito tempo fora do ar', async ({ app, page }) => {
+    await page.clock.install()
     await app.goto('/')
     await app.realtimeConnected()
     const status = page.getByTestId('realtime-status')
@@ -24,8 +25,8 @@ test.describe('Socket.IO: desligar e religar pelo painel', () => {
     const panel = page.getByRole('region', { name: 'Painel de cenários da simulação' })
     await panel.getByRole('button', { name: 'Desligar socket' }).click()
     await expect(status).toHaveAttribute('data-status', 'reconnecting')
-    // Fora do ar tempo bastante para o backoff chegar ao teto (0,5 → 1 → 2 → 4 s).
-    await page.waitForTimeout(9_000)
+    // 9 s fora do ar, no relógio da página: o backoff passa por 0,5 → 1 → 2 → 4 s e chega ao teto.
+    await page.clock.runFor(9_000)
     await expect(status).toHaveAttribute('data-status', 'reconnecting')
 
     await panel.getByRole('button', { name: 'Ligar socket' }).click()
@@ -37,12 +38,13 @@ test.describe('Socket.IO: desligar e religar pelo painel', () => {
   })
 
   test('religar logo depois de desligar também é rápido', async ({ app, page }) => {
+    await page.clock.install()
     await app.goto('/')
     await app.realtimeConnected()
     const status = page.getByTestId('realtime-status')
     await app.mock('setRealtimeOffline', true)
     await expect(status).toHaveAttribute('data-status', 'reconnecting')
-    await page.waitForTimeout(1_000)
+    await page.clock.runFor(1_000)
     await app.mock('setRealtimeOffline', false)
     const t0 = Date.now()
     await expect(status).toHaveAttribute('data-status', 'connected', { timeout: MAX_RECONNECT_MS })
