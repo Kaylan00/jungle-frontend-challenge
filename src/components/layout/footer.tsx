@@ -172,7 +172,7 @@ export function Footer() {
               ))}
             </ul>
             <h2 className={`${colTitle} mt-7`}>Carteiras compatíveis</h2>
-            <p className="mt-[9px] inline-flex h-[26px] max-w-full items-center xl:w-[228px] whitespace-pre rounded-[4px] border border-primary/40 bg-band pl-2.5 text-[9px] font-bold leading-none tracking-[0.1px] text-primary">
+            <p className="mt-[9px] inline-flex h-[26px] max-w-full items-center xl:min-w-[228px] whitespace-pre rounded-[4px] border border-primary/40 bg-band px-2.5 text-[9px] font-bold leading-none tracking-[0.1px] text-primary">
               {'METAMASK  •  WALLETCONNECT  •  COINBASE'}
             </p>
           </div>

@@ -107,7 +107,8 @@ function StoreLayout() {
         <main id="conteudo" ref={mainRef} tabIndex={-1} className={cn('scale-frame min-h-dvh flex-1 outline-none', hasMobileNav(pathname) && 'max-md:pb-24')}>
           <Outlet />
         </main>
-        {isDesktop ? <Footer /> : <MobileNav />}
+        {/* Confirmação do pedido: no Figma o recibo ("Thank you") aparece sem o rodapé. */}
+        {isDesktop ? !pathname.startsWith('/pedido/') && <Footer /> : <MobileNav />}
         <RealtimeBadge />
       </div>
       {authOverlay && <AuthOverlayHost overlay={authOverlay} />}

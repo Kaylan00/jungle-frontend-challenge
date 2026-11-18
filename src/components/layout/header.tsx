@@ -78,7 +78,24 @@ export function Header() {
           <Link to="/" className={cn(navItem, homeActive && navActive)} aria-current={homeActive ? 'page' : undefined}>
             Início
           </Link>
-          <Link to="/" hash="catalogo" className={cn(navItem, marketActive && navActive)} aria-current={marketActive ? 'page' : undefined}>
+          <Link
+            to="/"
+            hash="catalogo"
+            className={cn(navItem, marketActive && navActive)}
+            aria-current={marketActive ? 'page' : undefined}
+            onClick={(e) => {
+              // Já na página inicial, o link aponta para o mesmo endereço e o navegador não faz nada:
+              // rola até o catálogo (suave, salvo movimento reduzido) e leva o foco para lá.
+              if (window.location.pathname !== '/') return
+              const target = document.getElementById('catalogo')
+              if (!target) return
+              e.preventDefault()
+              const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+              target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+              document.getElementById('catalogo-title')?.setAttribute('tabindex', '-1')
+              document.getElementById('catalogo-title')?.focus({ preventScroll: true })
+            }}
+          >
             Mercado
           </Link>
           {['Criadores', 'Aprenda'].map((label) => (
