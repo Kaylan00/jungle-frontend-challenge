@@ -1,0 +1,23 @@
+{
+  // Vercel Functions (Node.js). Fica fora do tsconfig do app (src/): roda no servidor, não no navegador.
+  // A Vercel usa este arquivo ao compilar a função; o typecheck local passa por ../tsconfig.api.json.
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["."]
+}

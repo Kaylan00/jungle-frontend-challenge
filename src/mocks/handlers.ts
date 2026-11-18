@@ -2,7 +2,7 @@
  * Handlers REST do servidor simulado (MSW).
  * Os contratos de entrada são validados com os mesmos schemas zod usados no cliente.
  */
-import { http, HttpResponse, type DefaultBodyType, type HttpResponseResolver, type PathParams } from 'msw'
+import { http, HttpResponse, passthrough, type DefaultBodyType, type HttpResponseResolver, type PathParams } from 'msw'
 import {
   AddToCartInput,
   AvatarInput,
@@ -28,6 +28,7 @@ import {
 import { compareEth } from '@/lib/eth'
 import * as db from './db'
 import { apiError, API, bearer, optionalUser, readJson, requireUser, simulateNetwork, zodFields } from './http'
+import { REAL_EMAIL_ENDPOINT, sendRealResetEmail } from './real-email'
 import { consumeFlag, getScenario } from './scenario'
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete'
@@ -120,6 +121,7 @@ export const handlers = [
   // ---------- Recuperação de senha ----------
   // Resposta sempre igual (202), exista ou não a conta: não dá para descobrir e-mails cadastrados.
   // Se a conta existe, cria o token e "envia" o e-mail para a caixa de saída simulada (db.outbox).
+  // Em segundo plano, pede também o envio real (opcional) à Vercel Function com o Brevo (mocks/real-email.ts).
   route('post', '/auth/password-reset', async ({ request }) => {
     const parsed = PasswordResetRequest.safeParse(await readJson(request))
     if (!parsed.success) return apiError('VALIDATION_ERROR', 'Confira os campos destacados', { fields: zodFields(parsed.error.issues) })
@@ -138,6 +140,7 @@ export const handlers = [
         link,
         path,
       })
+      sendRealResetEmail(user.email, link)
     }
     return HttpResponse.json<PasswordResetAccepted>(
       {
@@ -536,6 +539,9 @@ export const handlers = [
     await db.setPassword(auth.user, parsed.data.newPassword)
     return new HttpResponse(null, { status: 204 })
   }),
+
+  // Envio real do e-mail (Vercel Function, não é simulada): segue para a rede, nunca cai no 404 abaixo.
+  http.all(REAL_EMAIL_ENDPOINT, () => passthrough()),
 
   // Qualquer outra rota da API: 404 no formato do contrato.
   http.all(`${API}/*`, () => apiError('NOT_FOUND', 'Rota da API inexistente')),

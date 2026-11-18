@@ -114,6 +114,14 @@ O socket é **aviso**; a REST é a **fonte da verdade**.
 
 Em produção o envio seria feito **pelo backend**, com um provedor transacional como o **Brevo** (ou similar), nunca pelo front: a chave de API do provedor daria a qualquer visitante o poder de mandar e-mails em nome da Kurio e não pode ficar no navegador. O front continuaria igual, chamando os mesmos três endpoints. No backend real entrariam também limite de pedidos por IP e por e-mail e tempo de resposta constante (para o tempo também não revelar se a conta existe).
 
+**Envio real opcional (Vercel Function + Brevo).** Para a demonstração publicada também poder mandar o e-mail de verdade, existe uma única peça de servidor: `api/send-reset-email.ts`, uma Vercel Function (Node.js, `export async function POST(request: Request)`) que chama a API HTTP do Brevo (`POST https://api.brevo.com/v3/smtp/email`, header `api-key`). A chave só existe nela, lida de `process.env.BREVO_API_KEY`; o remetente vem de `BREVO_SENDER_EMAIL` (+ `BREVO_SENDER_NAME`, padrão “Kurio”). As variáveis ficam no painel da Vercel (Settings → Environment Variables), nunca em arquivo versionado. Sem elas a função responde `503 EMAIL_DISABLED` e a demonstração segue só com o e-mail simulado.
+
+- **Quem chama**: o handler MSW de `POST /auth/password-reset`, depois de criar o token e guardar a mensagem na caixa de saída, dispara `fetch('/api/send-reset-email', { to, resetUrl })` em segundo plano (`mocks/real-email.ts`), sem esperar e engolindo qualquer falha; a resposta do mock não muda. O pedido usa `bypass()` do MSW e há um `passthrough()` explícito para essa rota antes do catch-all `/api/*` (que responderia 404), então ele sempre vai para a rede. Só dispara no navegador, fora de navegador automatizado (`navigator.webdriver`) e para e-mails fora dos domínios de teste. No `vite` a função não existe: o pedido recebe 404 e é ignorado.
+- **Por que a função é tão restrita**: ela é pública e não tem como saber se a conta existe (o banco simulado está no navegador). Então: corpo validado com zod (`to` e-mail, `resetUrl` texto, nada além disso); `resetUrl` só é aceito se for do próprio deploy (`PUBLIC_APP_URL` ou, sem ela, o host da requisição), no caminho `/redefinir-senha?token=rst_<48 hex>`, e o link é **remontado** pela função (o texto recebido não vai para o e-mail); `Origin` de outro site é recusado (`403`) e só `application/json` é aceito; o template é fixo em pt-BR (HTML simples com a marca Kurio + versão texto), sem nenhum conteúdo livre; domínios de teste (`@kurio.test`, `@example.*`, `.test`, `.invalid`, `.localhost`) recebem `202` sem envio; limite de 3 pedidos a cada 10 minutos por IP (`429`) e por destinatário (`202` neutro, sem envio). O pior abuso possível é alguém receber o e-mail fixo da Kurio com um link inválido, poucas vezes.
+- **Limite best-effort**: os contadores ficam na memória da instância. Instâncias paralelas não se enxergam e o contador zera quando a função recicla. Num backend real seria um store compartilhado (Redis/KV) e o token seria gerado no próprio servidor, sem endpoint público de envio.
+- **Respostas**: `202 {status:'accepted'}` igual para enviado, ignorado e destinatário no limite; `400 VALIDATION_ERROR`, `403 FORBIDDEN_ORIGIN`, `415`, `429 RATE_LIMITED` (com `Retry-After`), `502 EMAIL_SEND_FAILED` (o log guarda só o status do Brevo, nunca a chave nem o destinatário), `503 EMAIL_DISABLED`.
+- **Build e deploy**: `api/` tem `tsconfig` próprio (Node, `nodenext`), fora do `tsconfig.app.json`; o `tsc -b` checa a função por `tsconfig.api.json` e o Vite não a enxerga. Na Vercel o sistema de arquivos tem precedência sobre os rewrites, então o `"/(.*)" → /index.html` do `vercel.json` não cobre `/api/send-reset-email`. Teste isolado: `npm run test:api` (`scripts/test-send-reset-email.ts`, com `fetch` falso no lugar do Brevo).
+
 ## 5. Carrinho
 
 - O carrinho é **do servidor**: o cliente nunca calcula total. Toda mutation devolve o carrinho inteiro, que vai direto para o cache.
@@ -159,6 +167,7 @@ Em produção o envio seria feito **pelo backend**, com um provedor transacional
 - `mocks/realtime.ts`: servidor Socket.IO com `ws.link` + `toSocketIo`.
 - `mocks/scenario.ts`: latência (com gerador pseudoaleatório de semente fixa → reproduzível), falhas por rota com contador, resultado do pagamento, timeout do pedido, recusa da carteira, duração da sessão, socket fora do ar.
 - `mocks/controls.ts`: API de controle (`window.__jungleMock`) usada pelo painel e pelos testes. Ela altera o servidor; nunca a interface. Inclui a caixa de saída dos e-mails simulados (`lastEmail`, `outbox`) e `expirePasswordResets` (link vencido sem esperar 30 min).
+- `mocks/real-email.ts`: pedido em segundo plano à função de envio real do e-mail (seção 4, “Envio real opcional”). `/api/send-reset-email` é a única rota sob `/api` que o MSW deixa passar para a rede.
 - Pagamentos pendentes são liquidados por um relógio do “servidor” (`settleDueOrders`, a cada 500 ms e no carregamento), então um pedido continua andando mesmo depois de um refresh.
 - **Ativação por configuração** (`VITE_ENABLE_MOCKS`), disponível no build de demonstração. Sem a flag, nada do MSW entra no bundle.
 - Fixtures: 36 NFTs (9 categorias, 3 redes, edições 1/1 · 1/10 · 1/50 · Aberta, esgotadas e indisponíveis), 2 usuários, 3 cupons, datas fixas (baselines visuais estáveis).
@@ -188,6 +197,7 @@ Em produção o envio seria feito **pelo backend**, com um provedor transacional
 - **Conexão da carteira**: adicionado o bloco “Conectar / Conectada / Desconectar” no pagamento, para a simulação de conexão, recusa e desconexão pedida.
 - **Separador decimal**: ponto (`1.19 ETH`), como no Figma e no mercado cripto.
 - **Indicador “Ao vivo/Reconectando”** no cabeçalho (desktop largo): não está no Figma, mas dá feedback do tempo real.
+- **Fundo escurecido atrás das telas de conta (desktop)**: no Figma a página inicial aparece sem escurecer por trás da janela de entrar/criar conta. Um comentário no próprio Figma apontou que o fundo deveria escurecer para dar foco e contraste, e foi seguido: véu preto a 58% com desfoque leve (2 px), entrando com o mesmo fade dos outros diálogos (desligado com movimento reduzido). No mobile a janela é tela cheia e nada muda.
 - **Contraste**: os textos secundários em marrom-claro do Figma foram levemente clareados (`#C9A785`) para manter contraste ≥ 4.5:1 sobre o fundo.
 
 ## 10. Testes
@@ -210,6 +220,8 @@ Em produção o envio seria feito **pelo backend**, com um provedor transacional
 | 12 | `12-carregamento-falhas` | skeletons em rede lenta, erro 500 e sem conexão com “Tentar novamente” |
 | 13 | `13-recuperar-senha` | pedido para a Ana, e-mail simulado, senha nova (validação), login com a nova e recusa da antiga, link reusado (410), token inválido e expirado, resposta neutra para e-mail desconhecido, falha de rede e 500 com “Tentar novamente”, foco inicial (desktop × toque) e X sempre visível no mobile, axe |
 | — | `visual` | regressão visual de início, detalhe, carrinho e pagamento (desktop e mobile), baselines versionadas |
+
+Fora do Playwright, `npm run test:api` testa a função `api/send-reset-email.ts` isolada (sem chave → 503, link de outro domínio → 400, Origin de outro site → 403, domínio de teste → 202 sem chamar o Brevo, caso válido → corpo certo para o Brevo, limites por IP e destinatário, Brevo fora → 502), com `fetch` falso.
 
 Cada teste roda num contexto novo (seed limpa). Eventos de tempo real são disparados pelo servidor simulado e chegam pelo `socket.io-client`; as respostas REST vêm dos handlers MSW. Relatório HTML e traces das falhas: `npm run test:e2e:report`.
 

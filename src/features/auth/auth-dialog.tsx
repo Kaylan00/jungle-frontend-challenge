@@ -40,8 +40,10 @@ export function AuthDialog({
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogPortal>
-        {/* No Figma a página inicial aparece sem escurecer por trás da janela. */}
-        <DialogOverlay className="bg-transparent" />
+        {/* Desvio consciente do Figma (que não escurece o fundo): no desktop a página inicial fica atrás de um
+            véu escuro com leve desfoque, para dar foco e contraste à janela. Entra com fade (index.css,
+            [data-slot='dialog-overlay']). No mobile a janela é tela cheia: o véu não aparece. */}
+        <DialogOverlay className="bg-black/[0.58] backdrop-blur-[2px] max-md:bg-transparent max-md:backdrop-blur-none" />
         <DialogPrimitive.Content
           ref={contentRef}
           data-slot="dialog-content"

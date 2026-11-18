@@ -1,0 +1,9 @@
+{
+  // Typecheck da função em api/ e do teste isolado dela (scripts/), fora do tsconfig do app.
+  "extends": "./api/tsconfig.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.api.tsbuildinfo",
+    "allowImportingTsExtensions": true
+  },
+  "include": ["api", "scripts"]
+}

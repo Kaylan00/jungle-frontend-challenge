@@ -27,8 +27,9 @@ npm run dev            # http://localhost:5173 com mocks ligados
 | `npm run dev` | Desenvolvimento com mocks (MSW) |
 | `npm run build` | Verificação de tipos + build de produção (`dist/`) |
 | `npm run preview` | Serve o build em http://localhost:4173 |
-| `npm run typecheck` | `tsc -b` (app, config e testes) |
-| `npm run lint` | oxlint em `src/` e `e2e/` |
+| `npm run typecheck` | `tsc -b` (app, config, testes e a função de e-mail em `api/`) |
+| `npm run lint` | oxlint em `src/`, `e2e/`, `api/` e `scripts/` |
+| `npm run test:api` | Teste isolado da função de envio de e-mail (`api/send-reset-email.ts`), sem rede e sem chave real (Node 22.18+) |
 | `npm run test:e2e` | Playwright: 13 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
 | `npm run test:e2e:desktop` / `:mobile` | Só um viewport |
 | `npm run test:e2e:update` | Regrava as baselines visuais |
@@ -46,6 +47,8 @@ Arquivo `.env` (versionado, sem segredos) e `.env.example`:
 | `VITE_ENABLE_MOCKS` | `true` | Liga a camada de mocks (REST + Socket.IO). O build de demonstração usa `true`. |
 | `VITE_API_URL` | `/api` | Base da API REST |
 | `VITE_SOCKET_URL` | `wss://realtime.kurio.mock` | Endereço do servidor Socket.IO (interceptado pelo MSW) |
+
+Variáveis do **servidor** (só da função `api/send-reset-email`, nunca do navegador): `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` e `PUBLIC_APP_URL`. Ficam no painel da Vercel, não em arquivo. Ver “Envio real (opcional)” abaixo.
 
 ## Credenciais fictícias
 
@@ -66,6 +69,21 @@ Não há servidor de e-mail na demonstração: o e-mail de redefinição fica gu
 4. O link vale **30 minutos** e **uma vez só**; pedir de novo invalida o anterior. Para ver o erro: abra o mesmo link de novo (já usado), `/redefinir-senha?token=qualquer` (inválido) ou `await window.__jungleMock.expirePasswordResets()` antes de abrir (expirado). Todos oferecem “Pedir um novo link”.
 
 “Resetar tudo” no painel volta a senha da Ana para `Selva2026!`.
+
+#### Envio real (opcional)
+
+O deploy pode mandar o e-mail de verdade, pelo **Brevo**, além da caixa de saída simulada. Quem envia é uma Vercel Function (`api/send-reset-email.ts`), porque a chave do provedor **não pode ficar no navegador**: qualquer visitante poderia lê-la e mandar e-mails em nome da Kurio. O handler simulado de `POST /api/auth/password-reset` continua igual (token, caixa de saída, resposta neutra) e, quando a conta existe, pede o envio à função em segundo plano, sem esperar e sem quebrar nada se falhar.
+
+Para ligar, configure no painel da Vercel (**Settings → Environment Variables**) e publique de novo:
+
+| Variável | Obrigatória | Uso |
+| --- | --- | --- |
+| `BREVO_API_KEY` | sim | Chave da API do Brevo (SMTP & API → API Keys) |
+| `BREVO_SENDER_EMAIL` | sim | Remetente, verificado no Brevo |
+| `BREVO_SENDER_NAME` | não | Nome do remetente (padrão `Kurio`) |
+| `PUBLIC_APP_URL` | não | Endereço público do app (ex.: `https://jungle-frontend-challenge-navy.vercel.app`). Só links desse endereço são aceitos. Sem ela vale o host da própria requisição |
+
+Sem `BREVO_API_KEY` e `BREVO_SENDER_EMAIL` a função responde `503` e tudo segue só com o e-mail simulado. No `npm run dev` a função não existe e o pedido falha em silêncio. Domínios de teste (`@kurio.test`, `@example.*`, `.test`, `.invalid`) nunca recebem e-mail de verdade, então as contas de demonstração (Ana, Bruno) continuam só na caixa simulada: para receber, crie uma conta com um e-mail seu. Navegadores automatizados (testes E2E) não disparam o envio.
 
 ## Cenários da simulação
 
@@ -122,10 +140,12 @@ src/
   features/     telas por domínio (catalog, nft, cart, checkout, auth, profile, favorites)
   components/   layout, componentes compartilhados e ui/ (shadcn)
   mocks/        servidor simulado: db, handlers REST, servidor Socket.IO, cenários, painel
+api/            Vercel Function de envio real do e-mail de redefinição (Brevo, opcional)
+scripts/        teste isolado da função (npm run test:api)
 e2e/            testes Playwright (13 cenários + visual) e baselines em __screenshots__
 lighthouse/     script de auditoria e relatórios
 ```
 
 ## Deploy
 
-Vercel (preset Vite). `vercel.json` reescreve todas as rotas para `index.html`, então acesso direto e refresh funcionam em qualquer tela. O `mockServiceWorker.js` é servido sem cache para não ficar preso em versões antigas.
+Vercel (preset Vite). `vercel.json` reescreve todas as rotas para `index.html`, então acesso direto e refresh funcionam em qualquer tela. A função `api/send-reset-email` não é afetada: na Vercel o sistema de arquivos (arquivos estáticos e funções em `api/`) tem precedência sobre os rewrites. O `mockServiceWorker.js` é servido sem cache para não ficar preso em versões antigas.
