@@ -117,7 +117,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 | 390, 768, 1440 e telas largas sem overflow | `.container-page`, `--page-x` | `e2e/11` |
 | Skeletons sem deslocamento | `components/ui/skeleton.tsx` | `e2e/12`; CLS no Lighthouse |
 | Movimento reduzido | `index.css`, `lib/motion*` | E2E com `reducedMotion` |
-| Teclado, foco, diálogos | Radix; skip link | `e2e/11`, `20` |
+| Teclado, foco, diálogos | Radix; skip link; botões em andamento com `aria-disabled` (`busy`); todo diálogo devolve o foco; `scroll-padding` das barras fixas | `e2e/11`, `20`, `24` |
 | Labels e erros associados, um `h1` por página, título por rota | `FormField`, `lib/page-title.ts` | `e2e/11`, axe |
 | Feedback acessível | `lib/announcer.ts` | `e2e/16` |
 
@@ -135,7 +135,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 | 8 | Perfil, avatar, senha, carteiras | `e2e/08` |
 | 9 | Tempo real no checkout | `e2e/09` |
 | 10 | Duplicados, desconexão, pedido pendente | `e2e/10` |
-| 11 | Teclado e foco | `e2e/11` |
+| 11 | Teclado e foco | `e2e/11`, `e2e/24` |
 | 12 | Skeletons, falha e nova tentativa | `e2e/12` |
 | Extras | Senha, admin, alerta, sugestões, compartilhar, CSP, socket, presets, service worker | `e2e/13` a `23` |
 | Infra | Chromium desktop + mobile, estado isolado, relógio, relatório HTML e traces | `playwright.config.ts`, `e2e/fixtures.ts` |
@@ -144,7 +144,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 
 | Item | Onde |
 | --- | --- |
-| Início e detalhe, mobile e desktop, 5 execuções, mediana (mobile 90 / 94, desktop 100 / 100) | `lighthouse/run.mjs` |
+| Início e detalhe, mobile e desktop, 5 execuções, mediana (desktop 100 / 100; mobile 90 / 94 na rodada oficial, 82 a 90 conforme a máquina; limitações no RESULTADOS) | `lighthouse/run.mjs` |
 | Relatórios, ambiente, LCP/CLS/TBT | `lighthouse/RESULTADOS.md` |
 | Metas e ressalvas | `RESULTADOS.md`; ARCHITECTURE §11 |
 

@@ -12,11 +12,27 @@ Relatórios completos (HTML e JSON de cada medição): [`reports/2026-11-18T21-1
 | `/nft/nft-01` | mobile | **94** | 100 | 100 | 100 | 2.12 s | 0 | 266 ms |
 | `/nft/nft-01` | desktop | **100** | 100 | 100 | 100 | 0.51 s | 0 | 0 ms |
 
-Metas: Performance ≥ 90 · Accessibility ≥ 95 · Best Practices ≥ 95 · SEO ≥ 90. **Todas atingidas**, nas quatro combinações.
+Metas: Performance ≥ 90 · Accessibility ≥ 95 · Best Practices ≥ 95 · SEO ≥ 90. Accessibility, Best Practices e SEO:
+100 em todas as medições. Performance: desktop 100 sempre; **mobile atinge a meta nesta rodada, mas no limite**
+(leia as limitações abaixo antes de comparar).
 
-**Variação**: no perfil mobile a mesma build oscila entre execuções nesta máquina (início: 87 a 92; detalhe: 89 a 95,
-ver [Todas as medições](#todas-as-medições)). A mediana de 5 existe por isso. O início no mobile fica no limite da
-meta: uma medição isolada pode dar alguns pontos abaixo.
+## Limitações desta medição (leia antes de comparar)
+
+1. **Variação entre momentos da mesma máquina.** O perfil mobile simula CPU 4× mais lenta a partir do tempo real
+   medido, então a carga do computador entra no número. Dentro desta rodada o início foi de 87 a 92. Horas depois,
+   a mesma build (commit `a543c5b`, sem nenhuma mudança) mediu **82** de mediana no início, com TBT de 620 ms em vez
+   de 363 ms. O número honesto para o início no
+   mobile é **"entre 82 e 90, conforme a máquina"**; o detalhe fica uns 4 pontos acima.
+2. **Arquivos servidos pelo service worker do MSW.** Depois que o MSW assume a página, os chunks, a fonte e as artes
+   passam pelo service worker, e o Lighthouse 13.6 (simulação Lantern) os registra com 0 byte transferido: o
+   download deles não entra no LCP simulado. Para o usuário real o download acontece igual. Medido com o service
+   worker deixando esses arquivos passarem direto (o Lighthouse passa a cobrar o download): **77 / 77** no mobile
+   (LCP ~3,1 s, TBT ~600 ms). A configuração entregue é a padrão do MSW (com o primeiro handler devolvendo os
+   estáticos para a rede); a diferença existe só na simulação e fica registrada aqui para quem comparar.
+3. **O que pesa de verdade no mobile** é a camada de demonstração: antes da primeira requisição o navegador baixa e
+   avalia React e MSW e liga o service worker. Com backend real (`VITE_ENABLE_MOCKS=false`) isso não existe. O
+   próximo passo, se houvesse mais tempo, seria pré-renderizar a primeira tela no HTML no build, para o conteúdo
+   acima da dobra não depender do MSW.
 
 ## Ferramentas, ambiente e condições
 

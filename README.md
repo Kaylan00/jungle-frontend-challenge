@@ -150,7 +150,7 @@ O cenário fica no `localStorage` e sobrevive ao refresh. Cada preset (painel, `
 
 ## Testes
 
-**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900) e `mobile` (Pixel 7, 390×844), 23 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
+**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900) e `mobile` (Pixel 7, 390×844), 24 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
 
 | # | Cenário do enunciado | Arquivo |
 | --- | --- | --- |
@@ -164,7 +164,7 @@ O cenário fica no `localStorage` e sobrevive ao refresh. Cada preset (painel, `
 | 8 | Perfil, avatar, senha e carteiras com erros de validação | `e2e/08-perfil-carteiras.spec.ts` |
 | 9 | Preço e disponibilidade via Socket.IO durante o checkout | `e2e/09-tempo-real-checkout.spec.ts` |
 | 10 | Eventos duplicados ou antigos, desconexão, retomada de pedido pendente | `e2e/10-eventos-reconexao.spec.ts` |
-| 11 | Teclado, foco em diálogos, validação de formulários (com axe) | `e2e/11-teclado-acessibilidade.spec.ts` |
+| 11 | Teclado, foco em diálogos, validação de formulários (com axe) | `e2e/11-teclado-acessibilidade.spec.ts` e `e2e/24-acessibilidade-foco.spec.ts` (foco nos fluxos com conta, barras fixas, zoom de 400%, axe nas telas logadas) |
 | 12 | Skeletons em rede lenta, falha e nova tentativa | `e2e/12-carregamento-falhas.spec.ts` |
 
 - **Extras**: `e2e/13` a `e2e/23` (recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, compartilhar, cabeçalhos de segurança/CSP, casca do painel, religar o socket em até 6 s, presets que partem do cenário base e service worker do MSW que cai e se recupera sozinho).
@@ -187,7 +187,7 @@ Build de produção servido por `vite preview` em HTTPS/HTTP2 (como a Vercel), c
 | `/nft/nft-01` | mobile | 94 | 100 | 100 | 100 | 2.12 s | 0 | 266 ms |
 | `/nft/nft-01` | desktop | 100 | 100 | 100 | 100 | 0.51 s | 0 | 0 ms |
 
-Todas as metas atingidas. No mobile a mesma build oscila entre execuções (início: 87 a 92), por isso a mediana de 5. O que levou o mobile de 76 / 78 a 90 / 94, as alternativas descartadas, versões e ambiente estão em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Relatórios HTML e JSON de cada medição: [`lighthouse/reports/2026-11-18T21-18-39/`](./lighthouse/reports/2026-11-18T21-18-39/).
+Desktop 100 e Accessibility, Best Practices e SEO 100 em tudo. No mobile o número depende da máquina: a mesma build mediu de 82 a 90 no início em momentos diferentes (mediana de 5 em cada), e o Lighthouse não cobra o download dos arquivos servidos pelo service worker do MSW (sem esse efeito: 77 / 77). As limitações estão explicadas em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md#limitações-desta-medição-leia-antes-de-comparar). O que levou o mobile de 76 / 78 a 90 / 94, as alternativas descartadas, versões e ambiente estão em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Relatórios HTML e JSON de cada medição: [`lighthouse/reports/2026-11-18T21-18-39/`](./lighthouse/reports/2026-11-18T21-18-39/).
 
 ## Deploy
 
