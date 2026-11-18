@@ -50,4 +50,21 @@ test.describe('Tempo real no carrinho e no checkout', () => {
     await page.getByTestId('confirm-purchase').click()
     await expect(page).toHaveURL(/\/pedido\//)
   })
+
+  test('depois de um 409 de cotação, um novo evento de preço volta a travar a confirmação', async ({ app, page }) => {
+    await page.getByTestId('checkout-button').click()
+    await connectAndReview(page)
+    await app.mock('setRealtimeOffline', true)
+    await app.mock('changePrice', 'nft-01', 'nft-01-ed-3', '1.50')
+    await page.getByTestId('confirm-purchase').click()
+    await expect(page.getByTestId('review-notice')).toContainText('Os valores mudaram')
+    await expect(page.getByTestId('confirm-purchase')).toBeEnabled()
+
+    await app.mock('setRealtimeOffline', false)
+    await app.realtimeConnected()
+    await app.mock('changePrice', 'nft-01', 'nft-01-ed-3', '1.70')
+    await expect(page.getByTestId('quote-stale')).toBeVisible()
+    await expect(page.getByTestId('confirm-purchase')).toBeDisabled()
+    expect(await app.mock('getOrders')).toHaveLength(0)
+  })
 })

@@ -29,6 +29,8 @@ export default function ScenarioPanel() {
   const [log, setLog] = useState('')
   useEffect(() => {
     const unsubscribe = subscribeScenario(setScenario)
+    // Uma mudança entre a primeira renderização e esta inscrição não chegou por aviso: relê agora.
+    setScenario(mockControls.getScenario())
     return () => {
       unsubscribe()
     }

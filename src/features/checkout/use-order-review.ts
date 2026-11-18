@@ -29,7 +29,7 @@ export function useOrderReview({ cart, checkout, connection }: { cart: Cart; che
 
   const [quote, setQuote] = useState<Quote | null>(null)
   // "Assinatura" do carrinho no momento da cotação: preço, estoque e quantidade de cada item.
-  const signature = cart.items.map((i) => `${i.editionId}:${i.unitPrice}:${i.available}:${i.quantity}`).join('|')
+  const signature = cartSignature(cart)
   const [quoteSignature, setQuoteSignature] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -119,10 +119,9 @@ export function useOrderReview({ cart, checkout, connection }: { cart: Cart; che
         // A API devolveu a cotação atual: mostramos e exigimos nova confirmação (nova chave).
         clearAttempt()
         const fresh = (err.details as { quote?: Quote } | undefined)?.quote
-        void queryClient.invalidateQueries({ queryKey: qk.cart(user!.id) })
+        const refetchCart = queryClient.invalidateQueries({ queryKey: qk.cart(user!.id) })
         if (fresh) {
           setQuote(fresh)
-          setQuoteSignature(null)
           setAttempt({
             ...attempt,
             key: newIdempotencyKey(),
@@ -136,6 +135,13 @@ export function useOrderReview({ cart, checkout, connection }: { cart: Cart; che
         const msg = 'Os valores mudaram desde a revisão. Confira o novo total e confirme novamente.'
         setNotice(msg)
         announce(msg, 'assertive')
+        if (fresh) {
+          // A cotação nova vale para o carrinho como o servidor o vê agora. A assinatura é a do carrinho já
+          // recarregado: um evento de preço que chegar depois disso volta a travar a confirmação.
+          await refetchCart
+          const latest = queryClient.getQueryData<Cart>(qk.cart(user!.id))
+          setQuoteSignature(latest ? cartSignature(latest) : null)
+        }
       } else if (err?.isTransient) {
         // Continua com a mesma chave salva: "Tentar novamente" não cria outro pedido.
         const msg = 'Não recebemos a confirmação do servidor. Seu pedido pode já ter sido criado: tente novamente, sem risco de compra duplicada.'
@@ -163,3 +169,7 @@ export function useOrderReview({ cart, checkout, connection }: { cart: Cart; che
 }
 
 export type OrderReviewApi = ReturnType<typeof useOrderReview>
+
+function cartSignature(cart: Cart) {
+  return cart.items.map((i) => `${i.editionId}:${i.unitPrice}:${i.available}:${i.quantity}`).join('|')
+}
