@@ -217,6 +217,12 @@ describe('conexão', () => {
     expect(statuses).toEqual(['connected', 'reconnecting', 'offline'])
   })
 
+  it('cada tentativa tem prazo curto (5 s, não os 20 s padrão) e o backoff vai até 4 s', async () => {
+    const { io } = await import('socket.io-client')
+    const opts = vi.mocked(io).mock.lastCall?.[1]
+    expect(opts).toMatchObject({ transports: ['websocket'], timeout: 5_000, reconnectionDelay: 500, reconnectionDelayMax: 4_000 })
+  })
+
   it('desconexão pedida pelo próprio cliente não conta como queda', () => {
     client.start(null)
     socket().connectNow()

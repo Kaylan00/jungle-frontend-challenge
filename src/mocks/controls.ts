@@ -6,17 +6,37 @@
  */
 import * as db from './db'
 import { connectionCount, dropAllConnections } from './realtime'
-import { getScenario, PRESETS, resetScenario, setScenario, type Scenario } from './scenario'
+import { applyPreset, getScenario, PRESETS, resetScenario, setScenario, type Scenario } from './scenario'
 
 function fresh() {
   db.refreshFromStorage()
   return db.getState()
 }
 
+let workerRestarts = () => 0
+/** O vigia do service worker (browser.ts) informa quantas vezes religou o worker. */
+export function setWorkerRestartCounter(fn: () => number) {
+  workerRestarts = fn
+}
+
+/** Socket fora do ar no cenário novo: as conexões abertas caem (como num servidor que acabou de sair do ar). */
+function syncRealtime(wasOffline: boolean) {
+  if (getScenario().realtimeOffline && !wasOffline) dropAllConnections()
+}
+
 export const mockControls = {
   getScenario,
-  setScenario: (patch: Partial<Scenario>) => setScenario(patch),
-  applyPreset: (name: keyof typeof PRESETS) => setScenario({ ...PRESETS[name] }),
+  setScenario(patch: Partial<Scenario>) {
+    const wasOffline = getScenario().realtimeOffline
+    setScenario(patch)
+    syncRealtime(wasOffline)
+  },
+  /** Troca o cenário inteiro pelo do preset: parte do cenário base, nada do anterior continua valendo. */
+  applyPreset(name: keyof typeof PRESETS) {
+    const wasOffline = getScenario().realtimeOffline
+    applyPreset(name)
+    syncRealtime(wasOffline)
+  },
   /** Restaura dados e cenário para o estado conhecido (seed). As outras abas recarregam e reconectam. */
   async reset() {
     resetScenario()
@@ -41,6 +61,8 @@ export const mockControls = {
     if (offline) dropAllConnections()
   },
   connectionCount,
+  /** Quantas vezes o service worker do MSW foi religado nesta aba (ver worker-watchdog.ts). */
+  workerRestarts: () => workerRestarts(),
   settleNow: () =>
     db.withDb(() => {
       db.getState().orders.forEach((o) => {

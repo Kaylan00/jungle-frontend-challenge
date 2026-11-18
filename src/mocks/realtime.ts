@@ -62,14 +62,33 @@ onDbEvent((event) => {
   })
 })
 
+/**
+ * Servidor fora do ar = conexão RECUSADA, do jeito que o navegador mostra uma recusa de verdade: o WebSocket
+ * dispara `error` e depois `close` (1006), sem nunca ter disparado `open`. O `error` é o que importa: o
+ * Engine.IO o repassa ao Manager do socket.io-client, que trata como falha da tentativa (connect_error) e
+ * agenda a próxima pelo backoff na hora.
+ *
+ * Fechar a conexão sem `error` (o que este mock fazia antes) parecia equivalente, mas não é: o Manager só
+ * escuta `open` e `error` do Engine enquanto o handshake não terminou; um `close` nessa fase é ignorado e o
+ * cliente fica esperando o `timeout` da conexão (20 s por padrão) para desistir da tentativa. Era isso que
+ * deixava o indicador em "Reconectando" por 7 a 20 s depois de religar o socket. Ver ARCHITECTURE.md.
+ */
+function refuseConnection(client: { close: (code?: number, reason?: string) => void }) {
+  // O tipo público da conexão do MSW não expõe o WebSocket do lado do app, mas a instância tem (`socket`,
+  // da @mswjs/interceptors). Se uma versão futura tirar, sobra o `close` e o prazo de 5 s do cliente
+  // (src/realtime/client.ts) limita a espera; src/mocks/realtime.test.ts acusa a mudança.
+  const socket = (client as { socket?: unknown }).socket
+  if (socket instanceof EventTarget) socket.dispatchEvent(new Event('error'))
+  client.close(1006, 'offline')
+}
+
 const realtime = ws.link(`${SOCKET_URL}/*`)
 
 export const realtimeHandlers = [
   realtime.addEventListener('connection', (connection) => {
     const { client } = connection
     if (getScenario().realtimeOffline) {
-      // Servidor fora do ar: fecha na hora, o socket.io-client tenta de novo com backoff.
-      queueMicrotask(() => client.close(1011, 'offline'))
+      refuseConnection(client)
       return
     }
 

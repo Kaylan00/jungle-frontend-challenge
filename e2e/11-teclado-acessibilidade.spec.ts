@@ -61,22 +61,28 @@ test.describe('Teclado e acessibilidade', () => {
     }
   })
 
-  test('sem overflow horizontal em 390, 768 e 1440 px nem com zoom de 200%', async ({ app, page }) => {
-    test.skip(app.isMobile, 'O próprio teste percorre as larguras')
-    await app.login('ana')
-    await app.addToCart('nft-01', { edition: 'nft-01-ed-3' })
-    const routes = ['/', '/nft/nft-01', '/carrinho', '/pagamento', '/perfil', '/perfil/carteiras', '/perfil/favoritos', '/login']
-    // 640 px ≈ 1280 px com zoom de 200% (WCAG 1.4.10, reflow)
-    for (const width of [390, 640, 768, 1440]) {
+  // Um teste por largura (rodam em paralelo, cada um com folga própria) em vez de um só com 32 navegações,
+  // que passava de 45 s com 4 workers. Mesma cobertura: 8 rotas x 4 larguras, cada rota num passo nomeado.
+  // 640 px ≈ 1280 px com zoom de 200% (WCAG 1.4.10, reflow).
+  const OVERFLOW_ROUTES = ['/', '/nft/nft-01', '/carrinho', '/pagamento', '/perfil', '/perfil/carteiras', '/perfil/favoritos', '/login']
+  for (const width of [390, 640, 768, 1440]) {
+    test(`sem overflow horizontal em ${width} px${width === 640 ? ' (1280 px com zoom de 200%)' : ''}`, async ({ app, page }) => {
+      test.skip(app.isMobile, 'Cada teste já fixa a largura (390 px incluso)')
+      test.setTimeout(60_000)
+      await app.login('ana')
+      // Carrinho com item (para /carrinho e /pagamento terem conteúdo) pelo fluxo de compra do desktop.
+      await app.addToCart('nft-01', { edition: 'nft-01-ed-3' })
       await page.setViewportSize({ width, height: 900 })
-      for (const path of routes) {
-        await app.goto(path)
-        await page.waitForLoadState('networkidle')
-        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-        expect(overflow, `${path} em ${width}px`).toBeLessThanOrEqual(0)
+      for (const path of OVERFLOW_ROUTES) {
+        await test.step(path, async () => {
+          await app.goto(path)
+          await page.waitForLoadState('networkidle')
+          const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+          expect(overflow, `${path} em ${width}px`).toBeLessThanOrEqual(0)
+        })
       }
-    }
-  })
+    })
+  }
 
   test('nome de usuário longo não empurra o cabeçalho em 768 px', async ({ app, page }) => {
     test.skip(app.isMobile, 'Botão da conta só existe a partir de 768 px')

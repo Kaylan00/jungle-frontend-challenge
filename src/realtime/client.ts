@@ -48,6 +48,10 @@ export class RealtimeClient {
       autoConnect: false,
       reconnectionDelay: 500,
       reconnectionDelayMax: 4_000,
+      // Prazo de cada tentativa (handshake do Engine.IO + CONNECT do Socket.IO). O padrão é 20 s: um servidor
+      // que aceita o WebSocket mas fecha (ou some) antes do handshake prenderia o cliente esse tempo todo em
+      // "reconectando", porque o Manager não trata `close` antes do `open` como falha. Ver ARCHITECTURE.md.
+      timeout: 5_000,
       // Função: o token é lido a cada (re)conexão, nunca fica congelado.
       auth: (cb) => cb({ token: sessionStore.getToken() }),
     })

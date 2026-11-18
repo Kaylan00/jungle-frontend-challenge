@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosHeaders, type AxiosAdapter, type AxiosResponse,
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-// Módulos com estado (networkRecovery e sessão): uma cópia nova por teste.
+// Módulos com estado (interceptors e sessão): uma cópia nova por teste.
 let mod: typeof import('./http')
 let session: typeof import('./session-store')['sessionStore']
 
@@ -134,11 +134,8 @@ describe('request()', () => {
   })
 
   it('204 sem corpo e sem content-type não é falha', async () => {
-    const recovery = vi.fn(async () => {})
-    mod.setNetworkRecovery(recovery)
     const calls = fakeAdapter({ status: 204, data: '' })
     await expect(mod.request(z.any(), { method: 'DELETE', url: '/wallets/1/connect' })).resolves.toBe('')
-    expect(recovery).not.toHaveBeenCalled()
     expect(calls).toHaveLength(1)
   })
 
@@ -181,47 +178,33 @@ describe('request()', () => {
     expect(session.isExpired()).toBe(false)
   })
 
-  describe('resposta HTML (camada de rede que atende a API caiu)', () => {
-    it('sem quem recupere: falha de rede, sem nova tentativa', async () => {
-      const calls = fakeAdapter(HTML)
-      await expect(mod.request(Item, { url: '/x' })).rejects.toMatchObject({ code: 'NETWORK_ERROR', status: null })
-      expect(calls).toHaveLength(1)
-    })
-
-    it('GET: chama a recuperação e repete uma vez', async () => {
-      const recovery = vi.fn(async () => {})
-      mod.setNetworkRecovery(recovery)
+  describe('2xx que não é JSON (o pedido não chegou à API: fallback de SPA, proxy, CDN)', () => {
+    it.each(['get', 'post', 'PUT', 'patch', 'delete'])('%s: HTML vira NETWORK_ERROR transitório, sem repetir aqui', async (method) => {
       const calls = fakeAdapter(HTML, { data: { id: 'ok' }, headers: JSON_HEADERS })
-      await expect(mod.request(Item, { url: '/x' })).resolves.toEqual({ id: 'ok' })
-      expect(recovery).toHaveBeenCalledOnce()
-      expect(calls).toHaveLength(2)
-    })
-
-    it('GET: se continuar vindo HTML, desiste depois de uma repetição', async () => {
-      const recovery = vi.fn(async () => {})
-      mod.setNetworkRecovery(recovery)
-      const calls = fakeAdapter(HTML)
-      await expect(mod.request(Item, { url: '/x' })).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
-      expect(recovery).toHaveBeenCalledOnce()
-      expect(calls).toHaveLength(2)
-    })
-
-    it.each(['post', 'PUT', 'patch', 'delete'])('%s: recupera a rede mas nunca repete a escrita', async (method) => {
-      const recovery = vi.fn(async () => {})
-      mod.setNetworkRecovery(recovery)
-      const calls = fakeAdapter(HTML, { data: { id: 'ok' }, headers: JSON_HEADERS })
-      await expect(mod.request(Item, { method, url: '/orders' })).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
-      expect(recovery).toHaveBeenCalledOnce()
-      expect(calls).toHaveLength(1)
-    })
-
-    it('recuperação que falha continua sendo ApiError de rede (e não repete)', async () => {
-      mod.setNetworkRecovery(() => Promise.reject(new Error('worker não subiu')))
-      const calls = fakeAdapter(HTML, { data: { id: 'ok' }, headers: JSON_HEADERS })
-      const err = await mod.request(Item, { url: '/x' }).catch((e: unknown) => e)
+      const err = await mod.request(Item, { method, url: '/x' }).catch((e: unknown) => e)
       expect(err).toBeInstanceOf(mod.ApiError)
-      expect(err).toMatchObject({ code: 'NETWORK_ERROR' })
+      expect(err).toMatchObject({ code: 'NETWORK_ERROR', status: null, message: 'Sem conexão com o servidor.' })
+      expect((err as InstanceType<typeof mod.ApiError>).isTransient).toBe(true)
+      // Uma chamada só: quem decide repetir é a política de retry do Query (e só para leituras).
       expect(calls).toHaveLength(1)
+    })
+
+    it('texto puro ou corpo sem content-type também é falha de conexão', async () => {
+      fakeAdapter({ status: 200, data: 'Bad gateway', headers: { 'content-type': 'text/plain' } })
+      await expect(mod.request(Item, { url: '/x' })).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
+      fakeAdapter({ status: 200, data: '<html></html>' })
+      await expect(mod.request(Item, { url: '/x' })).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
+    })
+
+    it('JSON com charset ou tipo +json passa para a validação do contrato', async () => {
+      fakeAdapter({ data: { id: 'a' }, headers: { 'content-type': 'application/json; charset=utf-8' } })
+      await expect(mod.request(Item, { url: '/x' })).resolves.toEqual({ id: 'a' })
+      fakeAdapter({ data: { id: 'b' }, headers: { 'content-type': 'application/problem+json' } })
+      await expect(mod.request(Item, { url: '/x' })).resolves.toEqual({ id: 'b' })
+    })
+
+    it('o cliente não expõe gancho de recuperação de mock (nada específico do MSW aqui)', () => {
+      expect(Object.keys(mod).sort()).toEqual(['API_URL', 'ApiError', 'http', 'request', 'toApiError'])
     })
   })
 })

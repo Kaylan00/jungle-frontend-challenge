@@ -6,7 +6,7 @@
 import { FlaskConical, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { mockControls } from './controls'
-import { DEFAULT_SCENARIO, PRESETS, subscribeScenario, type Scenario } from './scenario'
+import { PRESETS, subscribeScenario, type Scenario } from './scenario'
 
 const PRESET_LABEL: Record<string, string> = {
   padrao: 'Padrão',
@@ -75,7 +75,8 @@ export default function ScenarioPanel() {
           id="mock-preset"
           className="mb-3 h-8 w-full rounded border border-border bg-secondary px-2"
           onChange={(e) => {
-            mockControls.setScenario({ ...DEFAULT_SCENARIO, ...PRESETS[e.target.value], seed: scenario.seed })
+            // Cada preset parte do cenário base inteiro (o "Padrão" zera falhas, pagamento, socket etc.).
+            mockControls.applyPreset(e.target.value)
             setLog(`Cenário: ${PRESET_LABEL[e.target.value]}`)
           }}
           defaultValue=""

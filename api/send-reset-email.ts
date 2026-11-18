@@ -11,12 +11,17 @@
  * - template fixo em pt-BR: o corpo da requisição não leva texto livre, só o destinatário e o link;
  * - o link tem que ser do próprio deploy (PUBLIC_APP_URL ou o host da requisição), no caminho
  *   /redefinir-senha?token=rst_<48 hex>, e é remontado aqui (o texto recebido nunca vai para o e-mail);
- * - Origin diferente do deploy é recusado (outro site não consegue disparar pelo navegador da vítima);
- * - só POST (a Vercel responde 405 aos métodos não exportados), só application/json e corpo de até 4 KB,
- *   lido com limite (413 sem carregar o resto);
+ * - `Origin` é OBRIGATÓRIO e tem que ser o do deploy (sem ele, 403: `curl` puro não dispara); quando o
+ *   navegador manda `Sec-Fetch-Site`, ele tem que ser `same-origin` (403 para cross-site e same-site).
+ *   Um cliente fora do navegador pode forjar os dois cabeçalhos: por isso os limites abaixo;
+ * - só POST (a Vercel responde 405 aos métodos não exportados), só application/json e corpo de até 1 KB
+ *   (o corpo legítimo tem ~150 bytes), lido com limite (413 sem carregar o resto);
  * - domínios de teste (kurio.test, example.*, .test, .invalid...) recebem 202 sem envio;
- * - limite por IP e por destinatário (3 a cada 10 min). É em memória: vale por instância da função e
- *   zera quando ela recicla, então é best-effort. Num backend real seria um store compartilhado.
+ * - limites: cada IP só pede para UM destinatário por janela de 10 min (outro endereço = 429) e no
+ *   máximo 3 pedidos na janela; cada destinatário recebe no máximo 1 e-mail a cada 5 min (cooldown, com
+ *   resposta neutra 202) e 3 por hora; e um teto de 30 envios por hora na instância (contra rodízio de IP).
+ *   Tudo em memória: vale POR INSTÂNCIA da função e zera quando ela recicla (best-effort). Num backend real
+ *   seria um store compartilhado (Redis/KV) e o próprio servidor geraria o token, sem endpoint público.
  *
  * Sem BREVO_API_KEY e BREVO_SENDER_EMAIL a função responde 503 EMAIL_DISABLED e o app segue só com o
  * e-mail simulado (caixa de saída do MSW).
@@ -29,9 +34,17 @@ const RESET_PATH = '/redefinir-senha'
 const TOKEN_PATTERN = /^rst_[a-f0-9]{48}$/
 /** Mesma validade de src/mocks/db.ts (PASSWORD_RESET_TTL_MIN). */
 const LINK_TTL_MIN = 30
-const MAX_BODY_BYTES = 4096
-const RATE_WINDOW_MS = 10 * 60_000
-const RATE_MAX = 3
+const MAX_BODY_BYTES = 1024
+/** Por IP: um destinatário e até 3 pedidos a cada 10 min. */
+const IP_WINDOW_MS = 10 * 60_000
+const IP_MAX_REQUESTS = 3
+/** Por destinatário: 1 e-mail a cada 5 min e até 3 por hora. */
+const RECIPIENT_COOLDOWN_MS = 5 * 60_000
+const RECIPIENT_WINDOW_MS = 60 * 60_000
+const RECIPIENT_MAX = 3
+/** Teto da instância: envios por hora, somando todos os IPs e destinatários. */
+const INSTANCE_WINDOW_MS = 60 * 60_000
+const INSTANCE_MAX = 30
 const BREVO_TIMEOUT_MS = 8000
 
 const SendResetEmailBody = z.strictObject({
@@ -133,27 +146,57 @@ async function readBodyCapped(request: Request, maxBytes: number): Promise<strin
   return new TextDecoder().decode(bytes)
 }
 
-// ---------- Limite simples por IP e por destinatário (em memória, best-effort) ----------
+// ---------- Limites (em memória, por instância, best-effort) ----------
 
-const hits = new Map<string, { count: number; resetAt: number }>()
+/** Por IP: o único destinatário da janela e quantos pedidos já fez. */
+const ipWindows = new Map<string, { recipient: string; count: number; resetAt: number }>()
+/** Por destinatário: horário dos envios na última hora. */
+const recipientSends = new Map<string, number[]>()
+/** Envios da instância na última hora. */
+let instanceSends: number[] = []
+const MAX_TRACKED = 5000
 
-/** Conta uma tentativa e diz se ainda está dentro do limite. */
-function withinLimit(key: string, now: number) {
-  if (hits.size > 5000) {
-    for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k)
+function prune(now: number) {
+  if (ipWindows.size > MAX_TRACKED) for (const [k, v] of ipWindows) if (v.resetAt <= now) ipWindows.delete(k)
+  if (recipientSends.size > MAX_TRACKED) {
+    for (const [k, v] of recipientSends) if (v.every((t) => t <= now - RECIPIENT_WINDOW_MS)) recipientSends.delete(k)
   }
-  const entry = hits.get(key)
-  if (!entry || entry.resetAt <= now) {
-    hits.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS })
-    return true
-  }
-  entry.count += 1
-  return entry.count <= RATE_MAX
+  // Teto duro de memória: se ainda estiver cheio (ataque com muitos IPs), esquece os mais antigos.
+  while (ipWindows.size > MAX_TRACKED) ipWindows.delete(ipWindows.keys().next().value!)
+  while (recipientSends.size > MAX_TRACKED) recipientSends.delete(recipientSends.keys().next().value!)
 }
 
-function retryAfterSec(key: string, now: number) {
-  const entry = hits.get(key)
-  return String(Math.max(1, Math.ceil(((entry?.resetAt ?? now) - now) / 1000)))
+type IpCheck = { ok: true } | { ok: false; retryAfterSec: number }
+
+/** Conta o pedido do IP: um destinatário por janela e até IP_MAX_REQUESTS pedidos. */
+function checkIp(ip: string, recipient: string, now: number): IpCheck {
+  const entry = ipWindows.get(ip)
+  if (!entry || entry.resetAt <= now) {
+    ipWindows.set(ip, { recipient, count: 1, resetAt: now + IP_WINDOW_MS })
+    return { ok: true }
+  }
+  const retryAfterSec = Math.max(1, Math.ceil((entry.resetAt - now) / 1000))
+  if (entry.recipient !== recipient) return { ok: false, retryAfterSec }
+  entry.count += 1
+  return entry.count <= IP_MAX_REQUESTS ? { ok: true } : { ok: false, retryAfterSec }
+}
+
+/** O destinatário pode receber agora? (cooldown entre envios e máximo por hora) */
+function recipientMaySend(recipient: string, now: number) {
+  const recent = (recipientSends.get(recipient) ?? []).filter((t) => t > now - RECIPIENT_WINDOW_MS)
+  recipientSends.set(recipient, recent)
+  const last = recent.at(-1)
+  return recent.length < RECIPIENT_MAX && (last === undefined || now - last >= RECIPIENT_COOLDOWN_MS)
+}
+
+function instanceMaySend(now: number) {
+  instanceSends = instanceSends.filter((t) => t > now - INSTANCE_WINDOW_MS)
+  return instanceSends.length < INSTANCE_MAX
+}
+
+function recordSend(recipient: string, now: number) {
+  recipientSends.set(recipient, [...(recipientSends.get(recipient) ?? []), now])
+  instanceSends.push(now)
 }
 
 function clientIp(request: Request) {
@@ -220,10 +263,12 @@ export async function POST(request: Request): Promise<Response> {
 
   const allowedOrigin = config.publicOrigin ?? requestOrigin(request)
   if (!allowedOrigin) return fail(400, 'VALIDATION_ERROR')
-  // Navegador de outro site: o Origin denuncia (um script fora do navegador pode omitir, mas aí o
-  // link continua preso ao domínio do deploy e ao template fixo).
+  // Quem chama é sempre a própria página do deploy, por fetch: o navegador manda Origin em todo POST e,
+  // nos navegadores atuais, Sec-Fetch-Site: same-origin. Sem Origin (curl, script) ou com outro site: 403.
   const origin = request.headers.get('origin')
-  if (origin && origin !== allowedOrigin) return fail(403, 'FORBIDDEN_ORIGIN')
+  if (!origin || origin !== allowedOrigin) return fail(403, 'FORBIDDEN_ORIGIN')
+  const fetchSite = request.headers.get('sec-fetch-site')
+  if (fetchSite !== null && fetchSite !== 'same-origin') return fail(403, 'FORBIDDEN_ORIGIN')
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return fail(415, 'UNSUPPORTED_MEDIA_TYPE')
 
   const raw = await readBodyCapped(request, MAX_BODY_BYTES)
@@ -243,10 +288,14 @@ export async function POST(request: Request): Promise<Response> {
   if (isTestEmail(to)) return accepted()
 
   const now = Date.now()
-  const ipKey = `ip:${clientIp(request)}`
-  if (!withinLimit(ipKey, now)) return fail(429, 'RATE_LIMITED', { 'retry-after': retryAfterSec(ipKey, now) })
-  // Destinatário no limite: resposta neutra, sem envio (não confirma nada sobre o endereço).
-  if (!withinLimit(`to:${to}`, now)) return accepted()
+  prune(now)
+  const ip = checkIp(clientIp(request), to, now)
+  if (!ip.ok) return fail(429, 'RATE_LIMITED', { 'retry-after': String(ip.retryAfterSec) })
+  // Destinatário em cooldown ou no limite: resposta neutra, sem envio (não confirma nada sobre o endereço).
+  if (!recipientMaySend(to, now)) return accepted()
+  if (!instanceMaySend(now)) return fail(429, 'RATE_LIMITED', { 'retry-after': '600' })
+  // Conta antes de chamar o Brevo: pedidos simultâneos para o mesmo endereço não passam juntos pelo cooldown.
+  recordSend(to, now)
 
   try {
     const res = await fetch(BREVO_ENDPOINT, {

@@ -1336,7 +1336,11 @@ export function settleDueOrders() {
           item.quantity -= line.quantity
         }
         cart.items = cart.items.filter((i) => i.quantity > 0)
-        cart.couponCode = null
+        // O cupom continua valendo para o que sobrou no carrinho; só sai se o carrinho ficou vazio ou se o
+        // cupom deixou de valer (expirou ou foi desativado). Os totais são recalculados na leitura
+        // (serializeCart) e a próxima cotação já sai com o desconto sobre os itens restantes; uma cotação
+        // antiga deste carrinho não passa mais no POST /orders (fingerprint diferente: QUOTE_OUTDATED).
+        if (cart.couponCode && (cart.items.length === 0 || !checkCoupon(cart.couponCode).ok)) cart.couponCode = null
         touchCart(cart)
       }
     } else {

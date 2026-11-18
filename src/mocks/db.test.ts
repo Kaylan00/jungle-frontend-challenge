@@ -326,7 +326,45 @@ describe('pedido: idempotência e estoque reservado', () => {
     expect(order.explorerUrl).toBe(`https://sepolia.etherscan.io/tx/${order.txHash}`)
     expect(edition('nft-01', 'nft-01-ed-3').available).toBe(stock)
     expect(cart.items.map((i) => [i.editionId, i.quantity])).toEqual([['nft-02-ed-2', 1]])
+    // Sobrou item: o cupom continua aplicado e o resumo é recalculado sobre o que ficou.
+    expect(cart.couponCode).toBe('KURIO10')
+    expect(db.serializeCart(cart)).toMatchObject({ coupon: { code: 'KURIO10' }, summary: { subtotal: '0.95', discount: '0.095' } })
+  })
+
+  it('cupom: sai quando o pedido esvazia o carrinho', async () => {
+    await placeOrder()
+    const cart = anaCart()
+    db.setCartCoupon(cart, 'KURIO10')
+    advance(1_000)
+    db.settleDueOrders()
+    expect(cart.items).toEqual([])
     expect(cart.couponCode).toBeNull()
+  })
+
+  it('cupom: sai quando deixou de valer, mesmo com itens no carrinho', async () => {
+    await placeOrder()
+    const cart = anaCart()
+    db.addCartItem(cart, 'nft-02', 'nft-02-ed-2', 1)
+    db.setCartCoupon(cart, 'KURIO10')
+    db.deactivateCoupon('KURIO10')
+    db.setCartCoupon(cart, 'KURIO10') // carrinho ainda aponta para o cupom (ex.: gravado antes da desativação)
+    advance(1_000)
+    db.settleDueOrders()
+    expect(cart.items).toHaveLength(1)
+    expect(cart.couponCode).toBeNull()
+  })
+
+  it('cupom mantido: a próxima cotação aplica o desconto só sobre os itens restantes', async () => {
+    await placeOrder()
+    const cart = anaCart()
+    db.addCartItem(cart, 'nft-02', 'nft-02-ed-2', 1)
+    db.setCartCoupon(cart, 'KURIO10')
+    advance(1_000)
+    db.settleDueOrders()
+    const r = await db.buildQuote(ANA, cart, 'ethereum', cart.couponCode)
+    if (!r.ok) throw new Error(r.message)
+    expect(r.quote).toMatchObject({ coupon: { code: 'KURIO10' }, subtotal: '0.95', discount: '0.095' })
+    expect(r.quote.lines.map((l) => l.editionId)).toEqual(['nft-02-ed-2'])
   })
 
   it('pedido já liquidado não é processado de novo', async () => {

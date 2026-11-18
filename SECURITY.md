@@ -48,11 +48,16 @@ backend real, as mesmas regras valeriam no servidor.
   o e-mail existe), troca de senha derruba todas as sessões.
 
 **Função `api/send-reset-email`**
-- Só `POST`, só `application/json`, corpo de até 4 KB lido com limite (413), schema estrito (sem campos extras).
+- Só `POST`, só `application/json`, corpo de até 1 KB lido com limite (413), schema estrito (sem campos extras).
+- **`Origin` obrigatório** e igual ao do deploy: sem `Origin` (um `curl` puro) ou com outro site, `403`. Quando o
+  navegador manda `Sec-Fetch-Site`, ele tem que ser `same-origin` (`cross-site` e `same-site` → `403`).
 - O link precisa ser do próprio deploy (`PUBLIC_APP_URL`) no formato exato do token e é remontado pela função:
   nada do texto recebido vai para o e-mail (sem open redirect, sem injeção no HTML, que ainda é escapado).
-- `Origin` de outro site recusado; domínios de teste nunca recebem e-mail; limite por IP (429) e por
-  destinatário (202 neutro); timeout de 8 s na chamada ao Brevo; logs sem chave e sem destinatário.
+- Domínios de teste nunca recebem e-mail; timeout de 8 s na chamada ao Brevo; logs sem chave e sem destinatário.
+- Limites: cada IP pede para **um destinatário** por janela de 10 min (outro endereço → `429`) e no máximo 3
+  pedidos; cada destinatário recebe no máximo 1 e-mail a cada 5 min e 3 por hora (`202` neutro, sem envio, para
+  não revelar nada sobre o endereço); teto de 30 envios por hora na instância. Pedidos simultâneos para o mesmo
+  endereço contam antes do envio (só um sai).
 - A chave do Brevo só existe em variável de ambiente da Vercel. O `.env` versionado tem apenas valores públicos.
 
 ## Limites conhecidos
@@ -64,10 +69,14 @@ backend real, as mesmas regras valeriam no servidor.
   navegador do próprio usuário). Num backend real: Argon2id ou scrypt.
 - **Sem limite de tentativas no login simulado**: um limite no navegador seria contornável por quem controla o
   navegador. No backend real: limite por IP e por conta no login, cadastro e recuperação de senha.
-- **Função de e-mail**: o limite é em memória por instância (best-effort) e qualquer um pode pedir o e-mail
-  fixo da Kurio para um endereço (sem saber se a conta existe). Com `PUBLIC_APP_URL` configurada o link fica
-  preso ao domínio oficial; sem ela, ao host da requisição. Num backend real o próprio servidor geraria o
-  token e enviaria, sem endpoint público de envio.
+- **Função de e-mail**: os limites são **em memória, por instância** da função (best-effort): zeram quando a
+  instância recicla e instâncias paralelas não se somam. `Origin` e `Sec-Fetch-Site` barram navegadores de outros
+  sites e o `curl` puro, mas um script fora do navegador pode forjar os dois cabeçalhos; por isso os limites e o
+  conteúdo fixo (o pior caso continua sendo alguém receber o e-mail fixo da Kurio com um link inválido, poucas
+  vezes). Um token HMAC de prova não foi adotado: sem sessão no servidor para amarrá-lo, quem o emitiria seria
+  outro endpoint público, e o script o pediria antes do envio do mesmo jeito. Com `PUBLIC_APP_URL` configurada
+  o link e o `Origin` ficam presos ao domínio oficial; sem ela, ao host da requisição. Num backend real o próprio
+  servidor geraria o token e enviaria, com limites num store compartilhado, sem endpoint público de envio.
 - **CSP com `style-src 'unsafe-inline'`**: necessário para os estilos que bibliotecas injetam (sonner, Radix).
   Scripts continuam restritos. Em deploys de *preview* da Vercel a barra de comentários da Vercel é bloqueada
   pela CSP (o domínio de produção não a usa).

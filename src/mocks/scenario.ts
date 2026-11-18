@@ -53,7 +53,16 @@ export const DEFAULT_SCENARIO: Scenario = {
   seed: 42,
 }
 
-/** Presets nomeados, usados no painel, no README e na URL (?mock=nome). */
+/** Cópia nova do cenário base (os arrays nunca são compartilhados com DEFAULT_SCENARIO nem com os presets). */
+export function baseScenario(): Scenario {
+  return structuredClone(DEFAULT_SCENARIO)
+}
+
+/**
+ * Presets nomeados, usados no painel, no README e na URL (?mock=nome). Cada preset descreve só o que muda em
+ * relação ao cenário BASE: aplicar um preset parte sempre do base (ver `presetScenario`), nunca do cenário
+ * atual. Assim `padrao` zera tudo e "catálogo 500" não herda o pagamento recusado de antes.
+ */
 export const PRESETS: Record<string, Partial<Scenario>> = {
   padrao: {},
   rapido: { latency: 'off' },
@@ -76,11 +85,11 @@ let current: Scenario = load()
 function load(): Scenario {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { ...DEFAULT_SCENARIO, ...JSON.parse(raw) }
+    if (raw) return { ...baseScenario(), ...JSON.parse(raw) }
   } catch {
     /* sem storage: usa o padrão */
   }
-  return { ...DEFAULT_SCENARIO }
+  return baseScenario()
 }
 
 function save() {
@@ -109,30 +118,50 @@ export function setScenario(patch: Partial<Scenario>) {
 }
 
 export function resetScenario() {
-  current = { ...DEFAULT_SCENARIO }
+  replaceScenario(baseScenario())
+}
+
+function replaceScenario(next: Scenario) {
+  current = next
   rng = mulberry32(current.seed)
   save()
 }
 
-/** Lê `?mock=` da URL: aceita presets e pares chave:valor separados por vírgula. */
+export function isPreset(name: string): boolean {
+  return Object.hasOwn(PRESETS, name)
+}
+
+/** Cenário completo de um preset: o base inteiro com só o que o preset define por cima. */
+export function presetScenario(name: string): Scenario {
+  if (!isPreset(name)) throw new Error(`Preset de cenário desconhecido: ${name}`)
+  return { ...baseScenario(), ...structuredClone(PRESETS[name]) }
+}
+
+/** Troca o cenário inteiro pelo do preset (nada do cenário anterior sobrevive). */
+export function applyPreset(name: string) {
+  replaceScenario(presetScenario(name))
+}
+
+/**
+ * Lê `?mock=` da URL: aceita presets e pares chave:valor separados por vírgula, sempre a partir do cenário
+ * base (o que estava salvo antes não vale). Tokens desconhecidos são ignorados.
+ */
 export function applyScenarioFromUrl(search: string) {
   const value = new URLSearchParams(search).get('mock')
   if (!value) return
-  let patch: Partial<Scenario> = {}
+  let next = baseScenario()
   for (const token of value.split(',')) {
-    if (PRESETS[token]) {
-      patch = { ...patch, ...PRESETS[token] }
+    if (isPreset(token)) {
+      next = { ...next, ...structuredClone(PRESETS[token]) }
       continue
     }
     const [k, v] = token.split(':')
-    if (k === 'latency') patch.latency = v as Latency
-    if (k === 'payment') patch.payment = v as Scenario['payment']
-    if (k === 'seed') patch.seed = Number(v)
-    if (k === 'outOfOrder') patch.outOfOrder = v !== 'false'
+    if (k === 'latency' && (['off', 'normal', 'slow', 'variable'] as const).includes(v as Latency)) next.latency = v as Latency
+    if (k === 'payment' && (v === 'approve' || v === 'reject')) next.payment = v
+    if (k === 'seed' && Number.isFinite(Number(v))) next.seed = Number(v)
+    if (k === 'outOfOrder') next.outOfOrder = v !== 'false'
   }
-  current = { ...DEFAULT_SCENARIO, ...patch }
-  rng = mulberry32(current.seed)
-  save()
+  replaceScenario(next)
 }
 
 // ---------- Latência determinística ----------

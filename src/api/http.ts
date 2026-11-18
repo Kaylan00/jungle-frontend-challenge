@@ -5,7 +5,8 @@
  *  - anexar o token da sessão (ou o id do carrinho de visitante);
  *  - transformar qualquer falha em `ApiError` tipado (código + campos);
  *  - avisar a camada de sessão quando a API responde SESSION_EXPIRED.
- * Não contém dados fictícios nem caminhos alternativos: quem responde é a API (real ou MSW).
+ * Não contém dados fictícios nem caminhos alternativos: quem responde é a API (real ou MSW), e o cliente
+ * não sabe qual. A manutenção do service worker do MSW fica inteira na camada de mocks (src/mocks/browser.ts).
  */
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 import type { z } from 'zod'
@@ -82,34 +83,24 @@ http.interceptors.response.use(undefined, (error) => {
   return Promise.reject(apiError)
 })
 
-let networkRecovery: (() => Promise<void>) | null = null
-/** Registra quem consegue restabelecer a camada de rede (no modo demonstração, o service worker do MSW). */
-export function setNetworkRecovery(fn: () => Promise<void>) {
-  networkRecovery = fn
+/** Corpo vazio (204, ou 2xx sem conteúdo): não há o que validar como JSON. */
+function hasBody(data: unknown) {
+  return data !== undefined && data !== null && data !== ''
 }
 
 /**
  * Faz a requisição e valida a resposta com o schema do contrato.
  * Se o servidor mandar algo fora do contrato, falha aqui (borda), não no componente.
  */
-export async function request<S extends z.ZodTypeAny>(schema: S, config: AxiosRequestConfig, attempt = 0): Promise<z.infer<S>> {
+export async function request<S extends z.ZodTypeAny>(schema: S, config: AxiosRequestConfig): Promise<z.infer<S>> {
   const res = await http.request(config)
-  // A API responde JSON (ou 204 sem corpo). Se chegou uma página HTML (o index.html do host, quando a
-  // camada de rede que atende a API não interceptou o pedido), não é "resposta inválida": é falha de
-  // conexão. Pede à camada de rede para se restabelecer (se houver quem saiba fazer isso) e tenta uma vez.
-  // Só GET é repetido automaticamente: repetir uma escrita poderia aplicá-la duas vezes.
-  if (String(res.headers['content-type'] ?? '').includes('text/html')) {
-    const method = (config.method ?? 'get').toLowerCase()
-    if (attempt === 0 && networkRecovery) {
-      // Se a recuperação falhar, o erro continua sendo de rede (ApiError), nunca o erro cru dela:
-      // é o ApiError que a política de retry e as telas de erro sabem tratar.
-      const recovered = await networkRecovery().then(
-        () => true,
-        () => false,
-      )
-      if (recovered && method === 'get') return request(schema, config, 1)
-    }
-    throw new ApiError({ code: 'NETWORK_ERROR', message: 'Sem conexão com o servidor.', status: null })
+  // A API só responde JSON (ou sem corpo). Um 2xx com outro tipo de conteúdo (tipicamente o index.html que um
+  // proxy, CDN ou fallback de SPA devolve quando o pedido não chegou à API) não é "resposta inválida da API":
+  // é falha de conexão. Vira NETWORK_ERROR, que é transitório: a política de retry do Query tenta de novo
+  // (só leituras; mutações nunca são repetidas sozinhas) e as telas mostram "sem conexão".
+  const contentType = String(res.headers['content-type'] ?? '')
+  if (hasBody(res.data) && !/\bjson\b/i.test(contentType)) {
+    throw new ApiError({ code: 'NETWORK_ERROR', message: 'Sem conexão com o servidor.', status: null, details: { contentType: contentType || null } })
   }
   const parsed = schema.safeParse(res.data)
   if (!parsed.success) {
