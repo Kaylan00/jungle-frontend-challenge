@@ -91,13 +91,15 @@ export function setNetworkRecovery(fn: () => Promise<void>) {
  */
 export async function request<S extends z.ZodTypeAny>(schema: S, config: AxiosRequestConfig, attempt = 0): Promise<z.infer<S>> {
   const res = await http.request(config)
-  // A API sempre responde JSON. Se chegou outra coisa (ex.: o index.html do host, quando a camada de
-  // rede que atende a API não interceptou o pedido), não é "resposta inválida": é falha de conexão.
-  // Pede à camada de rede para se restabelecer (se houver quem saiba fazer isso) e tenta uma vez.
-  if (!String(res.headers['content-type'] ?? '').includes('json')) {
+  // A API responde JSON (ou 204 sem corpo). Se chegou uma página HTML (o index.html do host, quando a
+  // camada de rede que atende a API não interceptou o pedido), não é "resposta inválida": é falha de
+  // conexão. Pede à camada de rede para se restabelecer (se houver quem saiba fazer isso) e tenta uma vez.
+  // Só GET é repetido automaticamente: repetir uma escrita poderia aplicá-la duas vezes.
+  if (String(res.headers['content-type'] ?? '').includes('text/html')) {
+    const method = (config.method ?? 'get').toLowerCase()
     if (attempt === 0 && networkRecovery) {
       await networkRecovery()
-      return request(schema, config, 1)
+      if (method === 'get') return request(schema, config, 1)
     }
     throw new ApiError({ code: 'NETWORK_ERROR', message: 'Sem conexão com o servidor.', status: null })
   }
