@@ -13,6 +13,7 @@
  */
 import { toSocketIo } from '@mswjs/socket.io-binding'
 import { ws } from 'msw'
+import { ADMIN_SOCKET_EVENTS } from '@/api/admin-contracts'
 import { SOCKET_EVENTS } from '@/api/contracts'
 import { initDb, lookupSession, onDbEvent, onRemoteReset, refreshFromStorage } from './db'
 import { getScenario } from './scenario'
@@ -22,6 +23,8 @@ export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'wss://realtime.jun
 interface LiveConnection {
   id: number
   userId: string | null
+  /** Conta admin: recebe também o feed do painel (admin.activity). */
+  isAdmin: boolean
   emit: (event: string, payload: unknown) => void
   close: () => void
 }
@@ -42,9 +45,14 @@ export function connectionCount() {
 onRemoteReset(() => dropAllConnections())
 
 // Encaminha cada evento do "banco" para os sockets certos: os gerados nesta aba e os que chegam de outra aba
-// (mesmo eventId e versão; o cliente deduplica). Pedido continua indo só para as conexões do dono.
+// (mesmo eventId e versão; o cliente deduplica). Pedido continua indo só para as conexões do dono; o feed do
+// painel (admin.activity) só para conexões de contas admin (papel lido da sessão no servidor, ao conectar).
 onDbEvent((event) => {
   connections.forEach((c) => {
+    if (event.type === 'admin.activity') {
+      if (c.isAdmin) c.emit(ADMIN_SOCKET_EVENTS.activity, event)
+      return
+    }
     if (event.type === 'order.updated') {
       // Evento de pedido só vai para o dono (isolamento entre usuários).
       if (c.userId === event.userId) c.emit(SOCKET_EVENTS.orderUpdated, event)
@@ -69,6 +77,7 @@ export const realtimeHandlers = [
     const live: LiveConnection = {
       id: ++connSeq,
       userId: null,
+      isAdmin: false,
       emit: (event, payload) => io.client.emit(event, payload),
       close: () => client.close(1001, 'server closed'),
     }
@@ -84,8 +93,10 @@ export const realtimeHandlers = [
         const auth = JSON.parse(event.data.slice(2) || '{}') as { token?: string }
         const s = lookupSession(auth.token ?? null)
         live.userId = s.status === 'ok' ? s.user.id : null
+        live.isAdmin = s.status === 'ok' && s.user.role === 'admin'
       } catch {
         live.userId = null
+        live.isAdmin = false
       }
     })
 

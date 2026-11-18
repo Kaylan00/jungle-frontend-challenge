@@ -8,21 +8,92 @@
  * - 409 de versão: o NFT atual (details.current) entra no cache, para a tela já mostrar o que está valendo.
  */
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
-import { AdminVersionConflict, type AdminCoupon, type AdminEditionPatch, type AdminNftListParams, type AdminNftListResponse, type CouponCreateInput, type NftDetail } from '@/api/contracts'
+import type { AdminOrderListParams, AdminUserListParams } from '@/api/admin-contracts'
+import {
+  AdminVersionConflict,
+  type AdminCoupon,
+  type AdminEditionPatch,
+  type AdminNftListParams,
+  type AdminNftListResponse,
+  type CouponCreateInput,
+  type LoginInput,
+  type NftDetail,
+} from '@/api/contracts'
 import { api } from '@/api/endpoints'
 import { ApiError } from '@/api/http'
-import { adminCouponsQuery, adminNftsQuery, qk } from '@/api/queries'
+import { adminActivityQuery, adminCouponsQuery, adminNftsQuery, adminOrdersQuery, adminOverviewQuery, adminUsersQuery, qk } from '@/api/queries'
+import { sessionStore } from '@/api/session-store'
 import { useSession } from '@/features/auth/use-session'
 import { notifyError, notifySuccess } from '@/features/profile/hooks'
 
-export function useAdminNfts(params: AdminNftListParams, enabled: boolean) {
+export function useAdminNfts(params: AdminNftListParams, enabled = true) {
   const { owner } = useSession()
   return useQuery({ ...adminNftsQuery(owner, params), enabled, placeholderData: keepPreviousData })
 }
 
-export function useAdminCoupons(enabled: boolean) {
+export function useAdminCoupons(enabled = true) {
   const { owner } = useSession()
   return useQuery({ ...adminCouponsQuery(owner), enabled })
+}
+
+export function useAdminOverview() {
+  const { owner } = useSession()
+  return useQuery(adminOverviewQuery(owner))
+}
+
+export function useAdminActivity() {
+  const { owner } = useSession()
+  return useQuery(adminActivityQuery(owner))
+}
+
+export function useAdminOrders(params: AdminOrderListParams) {
+  const { owner } = useSession()
+  return useQuery(adminOrdersQuery(owner, params))
+}
+
+export function useAdminUsers(params: AdminUserListParams) {
+  const { owner } = useSession()
+  return useQuery(adminUsersQuery(owner, params))
+}
+
+/**
+ * Login do Kurio Admin: a mesma API de autenticação da loja, mas a sessão só é adotada nesta aba depois que
+ * GET /admin/me (com o token recém-emitido) confirma o papel. Conta comum recebe o 403 da API: a sessão criada
+ * é encerrada no servidor na hora e o erro (com a mensagem da API) volta para a tela.
+ */
+export function useAdminLogin() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: LoginInput) => {
+      const session = await api.login(input)
+      try {
+        const me = await api.adminMe({ token: session.token })
+        return { session, me }
+      } catch (error) {
+        void api.logoutToken(session.token).catch(() => undefined)
+        throw error
+      }
+    },
+    onSuccess: ({ session, me }) => {
+      queryClient.removeQueries({ queryKey: qk.private })
+      sessionStore.setToken(session.token)
+      queryClient.setQueryData(qk.session, session)
+      queryClient.setQueryData(qk.adminMe(me.id), me)
+    },
+  })
+}
+
+/** Sair do painel encerra a sessão deste navegador (é a mesma da loja: mesmo origin, mesmo token). */
+export function useAdminLogout() {
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        await api.logout()
+      } finally {
+        sessionStore.clear('logout')
+      }
+    },
+  })
 }
 
 /** O NFT atual do 409 de versão (ou null se o erro for outro). */

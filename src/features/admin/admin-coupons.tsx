@@ -1,11 +1,11 @@
 /**
- * Aba "Cupons" do painel: criar (código, percentual ou valor fixo em ETH, validade opcional), listar e
+ * Seção "Cupons" do Kurio Admin: criar (código, percentual ou valor fixo em ETH, validade opcional), listar e
  * desativar. A validação roda no navegador com o mesmo schema da API; a API confere de novo (código repetido
  * → 409 no campo, data no passado → 422 no campo). O carrinho e o pagamento usam os mesmos cupons do banco.
  */
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { CouponForm, type AdminCoupon } from '@/api/contracts'
 import { ApiError } from '@/api/http'
@@ -35,8 +35,15 @@ function endOfDayIso(date: string) {
   return new Date(`${date}T23:59:59.999`).toISOString()
 }
 
-export function AdminCoupons({ query }: { query: UseQueryResult<{ items: AdminCoupon[] }> }) {
+export function AdminCoupons({ query, highlight }: { query: UseQueryResult<{ items: AdminCoupon[] }>; highlight?: string }) {
   const [deactivating, setDeactivating] = useState<AdminCoupon | null>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+  const target = highlight?.toUpperCase()
+  // Chegou pela busca global: traz o cupom escolhido para a vista.
+  useEffect(() => {
+    if (!target || !query.data) return
+    listRef.current?.querySelector(`[data-code="${CSS.escape(target)}"]`)?.scrollIntoView({ block: 'center' })
+  }, [target, query.data])
   return (
     <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start lg:gap-8">
       <CreateCouponForm />
@@ -47,7 +54,7 @@ export function AdminCoupons({ query }: { query: UseQueryResult<{ items: AdminCo
         {query.isPending ? (
           <ul className="flex flex-col gap-2" aria-busy="true" aria-label="Carregando cupons">
             {Array.from({ length: 3 }, (_, i) => (
-              <li key={i} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4" aria-hidden="true">
+              <li key={i} className="kp-ficha flex items-center gap-4 p-4" aria-hidden="true">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="ml-auto h-8 w-24" />
@@ -64,9 +71,15 @@ export function AdminCoupons({ query }: { query: UseQueryResult<{ items: AdminCo
         ) : query.data.items.length === 0 ? (
           <EmptyState title="Nenhum cupom cadastrado" message="Crie o primeiro no formulário ao lado." />
         ) : (
-          <ul className="flex flex-col gap-2" data-testid="coupon-list">
+          <ul ref={listRef} className="flex flex-col gap-2" data-testid="coupon-list">
             {query.data.items.map((c) => (
-              <li key={c.code} className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border bg-card px-4 py-3" data-testid="admin-coupon" data-code={c.code}>
+              <li
+                key={c.code}
+                className={cn('kp-ficha flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3', target === c.code && 'kp-chegou border-[rgb(210_138_76/0.6)]')}
+                data-testid="admin-coupon"
+                data-code={c.code}
+                aria-current={target === c.code ? 'true' : undefined}
+              >
                 <div className="min-w-0 flex-1">
                   <p className="font-bold tracking-[0.04em]">{c.code}</p>
                   <p className="truncate text-[13px] text-muted-foreground">{c.description}</p>
@@ -156,7 +169,7 @@ function CreateCouponForm() {
   })
 
   return (
-    <section aria-labelledby="new-coupon-title" className="rounded-lg border border-border bg-card p-5">
+    <section aria-labelledby="new-coupon-title" className="kp-ficha p-5 lg:sticky lg:top-6">
       <h2 id="new-coupon-title" className="text-[17px] font-bold leading-6">
         Novo cupom
       </h2>

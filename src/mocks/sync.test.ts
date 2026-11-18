@@ -28,7 +28,10 @@ async function openTab(): Promise<{ db: Db; events: Event[] }> {
   await db.initDb()
   db.startDbSync()
   const events: Event[] = []
-  db.onDbEvent((e) => events.push(e))
+  // Eventos da loja (catálogo e pedidos). O feed do painel (admin.activity) tem testes próprios.
+  db.onDbEvent((e) => {
+    if (e.type !== 'admin.activity') events.push(e)
+  })
   return { db, events }
 }
 

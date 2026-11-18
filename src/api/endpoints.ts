@@ -4,6 +4,14 @@
  */
 import { z } from 'zod'
 import {
+  AdminActivityList,
+  AdminOrderListResponse,
+  AdminOverview,
+  AdminUserListResponse,
+  type AdminOrderListParams,
+  type AdminUserListParams,
+} from './admin-contracts'
+import {
   AdminCoupon,
   AdminCouponList,
   AdminNftListResponse,
@@ -126,4 +134,22 @@ export const api = {
   adminListCoupons: ({ signal }: Opts = {}) => request(AdminCouponList, { url: '/admin/coupons', signal }),
   adminCreateCoupon: (body: CouponCreateInput) => request(AdminCoupon, { method: 'POST', url: '/admin/coupons', data: body }),
   adminDeactivateCoupon: (code: string) => request(AdminCoupon, { method: 'POST', url: `/admin/coupons/${encodeURIComponent(code)}/deactivate` }),
+
+  // Kurio Admin (painel à parte): contratos em admin-contracts.ts.
+  /** Confere se a sessão é de admin. `token` explícito: usado pelo login do painel antes de adotar a sessão. */
+  adminMe: ({ signal, token }: Opts & { token?: string } = {}) =>
+    request(User, { url: '/admin/me', signal, headers: token ? { Authorization: `Bearer ${token}` } : undefined }),
+  /** Encerra uma sessão específica (a recém-criada por uma conta sem permissão no login do painel). */
+  logoutToken: (token: string) => request(z.unknown(), { method: 'POST', url: '/auth/logout', headers: { Authorization: `Bearer ${token}` } }),
+  adminOverview: ({ signal }: Opts = {}) => request(AdminOverview, { url: '/admin/overview', signal }),
+  adminActivity: (limit: number, { signal }: Opts = {}) => request(AdminActivityList, { url: '/admin/activity', params: { limit: String(limit) }, signal }),
+  adminListOrders: (p: AdminOrderListParams, { signal }: Opts = {}) =>
+    request(AdminOrderListResponse, { url: '/admin/orders', params: compactParams({ status: p.status, q: p.q, page: p.page, pageSize: p.pageSize }), signal }),
+  adminListUsers: (p: AdminUserListParams, { signal }: Opts = {}) =>
+    request(AdminUserListResponse, { url: '/admin/users', params: compactParams({ q: p.q, page: p.page, pageSize: p.pageSize }), signal }),
+}
+
+/** Só os parâmetros preenchidos, como texto (a API ignora ausentes; vazio seria filtro por ""). */
+function compactParams(p: Record<string, string | number | undefined>) {
+  return Object.fromEntries(Object.entries(p).flatMap(([k, v]) => (v === undefined || v === '' ? [] : [[k, String(v)]])))
 }

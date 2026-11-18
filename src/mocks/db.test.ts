@@ -35,9 +35,12 @@ function edition(nftId: string, editionId: string) {
   return db.findNft(nftId)!.editions.find((e) => e.id === editionId)!
 }
 
+/** Eventos da loja (catálogo e pedidos). O feed do painel (admin.activity) tem testes próprios. */
 function collectEvents() {
-  const events: Array<Parameters<Parameters<typeof db.onDbEvent>[0]>[0]> = []
-  const off = db.onDbEvent((e) => events.push(e))
+  const events: Array<Exclude<db.DbEvent, { type: 'admin.activity' }>> = []
+  const off = db.onDbEvent((e) => {
+    if (e.type !== 'admin.activity') events.push(e)
+  })
   return { events, off }
 }
 

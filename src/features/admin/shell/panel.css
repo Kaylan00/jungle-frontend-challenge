@@ -1,0 +1,168 @@
+/*
+ * Kurio Admin: a casca do painel.
+ *
+ * A aplicação pousa numa MESA (marrom quase preto, mais fundo que a loja) e o trabalho acontece numa LOUSA
+ * arredondada que flutua sobre ela, com o TRILHO de navegação solto ao lado, sem barra de topo. É a estrutura
+ * do painel do CMS PIPA, com a identidade da Kurio: o fundo #140D0A da loja vira a lousa, o laranja só marca
+ * o lugar onde se está (uma vez por coluna) e a Roboto Mono continua sendo a voz.
+ */
+.kpanel {
+  --kp-mesa: #0b0705;
+  --kp-lousa: #140d0a;
+  --kp-borda-lousa: #2a1b14;
+  --kp-ficha: #1b120e;
+  --kp-ficha-hover: #22160f;
+  --kp-linha: #2e1f17;
+  --kp-linha-forte: #442c1b;
+  --kp-tinta: #f5f1eb;
+  --kp-grafite: #cfb28c;
+  --kp-fumaca: #a8917c;
+  --kp-laranja: #d28a4c;
+  --kp-laranja-texto: #e89b55;
+  --kp-trilho-tinta: #d9c6ad;
+  background: var(--kp-mesa);
+  color: var(--kp-tinta);
+}
+
+/* A lousa: o único lugar claro da tela (claro aqui é "menos escuro"), com borda de 1px e sombra longa. */
+.kp-lousa {
+  background:
+    radial-gradient(120% 60% at 100% 0%, rgb(210 138 76 / 0.055), transparent 60%),
+    var(--kp-lousa);
+  border: 1px solid var(--kp-borda-lousa);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.03) inset,
+    0 30px 80px -40px rgb(0 0 0 / 0.9);
+}
+
+/* Item do trilho: ícone e nome na mesma linha; o ativo é a pílula laranja com a tinta da lousa. */
+.kp-trilho-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--kp-trilho-tinta);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.kp-trilho-item:hover {
+  background: rgb(245 241 235 / 0.06);
+  color: var(--kp-tinta);
+}
+.kp-trilho-item[aria-current='page'] {
+  background: var(--kp-laranja);
+  color: #140d0a;
+  font-weight: 700;
+}
+.kp-trilho-item[aria-current='page'] .kp-contador {
+  background: #140d0a;
+  color: var(--kp-laranja-texto);
+}
+.kp-trilho-item svg {
+  flex-shrink: 0;
+}
+
+.kp-contador {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgb(210 138 76 / 0.16);
+  color: var(--kp-laranja-texto);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kp-kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--kp-linha-forte);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--kp-fumaca);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* Ficha: cartão, linha de tabela e caixa dentro da lousa. */
+.kp-ficha {
+  background: var(--kp-ficha);
+  border: 1px solid var(--kp-linha);
+  border-radius: 14px;
+}
+
+.kp-rotulo {
+  color: var(--kp-fumaca);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Entrada da lousa: sobe 6px e aparece (GSAP faz o mesmo quando já carregou; sem movimento, nada). */
+@keyframes kp-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.kp-entra {
+  animation: kp-entra 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp-entra {
+    animation: none;
+  }
+}
+
+/* Ponto do "ao vivo": pulsa devagar só quando conectado e só sem pedido de menos movimento. */
+@keyframes kp-pulso {
+  0% {
+    box-shadow: 0 0 0 0 rgb(111 191 115 / 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgb(111 191 115 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(111 191 115 / 0);
+  }
+}
+.kp-pulso {
+  animation: kp-pulso 2.4s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp-pulso {
+    animation: none;
+  }
+}
+
+/* Linha nova no feed (chegou pelo socket): um brilho laranja que some. */
+@keyframes kp-chegou {
+  from {
+    background-color: rgb(210 138 76 / 0.16);
+  }
+}
+.kp-chegou {
+  animation: kp-chegou 1.6s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp-chegou {
+    animation: none;
+  }
+}

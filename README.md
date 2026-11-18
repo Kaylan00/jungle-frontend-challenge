@@ -32,7 +32,7 @@ npm run dev            # http://localhost:5173 com mocks ligados
 | `npm run preview` | Serve o build em http://localhost:4173 |
 | `npm run typecheck` | `tsc -b` (app, config, testes e a função de e-mail em `api/`) |
 | `npm run lint` | oxlint em `src/` (testes incluídos), `e2e/`, `api/` e `scripts/` |
-| `npm run test:unit` | Vitest (Node, sem navegador, ~1 s): valores ETH, contratos zod, cliente HTTP, cliente de tempo real, regras do servidor simulado, painel admin pelos handlers MSW (permissão, validação, conflito de versão, cupons) e propagação entre abas (`src/**/*.test.ts`). `test:unit:watch` para o modo observação (Node 22.12+) |
+| `npm run test:unit` | Vitest (Node, sem navegador, ~1 s): valores ETH, contratos zod, cliente HTTP, cliente de tempo real, regras do servidor simulado, painel admin pelos handlers MSW (permissão, validação, conflito de versão, cupons, visão geral, pedidos, usuários e feed de atividade) e propagação entre abas (`src/**/*.test.ts`). `test:unit:watch` para o modo observação (Node 22.12+) |
 | `npm run test:api` | Teste isolado da função de envio de e-mail (`api/send-reset-email.ts`), sem rede e sem chave real (Node 22.18+) |
 | `npm run test:e2e` | Playwright: 19 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
 | `npm run test:e2e:desktop` / `:mobile` | Só um viewport |
@@ -60,18 +60,28 @@ Variáveis do **servidor** (só da função `api/send-reset-email`, nunca do nav
 | --- | --- | --- | --- |
 | Ana Colecionadora | `ana@kurio.test` | `Selva2026!` | 2 carteiras (principal Ethereum/MetaMask e secundária Polygon/Coinbase), 2 favoritos |
 | Bruno Pixel | `bruno@kurio.test` | `Pixel2026!` | Sem carteiras (bom para testar o cadastro), 1 favorito |
-| Kurio Admin | `admin@kurio.test` | `Kurio#Admin2026` | **Administrador**: acessa o painel em `/admin` (link “Painel” no menu da conta e, no celular, no menu do perfil) |
+| Kurio Admin | `admin@kurio.test` | `Kurio#Admin2026` | **Administrador**: entra no painel **Kurio Admin** em `/admin/entrar` (ou abra `/admin`) |
 
 Cupons da seed: `KURIO10` (10%), `GENESIS25` (25%), `BLACK2025` (expirado). O painel cria outros (percentual ou valor fixo em ETH, com ou sem validade) e desativa qualquer um; qualquer código que não esteja no banco é inválido.
 
-## Painel admin (`/admin`)
+## Kurio Admin (`/admin`)
 
-Entre com `admin@kurio.test` e abra **Painel** no menu da conta.
+O painel é um **sistema à parte** da loja: entrada própria, casca própria (trilho de navegação escuro à esquerda e a área de trabalho arredondada, sem cabeçalho, rodapé nem barra inferior da loja) e nenhum atalho no menu da conta da loja.
 
+**Como acessar**: abra `/admin` (sem sessão de admin ele leva a `/admin/entrar`, guardando o endereço pedido) e entre com `admin@kurio.test` / `Kurio#Admin2026`. Na loja (desktop) há um link discreto **Área da equipe** no rodapé, que leva ao mesmo endereço. **Sair** fica no pé do trilho.
+
+- **Entrada própria** (`/admin/entrar`): usa a mesma API de autenticação da loja, mas a sessão só é adotada depois que `GET /api/admin/me` confirma o papel. Conta comum (Ana, Bruno) recebe a mensagem do **403** da API (“Esta área é só para administradores da Kurio.”) e a sessão criada é encerrada na hora. Quem já está logado na loja com conta comum e abre `/admin` vê o mesmo aviso, com o nome da conta conectada.
+- **Busca global**: **Ctrl+K** ou **Ctrl+F** (⌘ no Mac), ou o botão **Buscar** do trilho (no celular, a lupa do cabeçalho). Leva a qualquer área e a um NFT (pelo nome, coleção ou id) ou cupom (pelo código). Setas escolhem, Enter abre, Esc fecha.
+- **Visão geral**: NFTs à venda, esgotados e em destaque, pedidos pendentes/confirmados/recusados, receita simulada (soma dos pedidos confirmados), usuários e cupons ativos, todos da API (`GET /api/admin/overview`), e **Últimos eventos** em tempo real (pedido recebido/confirmado/recusado, preço, estoque, status, destaque, cupom), que chegam pelo socket.
+- **Pedidos**: pedidos de todas as contas, com filtro por status, busca por número ou cliente e paginação. O status muda na tela sozinho (Processando → Confirmado/Recusado).
+- **Usuários** (somente leitura): nome, nome de usuário, papel, e-mail mascarado (`a***@kurio.test`), pedidos e favoritos. Nada de senha, carteira ou e-mail completo.
+- **Celular**: o trilho vira um menu que abre por cima (botão **Menu**); tabelas viram fichas.
 - **NFTs e edições**: busca (nome, coleção ou id), paginação e, por NFT, **Destacar/Em destaque** (vitrine) e **Edições**: cada edição tem **Editar** com preço (ETH com ponto, até 18 casas), disponibilidade (0 até a tiragem) e status (À venda / Indisponível; com 0 fica “Esgotada”). O salvar mostra “Salvando…”; o destaque é otimista (desfaz se a API recusar).
 - **Cupons**: criar (código, % ou valor fixo, validade opcional), ver o status (Ativo, Expirado, Desativado) e desativar. Carrinhos com o cupom perdem o desconto na hora e uma revisão de compra aberta com ele pede nova confirmação.
 - **Conflito de versão**: cada gravação envia a versão do NFT que está na tela. Se ele mudou depois (outra aba, outro admin, uma compra), a API responde **409** com os valores atuais e o diálogo oferece “Usar os valores atuais” ou “Manter os meus e revisar”. Para ver: abra **Editar** numa edição do Emerald Ape #042, use “Mudar preço” no painel de cenários e salve.
-- **Permissão**: sem sessão, `/admin` leva ao login. Com conta comum (Ana, Bruno), a API responde **403 FORBIDDEN** e a tela mostra “Sem permissão”. O papel é conferido pela API em toda rota `/api/admin/*`; esconder o link é só conveniência.
+- **Permissão**: o papel é conferido pela API em toda rota `/api/admin/*` (401 sem sessão, **403 FORBIDDEN** para conta comum); a tela só reage à resposta.
+- **Por que no mesmo endereço da loja**: o “servidor” desta demonstração roda no navegador e é compartilhado por origem (`localStorage`, `BroadcastChannel`, service worker). Num subdomínio próprio o painel teria outro banco e não veria as compras nem mudaria os preços da loja. Em produção ele seria um app separado falando com a mesma API (ver ARCHITECTURE.md, seção 13).
+- **Sessão**: loja e painel dividem a sessão deste navegador (mesmo origin, mesmo token). Sair do painel sai da loja também; entrar no painel com a conta da equipe troca a conta conectada na loja.
 
 ## Tempo real entre abas
 
@@ -79,9 +89,10 @@ O “servidor” simulado roda em cada aba, mas as abas do mesmo navegador agora
 
 Para ver ao vivo:
 
-1. Aba 1: entre como `admin@kurio.test` e abra `/admin`.
+1. Aba 1: abra `/admin`, entre como `admin@kurio.test` e vá em **NFTs** (ou Ctrl+K → “Emerald Ape #042”).
 2. Aba 2 (mesmo navegador): abra `/nft/nft-01?edicao=nft-01-ed-3` (ou o carrinho com esse item).
-3. Na aba 1, **Edições** do Emerald Ape #042 → **Editar** a 1/50 → preço `0.99` → **Salvar**. A aba 2 muda o preço na hora, sem recarregar.
+3. Na aba 1, **Edições** do Emerald Ape #042 → **Editar** a 1/50 → preço `0.99` → **Salvar**. A aba 2 muda o preço na hora, sem recarregar, e a **Visão geral** do painel registra a mudança em “Últimos eventos”.
+4. Pedidos ao vivo: as abas dividem a sessão, então quem compra na aba 2 é o próprio admin. Cadastre uma carteira em `/perfil/carteiras`, compre um NFT e acompanhe na aba 1 em **Pedidos** (ou no feed da **Visão geral**): o pedido entra como “Processando” e vira “Confirmado” sozinho. Entrar como Ana na aba 2 tiraria o admin da aba 1 (o painel volta para a própria entrada).
 
 Vale também para compras (o estoque reservado aparece nas outras abas), para o painel de cenários (“Mudar preço”, “Esgotar edição”, “Resetar tudo”) e para pagamentos pendentes (só uma aba liquida cada pedido). As abas do mesmo navegador compartilham a sessão (o token fica no `localStorage`), como em qualquer site.
 
@@ -169,12 +180,12 @@ src/
   app/          QueryClient, router, sincronização de sessão
   realtime/     cliente Socket.IO (deduplicação, versões, reconciliação)
   routes/       rotas (TanStack Router, baseadas em arquivo)
-  features/     telas por domínio (catalog, nft, cart, checkout, auth, profile, favorites, admin)
+  features/     telas por domínio (catalog, nft, cart, checkout, auth, profile, favorites, admin = Kurio Admin)
   components/   layout, componentes compartilhados e ui/ (shadcn)
   mocks/        servidor simulado: db, handlers REST, servidor Socket.IO, cenários, painel
 api/            Vercel Function de envio real do e-mail de redefinição (Brevo, opcional)
 scripts/        teste isolado da função (npm run test:api)
-e2e/            testes Playwright (19 cenários + visual) e baselines em __screenshots__
+e2e/            testes Playwright (20 cenários + visual) e baselines em __screenshots__
 lighthouse/     script de auditoria e relatórios
 ```
 

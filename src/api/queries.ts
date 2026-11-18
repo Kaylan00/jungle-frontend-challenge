@@ -8,6 +8,7 @@
  * então uma resposta atrasada de outra busca nunca aparece na tela atual.
  */
 import { keepPreviousData, queryOptions } from '@tanstack/react-query'
+import type { AdminOrderListParams, AdminUserListParams } from './admin-contracts'
 import type { AdminNftListParams, NftListParams, Session } from './contracts'
 import { api } from './endpoints'
 import { ApiError } from './http'
@@ -35,7 +36,64 @@ export const qk = {
   adminNftLists: (owner: Owner) => ['private', owner, 'admin', 'nfts'] as const,
   adminNfts: (owner: Owner, p: AdminNftListParams) => ['private', owner, 'admin', 'nfts', p] as const,
   adminCoupons: (owner: Owner) => ['private', owner, 'admin', 'coupons'] as const,
+  /** Kurio Admin: identidade (papel conferido pela API), números, feed, pedidos e usuários. */
+  adminMe: (owner: Owner) => ['private', owner, 'admin', 'me'] as const,
+  adminOverview: (owner: Owner) => ['private', owner, 'admin', 'overview'] as const,
+  adminActivity: (owner: Owner) => ['private', owner, 'admin', 'activity'] as const,
+  adminOrderLists: (owner: Owner) => ['private', owner, 'admin', 'orders'] as const,
+  adminOrders: (owner: Owner, p: AdminOrderListParams) => ['private', owner, 'admin', 'orders', p] as const,
+  adminUsers: (owner: Owner, p: AdminUserListParams) => ['private', owner, 'admin', 'users', p] as const,
+  /** Busca global do painel: NFTs pelo nome (poucos resultados, chave inclui o termo). */
+  adminSearchNfts: (owner: Owner, q: string) => ['private', owner, 'admin', 'search', q] as const,
 }
+
+export const ADMIN_ACTIVITY_LIMIT = 20
+
+export const adminMeQuery = (owner: Owner) =>
+  queryOptions({
+    queryKey: qk.adminMe(owner),
+    queryFn: ({ signal }) => api.adminMe({ signal }),
+    staleTime: 60_000,
+    // 403 é resposta, não falha passageira: não repete.
+    retry: (count, error) => !(error instanceof ApiError && !error.isTransient) && count < 2,
+  })
+
+export const adminOverviewQuery = (owner: Owner) =>
+  queryOptions({
+    queryKey: qk.adminOverview(owner),
+    queryFn: ({ signal }) => api.adminOverview({ signal }),
+    // O socket invalida a cada atividade; a consulta periódica cobre o pagamento que vence sem evento visto.
+    refetchInterval: 15_000,
+  })
+
+export const adminActivityQuery = (owner: Owner) =>
+  queryOptions({
+    queryKey: qk.adminActivity(owner),
+    queryFn: ({ signal }) => api.adminActivity(ADMIN_ACTIVITY_LIMIT, { signal }),
+  })
+
+export const adminOrdersQuery = (owner: Owner, p: AdminOrderListParams) =>
+  queryOptions({
+    queryKey: qk.adminOrders(owner, p),
+    queryFn: ({ signal }) => api.adminListOrders(p, { signal }),
+    placeholderData: keepPreviousData,
+    // Rede de segurança do "ao vivo": com pedido pendente na tela, confere a cada 5 s mesmo sem socket.
+    refetchInterval: (q) => (q.state.data?.items.some((o) => o.status === 'pending') ? 5_000 : false),
+  })
+
+export const adminUsersQuery = (owner: Owner, p: AdminUserListParams) =>
+  queryOptions({
+    queryKey: qk.adminUsers(owner, p),
+    queryFn: ({ signal }) => api.adminListUsers(p, { signal }),
+    placeholderData: keepPreviousData,
+  })
+
+export const adminSearchNftsQuery = (owner: Owner, q: string) =>
+  queryOptions({
+    queryKey: qk.adminSearchNfts(owner, q),
+    queryFn: ({ signal }) => api.adminListNfts({ q, pageSize: 6 }, { signal }),
+    staleTime: 15_000,
+  })
 
 export const ADMIN_PAGE_SIZE = 8
 

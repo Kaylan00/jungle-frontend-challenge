@@ -16,13 +16,19 @@ import { Route as CarrinhoRouteImport } from './routes/carrinho'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
-import { Route as AuthAdminRouteImport } from './routes/_auth/admin'
 import { Route as AuthPagamentoRouteImport } from './routes/_auth/pagamento'
+import { Route as AdminPainelRouteImport } from './routes/admin/_painel'
+import { Route as AdminEntrarRouteImport } from './routes/admin/entrar'
 import { Route as NftNftIdRouteImport } from './routes/nft.$nftId'
 import { Route as AuthPedidoOrderIdRouteImport } from './routes/_auth/pedido.$orderId'
 import { Route as AuthPerfilIndexRouteImport } from './routes/_auth/perfil.index'
 import { Route as AuthPerfilCarteirasRouteImport } from './routes/_auth/perfil.carteiras'
 import { Route as AuthPerfilFavoritosRouteImport } from './routes/_auth/perfil.favoritos'
+import { Route as AdminPainelIndexRouteImport } from './routes/admin/_painel/index'
+import { Route as AdminPainelCuponsRouteImport } from './routes/admin/_painel/cupons'
+import { Route as AdminPainelNftsRouteImport } from './routes/admin/_painel/nfts'
+import { Route as AdminPainelPedidosRouteImport } from './routes/admin/_painel/pedidos'
+import { Route as AdminPainelUsuariosRouteImport } from './routes/admin/_painel/usuarios'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,15 +64,20 @@ const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
   path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthAdminRoute = AuthAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AuthRoute,
-} as any)
 const AuthPagamentoRoute = AuthPagamentoRouteImport.update({
   id: '/pagamento',
   path: '/pagamento',
   getParentRoute: () => AuthRoute,
+} as any)
+const AdminPainelRoute = AdminPainelRouteImport.update({
+  id: '/admin/_painel',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminEntrarRoute = AdminEntrarRouteImport.update({
+  id: '/admin/entrar',
+  path: '/admin/entrar',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const NftNftIdRoute = NftNftIdRouteImport.update({
   id: '/nft/$nftId',
@@ -93,6 +104,31 @@ const AuthPerfilFavoritosRoute = AuthPerfilFavoritosRouteImport.update({
   path: '/perfil/favoritos',
   getParentRoute: () => AuthRoute,
 } as any)
+const AdminPainelIndexRoute = AdminPainelIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminPainelRoute,
+} as any)
+const AdminPainelCuponsRoute = AdminPainelCuponsRouteImport.update({
+  id: '/cupons',
+  path: '/cupons',
+  getParentRoute: () => AdminPainelRoute,
+} as any)
+const AdminPainelNftsRoute = AdminPainelNftsRouteImport.update({
+  id: '/nfts',
+  path: '/nfts',
+  getParentRoute: () => AdminPainelRoute,
+} as any)
+const AdminPainelPedidosRoute = AdminPainelPedidosRouteImport.update({
+  id: '/pedidos',
+  path: '/pedidos',
+  getParentRoute: () => AdminPainelRoute,
+} as any)
+const AdminPainelUsuariosRoute = AdminPainelUsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
+  getParentRoute: () => AdminPainelRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,13 +137,19 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
-  '/admin': typeof AuthAdminRoute
   '/pagamento': typeof AuthPagamentoRoute
+  '/admin': typeof AdminPainelRouteWithChildren
+  '/admin/entrar': typeof AdminEntrarRoute
   '/nft/$nftId': typeof NftNftIdRoute
   '/pedido/$orderId': typeof AuthPedidoOrderIdRoute
   '/perfil/carteiras': typeof AuthPerfilCarteirasRoute
   '/perfil/favoritos': typeof AuthPerfilFavoritosRoute
+  '/admin/cupons': typeof AdminPainelCuponsRoute
+  '/admin/nfts': typeof AdminPainelNftsRoute
+  '/admin/pedidos': typeof AdminPainelPedidosRoute
+  '/admin/usuarios': typeof AdminPainelUsuariosRoute
   '/perfil/': typeof AuthPerfilIndexRoute
+  '/admin/': typeof AdminPainelIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -116,13 +158,18 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
-  '/admin': typeof AuthAdminRoute
   '/pagamento': typeof AuthPagamentoRoute
+  '/admin/entrar': typeof AdminEntrarRoute
   '/nft/$nftId': typeof NftNftIdRoute
   '/pedido/$orderId': typeof AuthPedidoOrderIdRoute
   '/perfil/carteiras': typeof AuthPerfilCarteirasRoute
   '/perfil/favoritos': typeof AuthPerfilFavoritosRoute
+  '/admin/cupons': typeof AdminPainelCuponsRoute
+  '/admin/nfts': typeof AdminPainelNftsRoute
+  '/admin/pedidos': typeof AdminPainelPedidosRoute
+  '/admin/usuarios': typeof AdminPainelUsuariosRoute
   '/perfil': typeof AuthPerfilIndexRoute
+  '/admin': typeof AdminPainelIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -133,13 +180,19 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
-  '/_auth/admin': typeof AuthAdminRoute
   '/_auth/pagamento': typeof AuthPagamentoRoute
+  '/admin/_painel': typeof AdminPainelRouteWithChildren
+  '/admin/entrar': typeof AdminEntrarRoute
   '/nft/$nftId': typeof NftNftIdRoute
   '/_auth/pedido/$orderId': typeof AuthPedidoOrderIdRoute
   '/_auth/perfil/carteiras': typeof AuthPerfilCarteirasRoute
   '/_auth/perfil/favoritos': typeof AuthPerfilFavoritosRoute
+  '/admin/_painel/cupons': typeof AdminPainelCuponsRoute
+  '/admin/_painel/nfts': typeof AdminPainelNftsRoute
+  '/admin/_painel/pedidos': typeof AdminPainelPedidosRoute
+  '/admin/_painel/usuarios': typeof AdminPainelUsuariosRoute
   '/_auth/perfil/': typeof AuthPerfilIndexRoute
+  '/admin/_painel/': typeof AdminPainelIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,13 +203,19 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/redefinir-senha'
-    | '/admin'
     | '/pagamento'
+    | '/admin'
+    | '/admin/entrar'
     | '/nft/$nftId'
     | '/pedido/$orderId'
     | '/perfil/carteiras'
     | '/perfil/favoritos'
+    | '/admin/cupons'
+    | '/admin/nfts'
+    | '/admin/pedidos'
+    | '/admin/usuarios'
     | '/perfil/'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -165,13 +224,18 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/redefinir-senha'
-    | '/admin'
     | '/pagamento'
+    | '/admin/entrar'
     | '/nft/$nftId'
     | '/pedido/$orderId'
     | '/perfil/carteiras'
     | '/perfil/favoritos'
+    | '/admin/cupons'
+    | '/admin/nfts'
+    | '/admin/pedidos'
+    | '/admin/usuarios'
     | '/perfil'
+    | '/admin'
   id:
     | '__root__'
     | '/'
@@ -181,13 +245,19 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/redefinir-senha'
-    | '/_auth/admin'
     | '/_auth/pagamento'
+    | '/admin/_painel'
+    | '/admin/entrar'
     | '/nft/$nftId'
     | '/_auth/pedido/$orderId'
     | '/_auth/perfil/carteiras'
     | '/_auth/perfil/favoritos'
+    | '/admin/_painel/cupons'
+    | '/admin/_painel/nfts'
+    | '/admin/_painel/pedidos'
+    | '/admin/_painel/usuarios'
     | '/_auth/perfil/'
+    | '/admin/_painel/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -198,6 +268,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
+  AdminPainelRoute: typeof AdminPainelRouteWithChildren
+  AdminEntrarRoute: typeof AdminEntrarRoute
   NftNftIdRoute: typeof NftNftIdRoute
 }
 
@@ -252,19 +324,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RedefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_auth/admin': {
-      id: '/_auth/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthAdminRouteImport
-      parentRoute: typeof AuthRoute
-    }
     '/_auth/pagamento': {
       id: '/_auth/pagamento'
       path: '/pagamento'
       fullPath: '/pagamento'
       preLoaderRoute: typeof AuthPagamentoRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/admin/_painel': {
+      id: '/admin/_painel'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminPainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/entrar': {
+      id: '/admin/entrar'
+      path: '/admin/entrar'
+      fullPath: '/admin/entrar'
+      preLoaderRoute: typeof AdminEntrarRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/nft/$nftId': {
       id: '/nft/$nftId'
@@ -301,11 +380,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthPerfilFavoritosRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/admin/_painel/': {
+      id: '/admin/_painel/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminPainelIndexRouteImport
+      parentRoute: typeof AdminPainelRoute
+    }
+    '/admin/_painel/cupons': {
+      id: '/admin/_painel/cupons'
+      path: '/cupons'
+      fullPath: '/admin/cupons'
+      preLoaderRoute: typeof AdminPainelCuponsRouteImport
+      parentRoute: typeof AdminPainelRoute
+    }
+    '/admin/_painel/nfts': {
+      id: '/admin/_painel/nfts'
+      path: '/nfts'
+      fullPath: '/admin/nfts'
+      preLoaderRoute: typeof AdminPainelNftsRouteImport
+      parentRoute: typeof AdminPainelRoute
+    }
+    '/admin/_painel/pedidos': {
+      id: '/admin/_painel/pedidos'
+      path: '/pedidos'
+      fullPath: '/admin/pedidos'
+      preLoaderRoute: typeof AdminPainelPedidosRouteImport
+      parentRoute: typeof AdminPainelRoute
+    }
+    '/admin/_painel/usuarios': {
+      id: '/admin/_painel/usuarios'
+      path: '/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AdminPainelUsuariosRouteImport
+      parentRoute: typeof AdminPainelRoute
+    }
   }
 }
 
 interface AuthRouteChildren {
-  AuthAdminRoute: typeof AuthAdminRoute
   AuthPagamentoRoute: typeof AuthPagamentoRoute
   AuthPedidoOrderIdRoute: typeof AuthPedidoOrderIdRoute
   AuthPerfilCarteirasRoute: typeof AuthPerfilCarteirasRoute
@@ -314,7 +427,6 @@ interface AuthRouteChildren {
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
-  AuthAdminRoute: AuthAdminRoute,
   AuthPagamentoRoute: AuthPagamentoRoute,
   AuthPedidoOrderIdRoute: AuthPedidoOrderIdRoute,
   AuthPerfilCarteirasRoute: AuthPerfilCarteirasRoute,
@@ -324,6 +436,26 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface AdminPainelRouteChildren {
+  AdminPainelCuponsRoute: typeof AdminPainelCuponsRoute
+  AdminPainelNftsRoute: typeof AdminPainelNftsRoute
+  AdminPainelPedidosRoute: typeof AdminPainelPedidosRoute
+  AdminPainelUsuariosRoute: typeof AdminPainelUsuariosRoute
+  AdminPainelIndexRoute: typeof AdminPainelIndexRoute
+}
+
+const AdminPainelRouteChildren: AdminPainelRouteChildren = {
+  AdminPainelCuponsRoute: AdminPainelCuponsRoute,
+  AdminPainelNftsRoute: AdminPainelNftsRoute,
+  AdminPainelPedidosRoute: AdminPainelPedidosRoute,
+  AdminPainelUsuariosRoute: AdminPainelUsuariosRoute,
+  AdminPainelIndexRoute: AdminPainelIndexRoute,
+}
+
+const AdminPainelRouteWithChildren = AdminPainelRoute._addFileChildren(
+  AdminPainelRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
@@ -332,6 +464,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
+  AdminPainelRoute: AdminPainelRouteWithChildren,
+  AdminEntrarRoute: AdminEntrarRoute,
   NftNftIdRoute: NftNftIdRoute,
 }
 export const routeTree = rootRouteImport

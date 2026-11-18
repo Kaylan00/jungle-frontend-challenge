@@ -1,7 +1,7 @@
 /**
- * Cenário 15 — painel admin (/admin): permissão (login e 403 de verdade da API), edição de preço com
- * propagação AO VIVO para outra aba do mesmo navegador (pelo socket da outra aba), conflito de versão,
- * destaque e cupom criado no painel valendo no carrinho (e deixando de valer ao desativar).
+ * Cenário 15 — Kurio Admin (/admin, painel à parte da loja): permissão (entrada própria e 403 de verdade da
+ * API), edição de preço com propagação AO VIVO para outra aba do mesmo navegador (pelo socket da outra aba),
+ * conflito de versão, destaque e cupom criado no painel valendo no carrinho (e deixando de valer ao desativar).
  */
 import { App, expect, test } from './fixtures'
 
@@ -12,13 +12,17 @@ async function openEditions(page: App['page'], nftId: string) {
 }
 
 test.describe('Painel admin', () => {
-  test('visitante vai para o login; conta comum recebe 403 da API e vê "Sem permissão"', async ({ app, page }) => {
+  test('visitante vai para a entrada do painel; conta comum recebe 403 da API e vê "sem permissão"', async ({ app, page }) => {
     await app.goto('/admin')
-    await expect(page).toHaveURL(/\/login\?redirect=%2Fadmin/)
-    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page).toHaveURL(/\/admin\/entrar\?redirect=%2Fadmin/)
+    await expect(page.getByRole('heading', { name: 'Entrar no painel' })).toBeVisible()
+    // Sistema à parte: nada da moldura da loja (cabeçalho, rodapé, login por cima da página).
+    await expect(page.getByRole('banner')).toHaveCount(0)
+    await expect(page.getByRole('contentinfo')).toHaveCount(0)
+    await expect(page.getByRole('dialog')).toHaveCount(0)
 
     await app.login('ana')
-    // Sem o atalho "Painel" para conta comum.
+    // A loja não tem mais atalho para o painel no menu da conta (nem para admin).
     if (app.isMobile) {
       await app.goto('/perfil')
       await expect(page.getByRole('navigation', { name: 'Meu perfil' }).getByRole('link', { name: 'Painel' })).toHaveCount(0)
@@ -30,8 +34,10 @@ test.describe('Painel admin', () => {
     }
 
     await app.goto('/admin')
-    await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
-    await expect(page.getByTestId('admin-forbidden')).toContainText('Erro 403')
+    await expect(page).toHaveURL(/\/admin\/entrar\?.*motivo=sem-permissao/)
+    const notice = page.getByTestId('panel-login-notice')
+    await expect(notice).toContainText('Esta área é só para administradores da Kurio.')
+    await expect(notice).toContainText('@ana_nft')
 
     // A recusa é da API, não só da tela.
     const res = await page.evaluate(async () => {
@@ -43,16 +49,9 @@ test.describe('Painel admin', () => {
   })
 
   test('admin muda o preço e, em outra aba, o comprador vê o preço novo ao vivo pelo socket', async ({ app, page }) => {
-    await app.login('admin')
-    if (app.isMobile) {
-      await app.goto('/perfil')
-      await page.getByRole('link', { name: 'Painel' }).click()
-      await expect(page).toHaveURL(/\/admin$/)
-    } else {
-      await page.getByRole('button', { name: /Menu da conta/ }).click()
-      await page.getByRole('menuitem', { name: 'Painel' }).click()
-    }
-    await expect(page.getByRole('heading', { name: 'Painel', level: 1 })).toBeVisible()
+    await app.panelLogin('admin')
+    await app.panelNav('NFTs')
+    await expect(page.getByRole('heading', { name: 'NFTs', level: 1 })).toBeVisible()
     await page.getByLabel('Buscar NFT').fill('Emerald Ape #042')
     await expect(page.getByTestId('admin-nft')).toHaveCount(1)
     const row = await openEditions(page, 'nft-01')
@@ -83,11 +82,16 @@ test.describe('Painel admin', () => {
     await expect(price).toContainText('0.99 ETH')
     await expect(buyerPage.getByText('Não foi possível carregar')).toHaveCount(0)
     await buyerPage.close()
+
+    // A mudança entra no feed da visão geral do painel.
+    await app.panelNav('Visão geral')
+    await expect(page.getByTestId('activity-item').first()).toContainText('Preço alterado: Emerald Ape #042 · edição 1/50')
+    await expect(page.getByTestId('activity-item').first()).toContainText('1.19 ETH → 0.99 ETH')
   })
 
   test('conflito de versão: o NFT muda com o diálogo aberto e a API recusa a gravação antiga', async ({ app, page }) => {
-    await app.login('admin')
-    await app.goto('/admin?q=nft-01')
+    await app.panelLogin('admin', '/admin/nfts?q=nft-01')
+    await expect(page).toHaveURL(/\/admin\/nfts\?q=nft-01$/)
     const row = await openEditions(page, 'nft-01')
     await row.locator('[data-edition-id="nft-01-ed-2"]').getByRole('button', { name: /Editar/ }).click()
     const dialog = page.getByTestId('edition-dialog')
@@ -110,8 +114,7 @@ test.describe('Painel admin', () => {
   })
 
   test('destaque: liga na hora (otimista) e a vitrine da API passa a incluir o NFT', async ({ app, page }) => {
-    await app.login('admin')
-    await app.goto('/admin?q=nft-04')
+    await app.panelLogin('admin', '/admin/nfts?q=nft-04')
     const toggle = page.locator('[data-nft-id="nft-04"]').getByTestId('featured-toggle')
     await expect(toggle).toHaveAttribute('aria-pressed', 'false')
     await toggle.click()
@@ -122,9 +125,10 @@ test.describe('Painel admin', () => {
   })
 
   test('cupom criado no painel vale no carrinho e deixa de valer ao ser desativado', async ({ app, page }) => {
-    await app.login('admin')
-    await app.goto('/admin?aba=cupons')
-    await expect(page.getByRole('tab', { name: 'Cupons' })).toHaveAttribute('aria-selected', 'true')
+    await app.panelLogin('admin')
+    await app.panelNav('Cupons')
+    await expect(page).toHaveURL(/\/admin\/cupons$/)
+    await expect(page.getByRole('heading', { name: 'Cupons', level: 1 })).toBeVisible()
     const form = page.getByRole('region', { name: 'Novo cupom' })
 
     // Validação: valor fora da faixa e código repetido (este vem da API: 409 no campo).
@@ -142,6 +146,7 @@ test.describe('Painel admin', () => {
     await expect(created).toContainText('15%')
     await expect(created).toContainText('Ativo')
 
+    // A loja, no mesmo navegador (mesma sessão: o admin também compra).
     await app.addToCart('nft-02', { edition: 'nft-02-ed-2' })
     await page.getByLabel('Código promocional').fill('verao15')
     await page.getByRole('button', { name: 'Aplicar' }).click()
@@ -150,7 +155,7 @@ test.describe('Painel admin', () => {
     await expect(page.getByTestId('summary-discount')).toHaveText('(-) 0.1425 ETH')
     await expect(page.getByTestId('summary-total')).toHaveText('0.8235 ETH')
 
-    await app.goto('/admin?aba=cupons')
+    await app.goto('/admin/cupons')
     await page.locator('[data-testid="admin-coupon"][data-code="VERAO15"]').getByRole('button', { name: /Desativar/ }).click()
     await page.getByTestId('confirm-deactivate').click()
     await expect(page.locator('[data-testid="admin-coupon"][data-code="VERAO15"]')).toContainText('Desativado')
@@ -161,5 +166,13 @@ test.describe('Painel admin', () => {
     await page.getByLabel('Código promocional').fill('VERAO15')
     await page.getByRole('button', { name: 'Aplicar' }).click()
     await expect(page.getByTestId('coupon-error')).toHaveText('Este cupom foi desativado')
+  })
+
+  test('endereços da primeira versão do painel levam à seção certa', async ({ app, page }) => {
+    await app.panelLogin('admin', '/admin?aba=cupons')
+    await expect(page).toHaveURL(/\/admin\/cupons$/)
+    await app.goto('/admin?q=nft-04')
+    await expect(page).toHaveURL(/\/admin\/nfts\?q=nft-04$/)
+    await expect(page.getByTestId('admin-nft')).toHaveCount(1)
   })
 })

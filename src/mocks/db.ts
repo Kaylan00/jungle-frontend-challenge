@@ -34,6 +34,7 @@ import type {
   Wallet,
 } from '@/api/contracts'
 import { NftDetail as NftDetailSchema } from '@/api/contracts'
+import type { AdminActivity, AdminActivityEvent, AdminActivityKind } from '@/api/admin-contracts'
 import { addEth, compareEth, mulEth, percentOf, subEth, toEthString } from '@/lib/eth'
 import { explorerUrl } from '@/lib/explorer'
 import { buildNftFixtures } from './fixtures/nfts'
@@ -133,6 +134,8 @@ export interface DbState {
   outbox?: SimulatedEmail[]
   /** Opcional: estados salvos antes do painel admin recebem os cupons da seed na carga (migrate). */
   coupons?: StoredCoupon[]
+  /** Opcional: feed de atividade do painel (mais recentes no fim, no máximo ACTIVITY_MAX). */
+  activity?: AdminActivity[]
   nfts: NftDetail[]
   favorites: Record<string, string[]>
   carts: Record<string, StoredCart>
@@ -192,7 +195,7 @@ export async function stableHash(value: unknown) {
 //   eventos aos ouvintes locais (o servidor Socket.IO da aba) SEM reenviar: não há eco nem laço. O próprio
 //   BroadcastChannel não entrega a mensagem a quem enviou; `from` é uma segunda garantia.
 
-type DbEvent = NftUpdatedEvent | OrderUpdatedEvent
+export type DbEvent = NftUpdatedEvent | OrderUpdatedEvent | AdminActivityEvent
 
 export interface SyncMessage {
   from: string
@@ -401,6 +404,28 @@ function nextEventId() {
   return `evt-${state.eventSeq}`
 }
 
+/** Tamanho do feed de atividade guardado (o painel mostra os mais recentes). */
+export const ACTIVITY_MAX = 60
+
+/**
+ * Registra uma linha no feed do painel e a entrega como `admin.activity` (o servidor Socket.IO só repassa às
+ * conexões de contas admin). Usa `deliver`, e não `emit`: o "último evento" dos controles de duplicata
+ * continua sendo o de catálogo/pedido, que é o que os clientes da loja deduplicam.
+ */
+export function recordActivity(kind: AdminActivityKind, title: string, detail: string, resource: AdminActivity['resource']) {
+  const eventId = nextEventId()
+  const activity: AdminActivity = { id: eventId, occurredAt: iso(), kind, title, detail, resource }
+  const log = (state.activity ??= [])
+  log.push(activity)
+  if (log.length > ACTIVITY_MAX) log.splice(0, log.length - ACTIVITY_MAX)
+  persist()
+  deliver({ type: 'admin.activity', eventId, occurredAt: activity.occurredAt, version: state.eventSeq, activity })
+  return activity
+}
+
+const NETWORK_NAME: Record<Network, string> = { ethereum: 'Ethereum', polygon: 'Polygon', solana: 'Solana' }
+const EDITION_STATUS_NAME = { on_sale: 'à venda', sold_out: 'esgotada', unavailable: 'indisponível' } as const
+
 // ---------- Seed / reset ----------
 
 async function seedUser(u: (typeof SEED_USERS)[number]): Promise<StoredUser> {
@@ -440,6 +465,7 @@ async function buildSeed(): Promise<DbState> {
     passwordResets: [],
     outbox: [],
     coupons: seedCoupons(),
+    activity: [],
     nfts: buildNftFixtures(),
     favorites,
     carts: {},
@@ -756,6 +782,7 @@ export function updateEdition(nftId: string, editionId: string, patch: EditionPa
   const e = n?.editions.find((x) => x.id === editionId)
   if (!n || !e) return null
   const previousPrice = n.price
+  const before = { price: e.price, available: e.available, status: e.status }
   if (patch.price !== undefined) e.price = toEthString(patch.price)
   if (patch.available !== undefined) e.available = Math.max(0, patch.available)
   // "À venda" volta a valer pelo estoque (0 = esgotada); "Indisponível" tira de venda mesmo com estoque.
@@ -764,6 +791,15 @@ export function updateEdition(nftId: string, editionId: string, patch: EditionPa
   touchCartsWith(n.id)
   persist()
   emitNftUpdated(n, previousPrice)
+  const label = `${n.name} · edição ${e.name}`
+  const resource = { type: 'nft', id: n.id } as const
+  if (compareEth(before.price, e.price) !== 0) recordActivity('nft.price', `Preço alterado: ${label}`, `${before.price} ETH → ${e.price} ETH`, resource)
+  if (before.available !== e.available) recordActivity('nft.stock', `Estoque alterado: ${label}`, `${before.available} → ${e.available} de ${e.supply}`, resource)
+  // Esgotar ou voltar do esgotado é consequência do estoque (a linha acima já conta); aqui só a escolha do painel.
+  const followsStock = before.available !== e.available && (before.status === 'sold_out' || e.status === 'sold_out')
+  if (before.status !== e.status && !followsStock) {
+    recordActivity('nft.status', `Status alterado: ${label}`, `${EDITION_STATUS_NAME[before.status]} → ${EDITION_STATUS_NAME[e.status]}`, resource)
+  }
   return n
 }
 
@@ -775,6 +811,7 @@ export function setFeatured(nftId: string, featured: boolean) {
   n.version += 1
   persist()
   emitNftUpdated(n, n.price)
+  recordActivity('nft.featured', featured ? `Destaque ligado: ${n.name}` : `Destaque desligado: ${n.name}`, featured ? 'Passa a aparecer na vitrine da loja' : 'Saiu da vitrine da loja', { type: 'nft', id: n.id })
   return n
 }
 
@@ -1033,6 +1070,7 @@ export function createCoupon(input: CouponCreateInput): CouponCreateResult {
   }
   getCoupons().push(coupon)
   persist()
+  recordActivity('coupon.created', `Cupom ${coupon.code} criado`, coupon.description, { type: 'coupon', id: coupon.code })
   return { ok: true, coupon: adminCoupon(coupon) }
 }
 
@@ -1055,6 +1093,7 @@ export function deactivateCoupon(code: string) {
       if (q.coupon?.code === c.code) delete state.quotes[id]
     })
     persist()
+    recordActivity('coupon.deactivated', `Cupom ${c.code} desativado`, 'Carrinhos com ele perderam o desconto', { type: 'coupon', id: c.code })
   }
   return adminCoupon(c)
 }
@@ -1261,7 +1300,15 @@ export function createOrder(params: {
     const n = findNft(line.nftId)
     if (n) emitNftUpdated(n, previousPrices.get(n.id) ?? n.price)
   }
+  recordActivity('order.created', `Pedido ${order.number} recebido`, orderActivityDetail(order), { type: 'order', id: order.id })
   return order
+}
+
+/** "ana_nft · 2 itens · 1.19 ETH · Ethereum" (sem e-mail nem endereço de carteira). */
+function orderActivityDetail(order: StoredOrder) {
+  const user = state.users.find((u) => u.id === order.userId)
+  const items = order.lines.reduce((s, l) => s + l.quantity, 0)
+  return `${user?.username ?? 'conta removida'} · ${items} ${items === 1 ? 'item' : 'itens'} · ${order.total} ETH · ${NETWORK_NAME[order.network]}`
 }
 
 function dueOrders() {
@@ -1319,6 +1366,8 @@ export function settleDueOrders() {
       userId: order.userId,
       data: { status: order.status, failureReason: order.failureReason, txHash: order.txHash },
     })
+    if (order.status === 'confirmed') recordActivity('order.confirmed', `Pedido ${order.number} confirmado`, orderActivityDetail(order), { type: 'order', id: order.id })
+    else recordActivity('order.rejected', `Pedido ${order.number} recusado`, orderActivityDetail(order), { type: 'order', id: order.id })
   }
 }
 

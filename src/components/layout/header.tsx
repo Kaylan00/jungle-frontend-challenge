@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { LayoutDashboard, User, X } from 'lucide-react'
+import { User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -167,16 +167,6 @@ export function Header() {
                 <DropdownMenuItem onSelect={() => void navigate({ to: '/perfil' })}>Dados do perfil</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void navigate({ to: '/perfil/carteiras' })}>Carteiras</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void navigate({ to: '/perfil/favoritos' })}>Lista de interesse</DropdownMenuItem>
-                {/* Atalho visual só para admin; quem decide o acesso é a API (403 para conta comum). */}
-                {user.role === 'admin' && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => void navigate({ to: '/admin' })}>
-                      <LayoutDashboard className="size-4" aria-hidden="true" />
-                      Painel
-                    </DropdownMenuItem>
-                  </>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() =>

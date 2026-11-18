@@ -34,7 +34,9 @@ import {
   type PasswordResetTokenInfo,
   type Session,
 } from '@/api/contracts'
+import { AdminOrderListParams, AdminUserListParams } from '@/api/admin-contracts'
 import { compareEth } from '@/lib/eth'
+import * as adminDb from './admin-db'
 import * as db from './db'
 import { apiError, API, bearer, optionalUser, readJson, requireAdmin, requireUser, simulateNetwork, zodFields } from './http'
 import { REAL_EMAIL_ENDPOINT, sendRealResetEmail } from './real-email'
@@ -640,6 +642,57 @@ export const handlers = [
     const coupon = db.deactivateCoupon(params.code)
     if (!coupon) return apiError('NOT_FOUND', 'Cupom não encontrado')
     return HttpResponse.json(coupon)
+  }),
+
+  // Kurio Admin (painel à parte): identidade, visão geral, pedidos de todos, usuários e feed de atividade.
+  // Mesma regra das rotas acima: 401 sem sessão, 403 FORBIDDEN para conta comum (papel lido do banco).
+  route('get', '/admin/me', ({ request }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    return HttpResponse.json(db.publicUser(auth.user))
+  }),
+
+  route('get', '/admin/overview', ({ request }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    return HttpResponse.json(adminDb.adminOverview())
+  }),
+
+  route('get', '/admin/activity', ({ request }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 20)
+    if (!Number.isInteger(limit) || limit < 1 || limit > db.ACTIVITY_MAX) {
+      return apiError('VALIDATION_ERROR', 'Parâmetros inválidos', { fields: { limit: `Use um inteiro de 1 a ${db.ACTIVITY_MAX}` } })
+    }
+    return HttpResponse.json({ items: adminDb.listActivity(limit) })
+  }),
+
+  route('get', '/admin/orders', ({ request }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    const sp = new URL(request.url).searchParams
+    const parsed = AdminOrderListParams.safeParse({
+      status: sp.get('status') ?? undefined,
+      q: sp.get('q') ?? undefined,
+      page: sp.get('page') ? Number(sp.get('page')) : undefined,
+      pageSize: sp.get('pageSize') ? Number(sp.get('pageSize')) : undefined,
+    })
+    if (!parsed.success) return apiError('VALIDATION_ERROR', 'Parâmetros inválidos', { fields: zodFields(parsed.error.issues) })
+    return HttpResponse.json(adminDb.adminListOrders(parsed.data))
+  }),
+
+  route('get', '/admin/users', ({ request }) => {
+    const auth = requireAdmin(request)
+    if (auth instanceof Response) return auth
+    const sp = new URL(request.url).searchParams
+    const parsed = AdminUserListParams.safeParse({
+      q: sp.get('q') ?? undefined,
+      page: sp.get('page') ? Number(sp.get('page')) : undefined,
+      pageSize: sp.get('pageSize') ? Number(sp.get('pageSize')) : undefined,
+    })
+    if (!parsed.success) return apiError('VALIDATION_ERROR', 'Parâmetros inválidos', { fields: zodFields(parsed.error.issues) })
+    return HttpResponse.json(adminDb.adminListUsers(parsed.data))
   }),
 
   // Envio real do e-mail (Vercel Function, não é simulada): segue para a rede, nunca cai no 404 abaixo.

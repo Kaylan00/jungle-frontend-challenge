@@ -21,6 +21,9 @@ export const http = axios.create({
 })
 
 http.interceptors.request.use((config) => {
+  // Quem já mandou um Authorization próprio (o login do painel confere o papel com o token recém-emitido,
+  // antes de adotá-lo como sessão desta aba) não tem o cabeçalho trocado pelo token guardado.
+  if (config.headers.has('Authorization')) return config
   const token = sessionStore.getToken()
   if (token) config.headers.set('Authorization', `Bearer ${token}`)
   else {

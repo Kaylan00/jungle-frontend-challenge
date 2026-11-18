@@ -1,5 +1,5 @@
 /**
- * Aba "NFTs e edições" do painel: busca, paginação e, por NFT, destaque e edição de cada edição
+ * Seção "NFTs" do Kurio Admin: busca, paginação e, por NFT, destaque e edição de cada edição
  * (preço, disponibilidade e status). Cada gravação manda a versão do NFT que está na tela; se ele mudou
  * desde então, a API responde 409 e o diálogo mostra os valores atuais para decidir.
  */
@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ChevronDown, ChevronLeft, ChevronRight, Search, Star } from 'lucide-react'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { AdminEditionForm, type AdminNftListResponse, type Edition, type NftDetail } from '@/api/contracts'
 import { ApiError } from '@/api/http'
@@ -22,8 +22,14 @@ import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
 import { applyApiFieldErrors } from '@/lib/form-errors'
 import { cn } from '@/lib/utils'
-import type { AdminSearch } from './admin-page'
 import { useToggleFeatured, useUpdateEdition, versionConflictOf } from './hooks'
+
+export interface NftsSearch {
+  q?: string
+  pagina?: number
+  /** NFT com as edições abertas ao chegar (a busca global leva direto a ele) */
+  abrir?: string
+}
 
 const STATUS_LABEL: Record<Edition['status'], string> = { on_sale: 'À venda', sold_out: 'Esgotada', unavailable: 'Indisponível' }
 const STATUS_CLASS: Record<Edition['status'], string> = {
@@ -35,7 +41,7 @@ const STATUS_CLASS: Record<Edition['status'], string> = {
 /** Valor exato (o painel não arredonda: até 18 casas). */
 const exactEth = (v: string) => formatEth(v, { maxDecimals: 18 })
 
-export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftListResponse>; search: AdminSearch }) {
+export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftListResponse>; search: NftsSearch }) {
   const navigate = useNavigate()
   const [term, setTerm] = useState(search.q ?? '')
   const [editing, setEditing] = useState<{ nft: NftDetail; editionId: string } | null>(null)
@@ -44,12 +50,13 @@ export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftLis
   useEffect(() => setTerm(search.q ?? ''), [search.q])
   useEffect(() => {
     if ((search.q ?? '') === term.trim()) return
-    const t = setTimeout(() => void navigate({ to: '/admin', search: { q: term.trim() || undefined }, replace: true, resetScroll: false }), 300)
+    const t = setTimeout(() => void navigate({ to: '/admin/nfts', search: { q: term.trim() || undefined }, replace: true, resetScroll: false }), 300)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term])
 
-  const goToPage = (pagina: number) => void navigate({ to: '/admin', search: (prev) => ({ ...prev, pagina: pagina > 1 ? pagina : undefined }), resetScroll: false })
+  const goToPage = (pagina: number) =>
+    void navigate({ to: '/admin/nfts', search: (prev) => ({ q: prev.q, pagina: pagina > 1 ? pagina : undefined }), resetScroll: false })
 
   const data = query.data
   // O diálogo acompanha o NFT ao vivo (eventos de outras abas atualizam a lista) enquanto ele estiver na página.
@@ -62,14 +69,14 @@ export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftLis
           <label htmlFor="admin-search" className="mb-2 block text-[14px] leading-4">
             Buscar NFT
           </label>
-          <Search className="pointer-events-none absolute bottom-3 left-3 size-4 text-[#b39463]" aria-hidden="true" />
+          <Search className="pointer-events-none absolute bottom-3 left-3 size-4 text-[var(--kp-fumaca)]" aria-hidden="true" />
           <input
             id="admin-search"
             type="search"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder="Nome, coleção ou id (nft-01)"
-            className="h-10 w-full rounded-[2px] border border-[#3f2319] bg-transparent pl-9 pr-3 text-[14px] placeholder:text-[#b39463] focus-visible:border-primary focus-visible:outline-none"
+            className="h-10 w-full rounded-[10px] border border-[var(--kp-linha-forte)] bg-[var(--kp-ficha)] pl-9 pr-3 text-[14px] placeholder:text-[var(--kp-fumaca)] focus-visible:border-[var(--kp-laranja)] focus-visible:outline-none"
           />
         </div>
         {data && (
@@ -83,7 +90,7 @@ export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftLis
       {query.isPending ? (
         <ul className="flex flex-col gap-3" aria-busy="true" aria-label="Carregando NFTs">
           {Array.from({ length: 5 }, (_, i) => (
-            <li key={i} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4" aria-hidden="true">
+            <li key={i} className="kp-ficha flex items-center gap-4 p-4" aria-hidden="true">
               <Skeleton className="size-14 shrink-0 rounded-md" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-1/3" />
@@ -114,7 +121,7 @@ export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftLis
         <>
           <ul className={cn('flex flex-col gap-3 transition-opacity', query.isPlaceholderData && 'opacity-60')} aria-busy={query.isPlaceholderData || undefined} data-testid="admin-nft-list">
             {query.data.items.map((nft) => (
-              <NftRow key={nft.id} nft={nft} onEdit={(editionId) => setEditing({ nft, editionId })} />
+              <NftRow key={search.abrir === nft.id ? `${nft.id}:aberto` : nft.id} nft={nft} defaultOpen={search.abrir === nft.id} onEdit={(editionId) => setEditing({ nft, editionId })} />
             ))}
           </ul>
           {query.data.totalPages > 1 && (
@@ -142,11 +149,16 @@ export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftLis
   )
 }
 
-function NftRow({ nft, onEdit }: { nft: NftDetail; onEdit: (editionId: string) => void }) {
-  const [open, setOpen] = useState(false)
+function NftRow({ nft, defaultOpen = false, onEdit }: { nft: NftDetail; defaultOpen?: boolean; onEdit: (editionId: string) => void }) {
+  const [open, setOpen] = useState(defaultOpen)
   const panelId = useId()
+  const rowRef = useRef<HTMLLIElement>(null)
+  // Chegou pela busca global: a linha já nasce aberta (a chave muda) e vem para a vista.
+  useEffect(() => {
+    if (defaultOpen) rowRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [defaultOpen])
   return (
-    <li className="rounded-lg border border-border bg-card" data-testid="admin-nft" data-nft-id={nft.id}>
+    <li ref={rowRef} className={cn('kp-ficha transition-colors', defaultOpen && 'border-[rgb(210_138_76/0.55)]')} data-testid="admin-nft" data-nft-id={nft.id}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4">
         <img {...artSources(nft.image, ART_SIZES.detailThumb)} alt="" width={56} height={56} loading="lazy" className="size-14 shrink-0 rounded-md object-cover" />
         <div className="min-w-0 flex-1">
@@ -179,7 +191,7 @@ function NftRow({ nft, onEdit }: { nft: NftDetail; onEdit: (editionId: string) =
         </div>
       </div>
       {open && (
-        <div id={panelId} className="border-t border-border px-4 pb-2">
+        <div id={panelId} className="border-t border-[var(--kp-linha)] px-4 pb-2">
           <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_88px] gap-4 pt-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-subtle-foreground md:grid">
             <span>Edição</span>
             <span>Preço</span>

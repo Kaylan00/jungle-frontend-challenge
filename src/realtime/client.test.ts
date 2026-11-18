@@ -1,7 +1,8 @@
 import { QueryClient, QueryObserver } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AdminActivity } from '@/api/admin-contracts'
 import type { NftDetail, NftListResponse, NftUpdatedEvent, Order, OrderUpdatedEvent } from '@/api/contracts'
-import { qk } from '@/api/queries'
+import { ADMIN_ACTIVITY_LIMIT, qk } from '@/api/queries'
 import { sessionStore } from '@/api/session-store'
 import { clearPriceDrops, getPriceDrops, onPriceDropAlert, type PriceDrop } from '@/features/favorites/price-drops'
 import { subscribeAnnouncements } from '@/lib/announcer'
@@ -555,5 +556,55 @@ describe('favoritos, destaque e painel admin', () => {
       version: 2,
       editions: [{ id: 'ed-1', price: '1.5' }, { id: 'ed-2', price: '2' }],
     })
+  })
+})
+
+describe('admin.activity (Kurio Admin)', () => {
+  const activityEvent = (eventId: string, kind: AdminActivity['kind'] = 'order.created', resource: AdminActivity['resource'] = { type: 'order', id: 'ord-1' }) => ({
+    type: 'admin.activity' as const,
+    eventId,
+    occurredAt: '2026-01-01T00:00:00.000Z',
+    version: 1,
+    activity: { id: eventId, occurredAt: '2026-01-01T00:00:00.000Z', kind, title: `Linha ${eventId}`, detail: 'ana_nft · 1 item', resource },
+  })
+
+  beforeEach(() => {
+    client.start(USER)
+    socket().connectNow()
+    qc.setQueryData(qk.adminActivity(USER), { items: [] })
+    qc.setQueryData(qk.adminOverview(USER), { stale: false })
+    qc.setQueryData(qk.adminOrders(USER, {}), { items: [] })
+    qc.setQueryData(qk.adminCoupons(USER), { items: [] })
+  })
+
+  it('a linha entra no topo do feed sem nova requisição; números e pedidos são conferidos de novo', () => {
+    socket().serverEmit('admin.activity', activityEvent('evt-1'))
+    socket().serverEmit('admin.activity', activityEvent('evt-2'))
+    expect(qc.getQueryData<{ items: AdminActivity[] }>(qk.adminActivity(USER))?.items.map((a) => a.id)).toEqual(['evt-2', 'evt-1'])
+    expect(qc.getQueryState(qk.adminOverview(USER))?.isInvalidated).toBe(true)
+    expect(qc.getQueryState(qk.adminOrders(USER, {}))?.isInvalidated).toBe(true)
+    expect(qc.getQueryState(qk.adminCoupons(USER))?.isInvalidated).toBe(false)
+  })
+
+  it('cupom invalida a lista de cupons, não a de pedidos; duplicata e evento fora do contrato não fazem nada', () => {
+    socket().serverEmit('admin.activity', activityEvent('evt-1', 'coupon.created', { type: 'coupon', id: 'VERAO15' }))
+    expect(qc.getQueryState(qk.adminCoupons(USER))?.isInvalidated).toBe(true)
+    expect(qc.getQueryState(qk.adminOrders(USER, {}))?.isInvalidated).toBe(false)
+    socket().serverEmit('admin.activity', activityEvent('evt-1', 'coupon.created', { type: 'coupon', id: 'VERAO15' }))
+    socket().serverEmit('admin.activity', { type: 'admin.activity', eventId: 'evt-9' })
+    expect(qc.getQueryData<{ items: AdminActivity[] }>(qk.adminActivity(USER))?.items).toHaveLength(1)
+  })
+
+  it('o feed guarda só as linhas mais recentes (o tamanho da primeira leitura)', () => {
+    for (let i = 1; i <= ADMIN_ACTIVITY_LIMIT + 3; i++) socket().serverEmit('admin.activity', activityEvent(`evt-${i}`))
+    const items = qc.getQueryData<{ items: AdminActivity[] }>(qk.adminActivity(USER))!.items
+    expect(items).toHaveLength(ADMIN_ACTIVITY_LIMIT)
+    expect(items[0].id).toBe(`evt-${ADMIN_ACTIVITY_LIMIT + 3}`)
+  })
+
+  it('sem usuário logado, nada é aplicado', () => {
+    client.setUser(null)
+    socket().serverEmit('admin.activity', activityEvent('evt-1'))
+    expect(qc.getQueryData<{ items: AdminActivity[] }>(qk.adminActivity(USER))?.items).toEqual([])
   })
 })

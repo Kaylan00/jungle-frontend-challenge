@@ -15,7 +15,8 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { io, type Socket } from 'socket.io-client'
 import { NftUpdatedEvent, OrderUpdatedEvent, SOCKET_EVENTS, type AdminNftListResponse, type NftDetail, type NftListResponse, type Order } from '@/api/contracts'
-import { favoritesQuery, nftDetailQuery, qk } from '@/api/queries'
+import { ADMIN_SOCKET_EVENTS, AdminActivityEvent, type AdminActivityList } from '@/api/admin-contracts'
+import { ADMIN_ACTIVITY_LIMIT, favoritesQuery, nftDetailQuery, qk } from '@/api/queries'
 import { sessionStore } from '@/api/session-store'
 import { notePriceChange, recordPriceDrop } from '@/features/favorites/price-drops'
 import { announce } from '@/lib/announcer'
@@ -57,6 +58,7 @@ export class RealtimeClient {
     this.socket.io.on('reconnect_failed', () => this.setStatus('offline'))
     this.socket.on(SOCKET_EVENTS.nftUpdated, this.onNftUpdated)
     this.socket.on(SOCKET_EVENTS.orderUpdated, this.onOrderUpdated)
+    this.socket.on(ADMIN_SOCKET_EVENTS.activity, this.onAdminActivity)
 
     this.unsubscribeSession = sessionStore.subscribe(() => this.restart())
   }
@@ -230,6 +232,26 @@ export class RealtimeClient {
         /* sem favoritos ou sem rede: sem alerta (o preço novo já está na tela) */
       }
     })()
+  }
+
+  /**
+   * Feed do Kurio Admin (só chega a conexões de contas admin). A linha entra no topo do feed em cache e os
+   * números e listas do painel que estiverem na tela são conferidos de novo pela REST (fonte da verdade).
+   */
+  private onAdminActivity = (raw: unknown) => {
+    const parsed = AdminActivityEvent.safeParse(raw)
+    if (!parsed.success || !this.userId) return
+    const e = parsed.data
+    if (this.seen.has(e.eventId)) return
+    this.seen.add(e.eventId)
+    if (this.seen.size > MAX_SEEN) this.seen.delete(this.seen.values().next().value!)
+    const owner = this.userId
+    this.queryClient.setQueryData<AdminActivityList>(qk.adminActivity(owner), (old) =>
+      old && !old.items.some((a) => a.id === e.activity.id) ? { items: [e.activity, ...old.items].slice(0, ADMIN_ACTIVITY_LIMIT) } : old,
+    )
+    void this.queryClient.invalidateQueries({ queryKey: qk.adminOverview(owner) })
+    if (e.activity.resource.type === 'order') void this.queryClient.invalidateQueries({ queryKey: qk.adminOrderLists(owner) })
+    if (e.activity.resource.type === 'coupon') void this.queryClient.invalidateQueries({ queryKey: qk.adminCoupons(owner) })
   }
 
   private onOrderUpdated = (raw: unknown) => {

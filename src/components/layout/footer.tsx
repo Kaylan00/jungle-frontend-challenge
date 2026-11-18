@@ -177,7 +177,17 @@ export function Footer() {
             </p>
           </div>
         </div>
-        <p className="pb-[29px] pt-[11px] text-center leading-5">© 2026 Kurio. Propriedade digital para todos.</p>
+        <p className="pb-[29px] pt-[11px] text-center leading-5">
+          © 2026 Kurio. Propriedade digital para todos.
+          {/* Porta da equipe: discreta (não compete com a loja) e sem atalho no menu da conta. O painel tem login
+              próprio e a API confere o papel em cada chamada; esconder o endereço não seria proteção. */}
+          <span aria-hidden="true" className="mx-2 text-subtle-foreground">
+            ·
+          </span>
+          <Link to="/admin" preload={false} className="text-[12px] text-subtle-foreground underline-offset-4 transition-colors hover:text-highlight hover:underline">
+            Área da equipe
+          </Link>
+        </p>
       </div>
     </footer>
   )
