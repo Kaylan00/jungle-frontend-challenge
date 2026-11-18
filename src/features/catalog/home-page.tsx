@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { SortOption } from '@/api/contracts'
 import { featuredQuery, nftListQuery } from '@/api/queries'
 import { EmptyState, ErrorState } from '@/components/shared/error-state'
@@ -9,12 +9,14 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { announce } from '@/lib/announcer'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { cn } from '@/lib/utils'
+import { ActiveFilters } from './active-filters'
 import { CatalogFilters } from './filters'
 import { Hero } from './hero'
 import { NftCard, NftCardSkeleton } from './nft-card'
-import { PAGE_SIZE, SORT_LABEL, toListParams, type CatalogSearch } from './search-params'
+import { activeFilters, CLEAR_FILTERS, PAGE_SIZE, SORT_LABEL, toListParams, type CatalogSearch } from './search-params'
 
 /**
  * Grade do catálogo (lista e skeleton). Mobile (Figma 414): duas colunas, a da direita 32px mais baixa.
@@ -67,9 +69,6 @@ function useSearchTerm(search: CatalogSearch, update: ReturnType<typeof useCatal
   return [term, setTerm] as const
 }
 
-const countActiveFilters = (search: CatalogSearch) =>
-  (search.category?.length ?? 0) + (search.network?.length ?? 0) + (search.minPrice || search.maxPrice ? 1 : 0) + (search.onlyAvailable ? 1 : 0)
-
 /** Ícone de filtros do Figma mobile: duas linhas com um círculo em cada ponta. */
 function FiltersIcon() {
   return (
@@ -88,7 +87,8 @@ function MobileCatalogBar({ search }: { search: CatalogSearch }) {
   const [term, setTerm] = useSearchTerm(search, update)
   // Mesma consulta do catálogo (mesma chave = mesmo cache): só para as contagens dos filtros.
   const list = useQuery(nftListQuery(toListParams(search)))
-  const activeFilters = countActiveFilters(search)
+  // Mesma contagem das etiquetas de filtros ativos abaixo das abas (a busca conta como um filtro).
+  const activeCount = activeFilters(search).length
   return (
     <div className="container-page flex items-center gap-2 pt-10 md:hidden">
       <label className="relative flex-1">
@@ -120,11 +120,13 @@ function MobileCatalogBar({ search }: { search: CatalogSearch }) {
           <button
             type="button"
             className="relative grid size-[45px] shrink-0 place-items-center rounded-[10px] bg-[linear-gradient(135deg,#8a5a32,#bb7b45)] text-[#2a1a10] transition-[filter] hover:brightness-110"
-            aria-label={`Filtros${activeFilters ? `, ${activeFilters} ativos` : ''}`}
+            aria-label={`Filtros${activeCount ? `, ${activeCount} ${activeCount === 1 ? 'ativo' : 'ativos'}` : ''}`}
           >
             <FiltersIcon />
-            {activeFilters > 0 && (
-              <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-foreground text-[10px] text-background">{activeFilters}</span>
+            {activeCount > 0 && (
+              <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-foreground px-1 text-[10px] tabular-nums text-background" data-testid="filters-count">
+                {activeCount}
+              </span>
             )}
           </button>
         </SheetTrigger>
@@ -153,7 +155,12 @@ function Catalog({ search }: { search: CatalogSearch }) {
   const [term, setTerm] = useSearchTerm(search, update)
 
   const activeTab = TABS.findIndex((t) => t.sort === search.sort)
-  const activeFilters = countActiveFilters(search)
+  const hasFilters = activeFilters(search).length > 0
+  const tablistRef = useRef<HTMLDivElement>(null)
+  const clearFilters = () => {
+    announce('Todos os filtros foram removidos.')
+    void update(CLEAR_FILTERS)
+  }
 
   return (
     <section id="catalogo" aria-labelledby="catalogo-title" className="container-page mt-[14px] scroll-mt-20 md:mt-24">
@@ -178,8 +185,8 @@ function Catalog({ search }: { search: CatalogSearch }) {
                 data-testid="catalog-search"
               />
             </label>
-            {activeFilters > 0 && (
-              <button type="button" className="mt-4 pl-3 text-[15px] text-highlight underline-offset-4 hover:underline" onClick={() => void navigate({ to: '/', search: {}, hash: 'catalogo', resetScroll: false })}>
+            {hasFilters && (
+              <button type="button" className="mt-4 pl-3 text-[15px] text-highlight underline-offset-4 hover:underline" onClick={clearFilters}>
                 Limpar filtros
               </button>
             )}
@@ -187,13 +194,15 @@ function Catalog({ search }: { search: CatalogSearch }) {
           <FeaturedBox />
         </aside>
 
-        <div>
+        {/* min-w-0: a linha de etiquetas rola por dentro no mobile, sem alargar a coluna. */}
+        <div className="min-w-0">
           {/* Mobile (Figma 414): abas de 14px, a ativa em #E89B55 com sublinhado laranja, 6px abaixo do texto
               (o espaço extra sai da margem de baixo: a grade fica no mesmo lugar). Abaixo de 390px as três
               não cabem em 14px: vão para 13px; se ainda faltar espaço (fonte do sistema aumentada), a
               fileira rola de lado sem barra visível. */}
           <div className="mb-[10px] flex flex-wrap items-start justify-between gap-3 md:mb-[26px]">
             <div
+              ref={tablistRef}
               role="tablist"
               aria-label="Seleção do catálogo"
               className="flex max-w-full gap-[10px] overflow-x-auto text-[13px] leading-5 [scrollbar-width:none] min-[390px]:text-[14px] md:gap-[21px] md:text-[15px] [&::-webkit-scrollbar]:hidden"
@@ -218,6 +227,18 @@ function Catalog({ search }: { search: CatalogSearch }) {
             </div>
             <SortSelect value={search.sort} onChange={(sort) => void update({ sort })} className="hidden md:flex" />
           </div>
+
+          {/* Filtros aplicados (só aparece com algum filtro; a grade não se move quando não há nenhum). */}
+          <ActiveFilters
+            search={search}
+            onRemove={(f) => void update(f.patch)}
+            onClear={() => void update(CLEAR_FILTERS)}
+            focusFallback={() => {
+              const tabs = tablistRef.current
+              ;(tabs?.querySelector<HTMLElement>('[aria-selected="true"]') ?? tabs?.querySelector<HTMLElement>('[role="tab"]'))?.focus()
+            }}
+            className="mb-[18px] mt-1 md:-mt-2.5 md:mb-[26px]"
+          />
 
           <div aria-live="polite" className="sr-only" data-testid="results-summary">
             {list.data ? `${list.data.total} NFTs encontrados. Página ${list.data.page} de ${list.data.totalPages}.` : ''}
