@@ -144,7 +144,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 
 | Item | Onde |
 | --- | --- |
-| Início e detalhe, mobile e desktop, 5 execuções, mediana (desktop 100 / 100; mobile 90 / 94 na rodada oficial, 82 a 90 conforme a máquina; limitações no RESULTADOS) | `lighthouse/run.mjs` |
+| Início e detalhe, mobile e desktop, 5 execuções, mediana (desktop 100 / 100; mobile 93 a 96 no início num navegador comum, 82 a 90 no ambiente do script; detalhes no RESULTADOS) | `lighthouse/run.mjs` |
 | Relatórios, ambiente, LCP/CLS/TBT | `lighthouse/RESULTADOS.md` |
 | Metas e ressalvas | `RESULTADOS.md`; ARCHITECTURE §11 |
 

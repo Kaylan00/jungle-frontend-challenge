@@ -207,7 +207,7 @@ Cada teste roda num contexto novo (seed limpa). Eventos saem do servidor simulad
 
 ## 11. Performance (Lighthouse)
 
-Resultados, ambiente, condições e o passo a passo das otimizações em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Mediana de 5: desktop 100 e 100; mobile 90 (início) e 94 (detalhe) na rodada oficial, mas o mobile varia com a máquina (82 a 90 no início) e não cobra os arquivos servidos pelo service worker do MSW (sem esse efeito: 77 / 77). Detalhes na seção de limitações do RESULTADOS.
+Resultados, ambiente, condições e o passo a passo das otimizações em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Mediana de 5: desktop 100 e 100; mobile 90 (início) e 94 (detalhe) na rodada oficial do script; num navegador comum o início mede 93 a 96, e no ambiente do script varia de 82 a 90 e não cobra os arquivos servidos pelo service worker do MSW (sem esse efeito: 77 / 77). Detalhes na seção de limitações do RESULTADOS.
 
 - **Medição como produção**: `npm run lighthouse` serve o build em HTTPS/HTTP2 (certificado local de uso único), como a Vercel.
 - **Chunks**: React num chunk próprio (vai com a entrada), núcleo das bibliotecas da loja num `vendor` carregado com o app, zod e decimal.js com os contratos (os mocks usam antes do app), skeletons de espera (`pendingComponent`) separados por rota (`vite.config.ts`).
