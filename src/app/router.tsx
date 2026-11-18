@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { createRouter, type ParsedLocation } from '@tanstack/react-router'
 import { NotFound } from '@/components/layout/not-found'
 import { RouteError } from '@/components/layout/route-error'
+import { trackPreviousPage } from '@/lib/back-navigation'
 import { routeTree } from '@/routeTree.gen'
 
 export interface RouterContext {
@@ -26,6 +27,8 @@ export function createAppRouter(queryClient: QueryClient) {
     defaultErrorComponent: RouteError,
   })
   ref.router = router
+  // Seta "voltar" das telas mobile: lembra de qual página veio cada navegação (lib/back-navigation.ts).
+  trackPreviousPage(router)
   return router
 }
 

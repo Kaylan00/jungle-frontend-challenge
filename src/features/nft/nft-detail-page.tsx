@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { ChevronLeft, Mail, Search, ShoppingCart, Star, ZoomIn } from 'lucide-react'
 import { LinkedinIcon, TwitterIcon, XIcon } from '@/components/shared/brand-icons'
 import { useState } from 'react'
@@ -19,6 +19,7 @@ import { FavoriteButton } from '@/features/favorites/favorite-button'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { useBottomBar } from '@/lib/bottom-bars'
 import { formatEth } from '@/lib/eth'
+import { FLOW_PAGES, useSmartBack } from '@/lib/back-navigation'
 import { cn } from '@/lib/utils'
 import { ShareButton } from './share-button'
 import { SkeletonLine, VitrineCardSkeleton, VitrineDotsSkeleton } from './vitrine-skeleton'
@@ -51,7 +52,7 @@ function editionLabel(e: Edition) {
 
 function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) {
   const navigate = useNavigate()
-  const router = useRouter()
+  const goBack = useSmartBack({ fallback: '/', avoid: FLOW_PAGES })
   // Padrão: a edição à venda com o preço exibido no card (o menor); senão a primeira à venda.
   const firstOnSale = nft.editions.find((e) => e.status === 'on_sale' && e.price === nft.price) ?? nft.editions.find((e) => e.status === 'on_sale')
   const edition = nft.editions.find((e) => e.id === editionId) ?? firstOnSale ?? nft.editions[0]
@@ -96,7 +97,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
       <div className="mb-2 flex items-center justify-between md:hidden">
         <button
           type="button"
-          onClick={() => router.history.back()}
+          onClick={goBack}
           className="grid size-[35px] place-items-center rounded-full border border-[#3c2218] bg-[#2f1d15] text-muted-foreground transition-colors hover:text-highlight"
           aria-label="Voltar"
         >

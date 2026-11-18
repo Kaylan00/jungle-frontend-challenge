@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { AlertTriangle, ChevronLeft } from 'lucide-react'
 import { useState } from 'react'
 import type { Cart, CartItem } from '@/api/contracts'
@@ -12,6 +12,7 @@ import { NftCard } from '@/features/catalog/nft-card'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
 import { useBottomBar } from '@/lib/bottom-bars'
+import { FLOW_PAGES, useSmartBack } from '@/lib/back-navigation'
 import { cn } from '@/lib/utils'
 import { VitrineCardSkeleton, VitrineDotsSkeleton } from '@/features/nft/vitrine-skeleton'
 import { CouponForm, CouponSkeleton, SummaryLines } from './cart-summary'
@@ -19,7 +20,7 @@ import { useAcknowledgePrices, useCart, useRemoveCartItem, useUpdateCartItem } f
 
 export function CartPage() {
   const cart = useCart()
-  const router = useRouter()
+  const goBack = useSmartBack({ fallback: '/', avoid: FLOW_PAGES })
 
   return (
     // Mobile (Figma 414): margens de 28px, resumo num painel que vai até o fim da tela.
@@ -27,7 +28,7 @@ export function CartPage() {
       <div className="mb-[21px] flex items-center md:hidden">
         <button
           type="button"
-          onClick={() => router.history.back()}
+          onClick={goBack}
           className="grid size-[35px] shrink-0 place-items-center rounded-full border border-[#3c2218] bg-[#2f1d15] text-[#b09261] transition-colors hover:text-highlight"
           aria-label="Voltar"
         >

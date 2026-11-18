@@ -94,3 +94,15 @@ test.describe('Carrinho', () => {
     await expect(dialog).toBeHidden()
   })
 })
+
+test('mobile: a seta "Voltar" do carrinho nunca leva de volta ao pagamento', async ({ app, page }) => {
+  test.skip(!app.isMobile, 'A seta "Voltar" do carrinho existe só no mobile')
+  await app.login('ana')
+  await app.addToCart('nft-01', { edition: 'nft-01-ed-3' })
+  await page.getByRole('button', { name: /Conectar e finalizar/ }).first().click()
+  await expect(page).toHaveURL(/\/pagamento$/)
+  await page.goBack()
+  await expect(page).toHaveURL(/\/carrinho$/)
+  await page.getByRole('button', { name: 'Voltar' }).first().click()
+  await expect(page).toHaveURL(/\/$/)
+})
