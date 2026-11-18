@@ -458,7 +458,9 @@ function MoreFromCollection({ nft }: { nft: NftDetail }) {
         ))}
       </ul>
       {pages > 1 && (
-        <div className="mt-[28px] flex justify-center gap-2 xl:mt-8" role="group" aria-label="Páginas da coleção">
+        // Botões de 24x24 (área de toque da WCAG 2.5.8) com o ponto de 12px no meio; as margens negativas
+        // mantêm o ponto e o conteúdo abaixo exatamente onde estavam.
+        <div className="-mb-1.5 mt-[22px] flex justify-center xl:mt-[26px]" role="group" aria-label="Páginas da coleção">
           {Array.from({ length: pages }, (_, i) => (
             <button
               key={i}
@@ -466,8 +468,12 @@ function MoreFromCollection({ nft }: { nft: NftDetail }) {
               onClick={() => setPage(i)}
               aria-label={`Página ${i + 1} de ${pages}`}
               aria-current={i === current ? 'true' : undefined}
-              className={cn('size-3 rounded-full border border-primary transition-colors hover:bg-primary/60 xl:border-[1.3px]', i === current && 'bg-primary')}
-            />
+              className="group/dot grid size-6 place-items-center"
+            >
+              <span
+                className={cn('size-3 rounded-full border border-primary transition-colors group-hover/dot:bg-primary/60 xl:border-[1.3px]', i === current && 'bg-primary')}
+              />
+            </button>
           ))}
         </div>
       )}

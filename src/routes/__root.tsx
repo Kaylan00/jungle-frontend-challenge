@@ -12,7 +12,9 @@ import { RealtimeBadge } from '@/components/layout/realtime-badge'
 import { useAuthOverlay } from '@/features/auth/auth-overlay'
 import { AuthOverlayHost } from '@/features/auth/auth-overlay-host'
 import { PriceDropNotifier } from '@/features/favorites/price-drop-notifier'
+import { isPanelPath } from '@/features/admin/panel-path'
 import { refreshBottomBars } from '@/lib/bottom-bars'
+import { useIsDesktop } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 // Painel de cenários só existe com mocks ligados (não entra no bundle sem eles).
@@ -38,11 +40,43 @@ const TOAST_MOBILE_OFFSET = {
   right: 'calc(env(safe-area-inset-right, 0px) + 12px)',
 }
 
+/**
+ * Duas aplicações no mesmo origin: a loja e o Kurio Admin (/admin/*). O painel não usa cabeçalho, rodapé,
+ * barra inferior, login por cima da página, alerta de preço dos favoritos nem a aba de cenários da loja: a
+ * casca dele mora em routes/admin/_painel.tsx. A escolha segue a página já exibida (e não a que está
+ * carregando), para a loja não ficar sem moldura no meio da navegação até o painel.
+ */
 function RootLayout() {
+  const shownPathname = useRouterState({ select: (s) => (s.resolvedLocation ?? s.location).pathname })
+  return isPanelPath(shownPathname) ? <PanelRoot /> : <StoreLayout />
+}
+
+/** Raiz do painel: só a página, as regiões de anúncio (aria-live) e os avisos. */
+function PanelRoot() {
+  return (
+    <>
+      <Outlet />
+      <LiveAnnouncer />
+      <Toaster
+        theme="dark"
+        position="bottom-right"
+        offset={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', right: 'calc(env(safe-area-inset-right, 0px) + 16px)' }}
+        mobileOffset={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)', left: '12px', right: '12px' }}
+        richColors
+        toastOptions={{ style: { fontFamily: 'var(--font-sans)', background: '#1b120e', border: '1px solid #442c1b' } }}
+      />
+    </>
+  )
+}
+
+function StoreLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   // Tela de conta aberta sobre esta página (ver features/auth/auth-overlay.ts): a página fica ao fundo, inerte.
   const authOverlay = useAuthOverlay()
   const overlayOpen = authOverlay !== null
+  // Cabeçalho e rodapé só existem no desktop e a barra inferior só no mobile (as classes md: continuam como
+  // reserva): o layout que não aparece nem é montado, o que deixa a primeira tela do celular mais leve.
+  const isDesktop = useIsDesktop()
   // Com a página inerte atrás da tela de conta, as barras dela não empurram mais os avisos.
   useEffect(() => refreshBottomBars(), [overlayOpen])
   // Página já exibida (não a que ainda está carregando): uma navegação que o guard desvia para o login por
@@ -69,12 +103,11 @@ function RootLayout() {
         >
           Pular para o conteúdo
         </a>
-        <Header />
+        {isDesktop && <Header />}
         <main id="conteudo" ref={mainRef} tabIndex={-1} className={cn('scale-frame min-h-dvh flex-1 outline-none', hasMobileNav(pathname) && 'max-md:pb-24')}>
           <Outlet />
         </main>
-        <Footer />
-        <MobileNav />
+        {isDesktop ? <Footer /> : <MobileNav />}
         <RealtimeBadge />
       </div>
       {authOverlay && <AuthOverlayHost overlay={authOverlay} />}

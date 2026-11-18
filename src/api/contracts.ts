@@ -8,6 +8,10 @@
  */
 import { z } from 'zod'
 
+// Sem o modo JIT do zod: ele testa `new Function('')` para saber se pode compilar os schemas, e a CSP do app
+// (script-src 'self', sem 'unsafe-eval') registra essa tentativa como violação, mesmo com o erro tratado.
+z.config({ jitless: true })
+
 /** Valor em ETH trafega sempre como string decimal (até 18 casas), nunca como number. */
 export const EthAmount = z.string().regex(/^\d+(\.\d{1,18})?$/, 'Valor ETH inválido')
 export type EthAmount = z.infer<typeof EthAmount>

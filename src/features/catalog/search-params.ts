@@ -37,6 +37,24 @@ export const catalogSearchSchema = z.object({
 })
 export type CatalogSearch = z.infer<typeof catalogSearchSchema>
 
+/**
+ * Validação da URL do catálogo com cache. O roteador valida a busca de novo a cada render de cada <Link> que
+ * aponta para o início (cards, abas, paginação, etiquetas...), quase sempre com a mesma entrada; o zod sem
+ * JIT (ver api/contracts.ts) refaz o objeto inteiro em toda chamada. Mesma entrada devolve o mesmo resultado.
+ */
+const validated = new Map<string, CatalogSearch>()
+export function validateCatalogSearch(input: Record<string, unknown>): CatalogSearch {
+  const key = JSON.stringify(input)
+  let result = validated.get(key)
+  if (!result) {
+    result = catalogSearchSchema.parse(input)
+    // Poucas buscas distintas por sessão; o limite só evita crescer sem fim.
+    if (validated.size >= 100) validated.delete(validated.keys().next().value!)
+    validated.set(key, result)
+  }
+  return result
+}
+
 export function toListParams(s: CatalogSearch): NftListParams {
   return {
     q: s.q || undefined,

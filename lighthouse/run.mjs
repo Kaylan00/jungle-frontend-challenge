@@ -8,6 +8,8 @@
  *
  * Uso: npm run build && npm run lighthouse
  * Variáveis: LH_URL (padrão: sobe o preview local em :4175), CHROME_PATH (padrão: Chromium do Playwright).
+ * Para comparar alternativas sem rodar tudo: LH_PAGES=inicio,detalhe, LH_PROFILES=mobile,desktop e
+ * LH_OUT=lighthouse/reports/tmp/<nome> (pasta fora do controle de versão).
  */
 import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
@@ -17,14 +19,21 @@ import lighthouse from 'lighthouse'
 import desktopConfig from 'lighthouse/core/config/desktop-config.js'
 
 const RUNS = Number(process.env.LH_RUNS ?? 3)
-const PAGES = [
-  { name: 'inicio', path: '/' },
-  { name: 'detalhe', path: '/nft/nft-01' },
-]
-const PROFILES = [
-  { name: 'mobile', config: undefined },
-  { name: 'desktop', config: desktopConfig },
-]
+const only = (list, env) => (env ? list.filter((x) => env.split(',').includes(x.name)) : list)
+const PAGES = only(
+  [
+    { name: 'inicio', path: '/' },
+    { name: 'detalhe', path: '/nft/nft-01' },
+  ],
+  process.env.LH_PAGES,
+)
+const PROFILES = only(
+  [
+    { name: 'mobile', config: undefined },
+    { name: 'desktop', config: desktopConfig },
+  ],
+  process.env.LH_PROFILES,
+)
 const CATEGORIES = ['performance', 'accessibility', 'best-practices', 'seo']
 
 function findChrome() {
@@ -76,7 +85,7 @@ const median = (xs) => {
 }
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-const outDir = join('lighthouse', 'reports', stamp)
+const outDir = process.env.LH_OUT ?? join('lighthouse', 'reports', stamp)
 mkdirSync(outDir, { recursive: true })
 
 const { url: baseUrl, stop } = await startPreview()
@@ -101,7 +110,7 @@ try {
   for (const pageDef of PAGES) {
     for (const profile of PROFILES) {
       const runs = []
-      for (let i = 1; i <= RUNS; i++) {
+      for (let i = 1, attempt = 1; i <= RUNS; ) {
         // Perfil de navegador novo a cada medição: sem cache nem service worker anterior.
         // Chrome aberto direto (o chrome-launcher detecta WSL e converte caminhos para o Windows).
         const userDataDir = mkdtempSync(join(process.platform === 'win32' ? tmpdir() : '/tmp', 'kurio-lh-'))
@@ -117,6 +126,13 @@ try {
           writeFileSync(join(outDir, `${base}.html`), html)
           writeFileSync(join(outDir, `${base}.json`), json)
           const lhr = result.lhr
+          // Falha do próprio Lighthouse ao gravar o trace (ex.: NO_NAVSTART, "Please run Lighthouse again"):
+          // não é resultado da página; mede de novo (até 3 tentativas) em vez de abortar a rodada.
+          if (lhr.runtimeError) {
+            console.warn(`${base}: ${lhr.runtimeError.code}, tentativa ${attempt} descartada`)
+            if (++attempt > 3) throw new Error(`${base}: ${lhr.runtimeError.message}`)
+            continue
+          }
           const run = {
             scores: Object.fromEntries(CATEGORIES.map((c) => [c, Math.round((lhr.categories[c]?.score ?? 0) * 100)])),
             lcpMs: Math.round(lhr.audits['largest-contentful-paint'].numericValue),
@@ -126,6 +142,8 @@ try {
           }
           runs.push(run)
           console.log(`${pageDef.name} ${profile.name} #${i}`, JSON.stringify(run))
+          i++
+          attempt = 1
         } finally {
           chrome.kill()
           await new Promise((r) => setTimeout(r, 300))

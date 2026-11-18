@@ -31,7 +31,19 @@ export function loadGsap(): Promise<Gsap> {
 /** O GSAP, se já tiver sido carregado (para gsap.set mesmo com movimento reduzido); senão null. */
 export const loadedGsap = (): Gsap | null => instance
 
-/** Roda depois do carregamento e com o navegador ocioso (não disputa CPU com o LCP). */
+/*
+ * Primeira tela pronta: a rota inicial carregou e as consultas dela já responderam (ver app/app-settled.ts).
+ * O evento `load` não serve de marco num app que monta tudo por import dinâmico: ele dispara logo no começo,
+ * e enquanto as respostas da API não chegam o navegador fica ocioso, então um requestIdleCallback rodaria
+ * ANTES de a primeira tela (e a arte do LCP) ser montada, disputando CPU com ela.
+ */
+let settle = () => {}
+const settled = new Promise<void>((resolve) => (settle = resolve))
+
+/** Marca a primeira tela como pronta (chamado uma vez por app/app-settled.ts; chamadas extras não fazem nada). */
+export const markAppSettled = () => settle()
+
+/** Roda depois que a primeira tela ficou pronta e com o navegador ocioso (não disputa CPU com o LCP). */
 export function whenIdle(fn: () => void, timeout = 2500): () => void {
   let cancelled = false
   let idleId: number | undefined
@@ -41,8 +53,12 @@ export function whenIdle(fn: () => void, timeout = 2500): () => void {
     if ('requestIdleCallback' in window) idleId = window.requestIdleCallback(() => !cancelled && fn(), { timeout })
     else timer = setTimeout(() => !cancelled && fn(), 200)
   }
-  if (document.readyState === 'complete') run()
-  else window.addEventListener('load', run, { once: true })
+  const afterLoad = () => {
+    if (cancelled) return
+    if (document.readyState === 'complete') run()
+    else window.addEventListener('load', run, { once: true })
+  }
+  void settled.then(afterLoad)
   return () => {
     cancelled = true
     window.removeEventListener('load', run)

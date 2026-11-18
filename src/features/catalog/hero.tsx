@@ -335,7 +335,8 @@ function Dots({ count, index, onSelect, small, className }: { count: number; ind
           onClick={() => onSelect(i)}
           aria-label={`Destaque ${i + 1} de ${count}`}
           aria-current={i === index ? 'true' : undefined}
-          className="group/dot grid h-6 w-4 place-items-center"
+          // Área de toque de 24x24 (WCAG 2.5.8); o ponto visível continua pequeno.
+          className="group/dot grid size-6 place-items-center"
         >
           <span
             className={cn(

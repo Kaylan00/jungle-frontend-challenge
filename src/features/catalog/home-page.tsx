@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Skeleton } from '@/components/ui/skeleton'
 import { announce } from '@/lib/announcer'
 import { ART_SIZES, artSources } from '@/lib/art'
+import { useIsDesktop } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 import { ActiveFilters } from './active-filters'
 import { CatalogFilters } from './filters'
@@ -34,9 +35,10 @@ const TABS: Array<{ label: string; sort: SortOption | undefined }> = [
 ]
 
 export function HomePage({ search }: { search: CatalogSearch }) {
+  const isDesktop = useIsDesktop()
   return (
     <>
-      <MobileCatalogBar search={search} />
+      {!isDesktop && <MobileCatalogBar search={search} />}
       <Hero />
       <Catalog search={search} />
       <PromoBanners />
@@ -163,6 +165,10 @@ function Catalog({ search }: { search: CatalogSearch }) {
   const totalPages = list.data?.totalPages ?? 1
   const update = useCatalogUpdate()
   const [term, setTerm] = useSearchTerm(search, update)
+  // Caixa de filtros lateral e ordenação ao lado das abas só no desktop (no mobile ficam na folha de filtros
+  // da barra do topo). Escondidas com CSS elas ainda montavam boa parte da página e os sliders e checkboxes do
+  // Radix eram medidos na carga, sem nunca aparecer.
+  const isDesktop = useIsDesktop()
 
   const activeTab = TABS.findIndex((t) => t.sort === search.sort)
   const hasFilters = activeFilters(search).length > 0
@@ -179,30 +185,32 @@ function Catalog({ search }: { search: CatalogSearch }) {
       </h2>
 
       <div className="grid gap-10 md:grid-cols-[240px_1fr] xl:grid-cols-[310px_1fr] xl:gap-12 wide:grid-cols-[calc(310*var(--u))_1fr] wide:gap-[calc(48*var(--u))]">
-        <aside className="hidden md:block" aria-label="Filtros do catálogo">
-          <div className="mt-px bg-card px-5 pb-5 pt-[15px]">
-            <CatalogFilters search={search} facets={list.data?.facets} onChange={(p) => void update(p)} />
-            {/* A busca por nome não aparece no Figma desktop; fica no fim da caixa de filtros. */}
-            <label className="relative mt-3 block">
-              <span className="sr-only">Buscar NFTs por nome</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-              <input
-                type="search"
-                value={term}
-                onChange={(e) => setTerm(e.target.value)}
-                placeholder="Buscar por nome"
-                className="h-10 w-full rounded-[4px] bg-band pl-9 pr-2 text-[15px] placeholder:text-[#b19362]"
-                data-testid="catalog-search"
-              />
-            </label>
-            {hasFilters && (
-              <button type="button" className="mt-4 pl-3 text-[15px] text-highlight underline-offset-4 hover:underline" onClick={clearFilters}>
-                Limpar filtros
-              </button>
-            )}
-          </div>
-          <FeaturedBox />
-        </aside>
+        {isDesktop && (
+          <aside className="hidden md:block" aria-label="Filtros do catálogo">
+            <div className="mt-px bg-card px-5 pb-5 pt-[15px]">
+              <CatalogFilters search={search} facets={list.data?.facets} onChange={(p) => void update(p)} />
+              {/* A busca por nome não aparece no Figma desktop; fica no fim da caixa de filtros. */}
+              <label className="relative mt-3 block">
+                <span className="sr-only">Buscar NFTs por nome</span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={term}
+                  onChange={(e) => setTerm(e.target.value)}
+                  placeholder="Buscar por nome"
+                  className="h-10 w-full rounded-[4px] bg-band pl-9 pr-2 text-[15px] placeholder:text-[#b19362]"
+                  data-testid="catalog-search"
+                />
+              </label>
+              {hasFilters && (
+                <button type="button" className="mt-4 pl-3 text-[15px] text-highlight underline-offset-4 hover:underline" onClick={clearFilters}>
+                  Limpar filtros
+                </button>
+              )}
+            </div>
+            <FeaturedBox />
+          </aside>
+        )}
 
         {/* min-w-0: a linha de etiquetas rola por dentro no mobile, sem alargar a coluna. */}
         <div className="min-w-0">
@@ -235,7 +243,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
                 )
               })}
             </div>
-            <SortSelect value={search.sort} onChange={(sort) => void update({ sort })} className="hidden md:flex" />
+            {isDesktop && <SortSelect value={search.sort} onChange={(sort) => void update({ sort })} className="hidden md:flex" />}
           </div>
 
           {/* Filtros aplicados (só aparece com algum filtro; a grade não se move quando não há nenhum). */}

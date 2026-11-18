@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-17T17:47:02.047Z",
+  "date": "2026-11-18T16:10:15.532Z",
   "baseUrl": "http://localhost:4175",
   "runs": 3,
   "environment": {
@@ -16,50 +16,50 @@
       "page": "/",
       "profile": "mobile",
       "median": {
-        "performance": 71,
+        "performance": 82,
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100,
-        "lcpMs": 4234,
+        "lcpMs": 3844,
         "cls": 0,
-        "tbtMs": 601
+        "tbtMs": 311
       },
       "runs": [
         {
           "scores": {
-            "performance": 75,
+            "performance": 81,
             "accessibility": 100,
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 4234,
+          "lcpMs": 3844,
           "cls": 0,
-          "tbtMs": 450,
-          "fcpMs": 866
+          "tbtMs": 323,
+          "fcpMs": 950
         },
         {
           "scores": {
-            "performance": 71,
+            "performance": 82,
             "accessibility": 100,
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 4138,
+          "lcpMs": 3916,
           "cls": 0,
-          "tbtMs": 601,
-          "fcpMs": 863
+          "tbtMs": 290,
+          "fcpMs": 956
         },
         {
           "scores": {
-            "performance": 65,
+            "performance": 82,
             "accessibility": 100,
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 4417,
+          "lcpMs": 3812,
           "cls": 0,
-          "tbtMs": 804,
-          "fcpMs": 879
+          "tbtMs": 311,
+          "fcpMs": 952
         }
       ]
     },
@@ -67,50 +67,50 @@
       "page": "/",
       "profile": "desktop",
       "median": {
-        "performance": 98,
+        "performance": 99,
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100,
-        "lcpMs": 1193,
+        "lcpMs": 1041,
         "cls": 0,
-        "tbtMs": 6
+        "tbtMs": 0
       },
       "runs": [
         {
           "scores": {
-            "performance": 97,
+            "performance": 99,
             "accessibility": 100,
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 1276,
+          "lcpMs": 1027,
           "cls": 0,
-          "tbtMs": 4,
-          "fcpMs": 333
-        },
-        {
-          "scores": {
-            "performance": 98,
-            "accessibility": 100,
-            "best-practices": 100,
-            "seo": 100
-          },
-          "lcpMs": 1193,
-          "cls": 0,
-          "tbtMs": 8,
-          "fcpMs": 310
-        },
-        {
-          "scores": {
-            "performance": 98,
-            "accessibility": 100,
-            "best-practices": 100,
-            "seo": 100
-          },
-          "lcpMs": 1140,
-          "cls": 0,
-          "tbtMs": 6,
+          "tbtMs": 0,
           "fcpMs": 291
+        },
+        {
+          "scores": {
+            "performance": 99,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 1041,
+          "cls": 0,
+          "tbtMs": 0,
+          "fcpMs": 295
+        },
+        {
+          "scores": {
+            "performance": 98,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 1059,
+          "cls": 0,
+          "tbtMs": 0,
+          "fcpMs": 384
         }
       ]
     },
@@ -118,50 +118,50 @@
       "page": "/nft/nft-01",
       "profile": "mobile",
       "median": {
-        "performance": 76,
+        "performance": 84,
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100,
-        "lcpMs": 4052,
+        "lcpMs": 3780,
         "cls": 0,
-        "tbtMs": 444
+        "tbtMs": 242
       },
       "runs": [
         {
           "scores": {
-            "performance": 76,
+            "performance": 84,
             "accessibility": 100,
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 4052,
+          "lcpMs": 3799,
           "cls": 0,
-          "tbtMs": 444,
-          "fcpMs": 856
+          "tbtMs": 242,
+          "fcpMs": 967
         },
         {
           "scores": {
-            "performance": 79,
+            "performance": 85,
             "accessibility": 100,
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 3983,
+          "lcpMs": 3754,
           "cls": 0,
-          "tbtMs": 349,
-          "fcpMs": 838
+          "tbtMs": 235,
+          "fcpMs": 949
         },
         {
           "scores": {
-            "performance": 72,
+            "performance": 83,
             "accessibility": 100,
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 4384,
+          "lcpMs": 3780,
           "cls": 0,
-          "tbtMs": 507,
-          "fcpMs": 854
+          "tbtMs": 294,
+          "fcpMs": 950
         }
       ]
     },
@@ -173,7 +173,7 @@
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100,
-        "lcpMs": 1114,
+        "lcpMs": 1063,
         "cls": 0,
         "tbtMs": 0
       },
@@ -185,10 +185,10 @@
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 1087,
+          "lcpMs": 1063,
           "cls": 0,
-          "tbtMs": 3,
-          "fcpMs": 284
+          "tbtMs": 0,
+          "fcpMs": 393
         },
         {
           "scores": {
@@ -197,10 +197,10 @@
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 1159,
+          "lcpMs": 1066,
           "cls": 0,
           "tbtMs": 0,
-          "fcpMs": 303
+          "fcpMs": 304
         },
         {
           "scores": {
@@ -209,10 +209,10 @@
             "best-practices": 100,
             "seo": 100
           },
-          "lcpMs": 1114,
+          "lcpMs": 1058,
           "cls": 0,
           "tbtMs": 0,
-          "fcpMs": 290
+          "fcpMs": 384
         }
       ]
     }

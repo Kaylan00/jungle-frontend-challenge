@@ -3,7 +3,7 @@ import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
 type VercelHeaders = { headers?: Array<{ source: string; headers: Array<{ key: string; value: string }> }> }
 
@@ -19,9 +19,25 @@ function productionSecurityHeaders(): Record<string, string> {
   return Object.fromEntries((global?.headers ?? []).map((h) => [h.key, h.value]))
 }
 
+/**
+ * Troca o cookieStore interno do MSW (tough-cookie + lista de sufixos públicos do tldts, ≈ 2/3 do chunk dos
+ * mocks) por uma versão mínima para a mesma origem: ver src/mocks/msw-cookie-store.ts. Vale no build e no
+ * `vite dev` (pré-empacotamento das dependências); os testes unitários (msw/node, vitest.config.ts) usam o original.
+ */
+function mswLightCookieStore() {
+  const replacement = path.resolve(import.meta.dirname, 'src/mocks/msw-cookie-store.ts')
+  return {
+    name: 'msw-light-cookie-store',
+    resolveId(source: string, importer: string | undefined) {
+      if (importer && /[\\/]node_modules[\\/]msw[\\/]/.test(importer) && /(^|\/)cookieStore\.m?js$/.test(source)) return replacement
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    { ...mswLightCookieStore(), enforce: 'pre' } satisfies Plugin,
     // Gera src/routeTree.gen.ts a partir de src/routes e divide cada rota em um chunk próprio.
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     react(),
@@ -30,6 +46,7 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
+  optimizeDeps: { rolldownOptions: { plugins: [mswLightCookieStore()] } },
   server: { port: 5173 },
   preview: { port: 4173, headers: productionSecurityHeaders() },
 })
