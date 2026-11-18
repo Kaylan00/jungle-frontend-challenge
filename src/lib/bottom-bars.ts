@@ -41,11 +41,16 @@ function measure(el: HTMLElement, opts: BarOptions) {
   return Math.min(el.offsetHeight + (parseFloat(style.bottom) || 0) + (opts.extra ?? 0), vh * MAX_SHARE)
 }
 
+let applied = ''
+
 function update() {
   frame = 0
   for (const [el, opts] of bars) heights.set(el, measure(el, opts))
-  const max = Math.max(0, ...heights.values())
-  document.documentElement.style.setProperty('--bottom-bars', `${Math.round(max)}px`)
+  const value = `${Math.round(Math.max(0, ...heights.values()))}px`
+  // Variável no <html> muda o estilo da página inteira: só escreve quando o valor muda de fato.
+  if (value === applied) return
+  applied = value
+  document.documentElement.style.setProperty('--bottom-bars', value)
 }
 
 function schedule() {
@@ -58,7 +63,12 @@ function start() {
   // Troca de largura muda a barra de fixa para comum; a rolagem move os painéis no fluxo.
   window.addEventListener('resize', schedule, { passive: true })
   window.addEventListener('scroll', () => [...bars.values()].some((o) => o.flow) && schedule(), { passive: true })
-  observer = new ResizeObserver(schedule)
+  // O ResizeObserver avisa logo depois do layout: medir aqui sai de graça (sem forçar um layout extra num
+  // quadro seguinte enquanto a página ainda está sendo montada).
+  observer = new ResizeObserver(() => {
+    cancelAnimationFrame(frame)
+    update()
+  })
   // Página que cresce ou encolhe (itens entrando/saindo) também move os painéis no fluxo.
   observer.observe(document.body)
 }
@@ -75,8 +85,9 @@ export function useBottomBar({ extra = 0, flow = false, media }: BarOptions = {}
       if (!el || typeof ResizeObserver === 'undefined') return
       start()
       bars.set(el, { extra, flow, media })
+      // A primeira medida vem do próprio ResizeObserver (ele sempre avisa logo depois de começar a observar,
+      // já com o layout pronto), em vez de um quadro agendado que forçaria o layout antes da hora.
       observer?.observe(el)
-      schedule()
       return () => {
         observer?.unobserve(el)
         bars.delete(el)

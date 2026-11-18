@@ -52,7 +52,40 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              // O React fica com o arquivo de entrada (main.tsx precisa dele antes de tudo); sem este grupo ele
+              // iria para o vendor, e o vendor inteiro seria baixado antes de os mocks subirem.
+              name: 'react',
+              test: /node_modules[\/](react|react-dom|scheduler)[\/]/,
+              priority: 2,
+            },
+            {
+              // Núcleo que toda tela da loja usa (roteador, React Query, Axios, avisos, utilitários de classe)
+              // num arquivo só, em vez de dezenas de pedaços pequenos baixados em ondas antes da primeira tela.
+              // Fica fora o que só algumas telas usam (ícones, Radix, formulários), o zod e o decimal.js (os
+              // contratos, que os mocks usam antes do app) e MSW, Socket.IO e animações, cada um no seu tempo.
+              name: 'vendor',
+              test: /node_modules[\/](@tanstack|axios|sonner|tailwind-merge|clsx|class-variance-authority|use-sync-external-store|seroval|tiny-invariant|tiny-warning|cookie-es)[\/]/,
+            },
+          ],
+        },
+      },
+    },
+  },
   optimizeDeps: { rolldownOptions: { plugins: [mswLightCookieStore()] } },
   server: { port: 5173 },
-  preview: { port: 4173, headers: productionSecurityHeaders() },
+  preview: {
+    port: 4173,
+    headers: productionSecurityHeaders(),
+    // `npm run lighthouse` serve o build em HTTPS, que no Vite liga HTTP/2, como a Vercel serve em produção.
+    // O certificado é gerado na hora pelo script (lighthouse/run.mjs), só para a medição.
+    https: process.env.LH_TLS_DIR
+      ? { key: readFileSync(path.join(process.env.LH_TLS_DIR, 'key.pem')), cert: readFileSync(path.join(process.env.LH_TLS_DIR, 'cert.pem')) }
+      : undefined,
+  },
 })

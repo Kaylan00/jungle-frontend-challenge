@@ -1,4 +1,4 @@
-import { useRouterState } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
 import { Heart } from 'lucide-react'
 import { useOpenAuth } from '@/features/auth/auth-overlay'
 import { useSession } from '@/features/auth/use-session'
@@ -24,7 +24,8 @@ export function FavoriteButton({
   const { data } = useFavorites()
   const toggle = useToggleFavorite()
   const openAuth = useOpenAuth()
-  const href = useRouterState({ select: (s) => s.location.href })
+  // O endereço só importa no clique: lido na hora, sem cada card assinar o estado do roteador.
+  const router = useRouter()
   const active = Boolean(data?.nftIds.includes(nftId))
 
   const onClick = (e: React.MouseEvent) => {
@@ -32,7 +33,7 @@ export function FavoriteButton({
     e.stopPropagation()
     if (!user) {
       // Favoritos exigem conta: login por cima desta página e volta para ela depois.
-      openAuth({ redirect: href })
+      openAuth({ redirect: router.state.location.href })
       return
     }
     toggle.mutate({ nftId, value: !active, name: nftName })

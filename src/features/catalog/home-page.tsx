@@ -120,11 +120,21 @@ function useStableResultsHeight() {
     }
     const ro = new ResizeObserver(measure)
     ro.observe(box)
-    const mo = new MutationObserver(measure)
+    // Mudanças na grade (itens entrando) chegam em rajadas: mede uma vez por quadro, não uma por mudança
+    // (cada medida fora de hora obriga o navegador a montar o layout de novo).
+    let frame = 0
+    const mo = new MutationObserver(() => {
+      if (!frame)
+        frame = requestAnimationFrame(() => {
+          frame = 0
+          measure()
+        })
+    })
     mo.observe(box, { childList: true, subtree: true })
     return () => {
       ro.disconnect()
       mo.disconnect()
+      cancelAnimationFrame(frame)
     }
   }, [])
   return [ref, minHeight] as const

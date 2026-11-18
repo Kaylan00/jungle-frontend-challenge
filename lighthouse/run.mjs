@@ -3,7 +3,7 @@
  *
  * - Build otimizado (`npm run build`) servido por `vite preview` com o cenário padrão dos mocks.
  * - Páginas: início e detalhe do NFT. Perfis: mobile (padrão do Lighthouse, com throttling) e desktop.
- * - 3 medições por página e perfil; relatório HTML/JSON de cada execução + resumo com a mediana.
+ * - 5 medições por página e perfil; relatório HTML/JSON de cada execução + resumo com a mediana.
  * - Saída: lighthouse/reports/<data>/ (summary.json e summary.md).
  *
  * Uso: npm run build && npm run lighthouse
@@ -11,14 +11,14 @@
  * Para comparar alternativas sem rodar tudo: LH_PAGES=inicio,detalhe, LH_PROFILES=mobile,desktop e
  * LH_OUT=lighthouse/reports/tmp/<nome> (pasta fora do controle de versão).
  */
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { homedir, cpus, totalmem, release, platform, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import lighthouse from 'lighthouse'
 import desktopConfig from 'lighthouse/core/config/desktop-config.js'
 
-const RUNS = Number(process.env.LH_RUNS ?? 3)
+const RUNS = Number(process.env.LH_RUNS ?? 5)
 const only = (list, env) => (env ? list.filter((x) => env.split(',').includes(x.name)) : list)
 const PAGES = only(
   [
@@ -50,7 +50,7 @@ function findChrome() {
 
 function launchChrome(chromePath, userDataDir) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(chromePath, ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run', `--user-data-dir=${userDataDir}`, '--remote-debugging-port=0', 'about:blank'])
+    const proc = spawn(chromePath, ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run', '--ignore-certificate-errors', `--user-data-dir=${userDataDir}`, '--remote-debugging-port=0', 'about:blank'])
     const t = setTimeout(() => reject(new Error('Chrome não abriu')), 20_000)
     proc.stderr.on('data', (d) => {
       const m = String(d).match(/DevTools listening on ws:\/\/[^:]+:(\d+)\//)
@@ -65,7 +65,11 @@ function launchChrome(chromePath, userDataDir) {
 async function startPreview() {
   if (process.env.LH_URL) return { url: process.env.LH_URL, stop: () => {} }
   const port = 4175
-  const child = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { stdio: 'pipe', detached: true })
+  // HTTPS com certificado de uso único: o Vite serve o preview em HTTP/2, como a Vercel em produção. Em HTTP/1.1
+  // a simulação do Lighthouse abre conexões novas para cada lote de arquivos e o resultado não representa o site.
+  const tlsDir = mkdtempSync(join(tmpdir(), 'kurio-lh-tls-'))
+  execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=localhost', '-keyout', join(tlsDir, 'key.pem'), '-out', join(tlsDir, 'cert.pem')], { stdio: 'ignore' })
+  const child = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { stdio: 'pipe', detached: true, env: { ...process.env, LH_TLS_DIR: tlsDir } })
   await new Promise((resolve, reject) => {
     const t = setTimeout(() => reject(new Error('preview não subiu')), 30_000)
     child.stdout.on('data', (d) => {
@@ -76,7 +80,13 @@ async function startPreview() {
     })
   })
   // Mata o grupo de processos (npx + vite), senão o preview fica preso na porta.
-  return { url: `http://localhost:${port}`, stop: () => process.kill(-child.pid, 'SIGTERM') }
+  return {
+    url: `https://localhost:${port}`,
+    stop: () => {
+      process.kill(-child.pid, 'SIGTERM')
+      rmSync(tlsDir, { recursive: true, force: true })
+    },
+  }
 }
 
 const median = (xs) => {
@@ -101,7 +111,7 @@ const summary = {
     os: `${platform()} ${release()}`,
     cpus: `${cpus().length}x ${cpus()[0]?.model ?? ''}`.trim(),
     memoryGb: Math.round(totalmem() / 1e9),
-    conditions: 'Build de produção (vite build) servido por vite preview; cenário padrão dos mocks (latência normal 150–400 ms); perfil mobile = throttling simulado padrão do Lighthouse (Moto G Power, 4G lento, CPU 4x); desktop = preset desktop do Lighthouse.',
+    conditions: 'Build de produção (vite build) servido por vite preview em HTTPS/HTTP2 (como a Vercel); cenário padrão dos mocks (latência normal 150–400 ms); perfil mobile = throttling simulado padrão do Lighthouse (Moto G Power, 4G lento, CPU 4x); desktop = preset desktop do Lighthouse.',
   },
   results: [],
 }

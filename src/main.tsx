@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, startTransition } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { applyPanelThemeEarly } from './features/admin/shell/panel-theme'
@@ -23,11 +23,16 @@ async function bootstrap() {
     await startMocks()
   }
   const { App } = await import('./app/app')
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  )
+  const root = createRoot(document.getElementById('root')!)
+  // Primeira renderização como transição: o React 19 a divide em fatias e devolve a thread ao navegador entre
+  // elas, em vez de uma tarefa longa só (TBT no celular). O resultado na tela é o mesmo.
+  startTransition(() => {
+    root.render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    )
+  })
 }
 
 void bootstrap()
