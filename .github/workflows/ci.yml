@@ -44,8 +44,16 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Testes unitários (Vitest)
-        run: npm run test:unit
+      - name: Testes unitários com cobertura (Vitest; limites em vitest.config.ts)
+        run: npm run test:coverage
+
+      - name: Publicar relatório de cobertura
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-unitarios
+          path: coverage/
+          retention-days: 14
 
       - name: Teste da função de e-mail (api/)
         run: npm run test:api

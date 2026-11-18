@@ -65,8 +65,11 @@ backend real, as mesmas regras valeriam no servidor.
 - **Token no `localStorage`**: é o que um front sem backend consegue fazer. Um XSS leria o token. Em produção a
   sessão seria um cookie `HttpOnly; Secure; SameSite=Lax` emitido pelo backend, com o token inacessível ao
   JavaScript, e a CSP acima reduz a chance de XSS.
-- **Senhas no banco simulado** com `SHA-256(salt + senha)`: suficiente para a demonstração (o banco fica no
-  navegador do próprio usuário). Num backend real: Argon2id ou scrypt.
+- **Senhas no banco simulado** com **PBKDF2-HMAC-SHA-256, 600 mil iterações** (recomendação atual da OWASP
+  para PBKDF2) e salt aleatório por usuário, via Web Crypto; formato autodescritivo
+  `pbkdf2-sha256$<iterações>$<hash>` e comparação em tempo constante. Custa ~80 ms num notebook e só roda em
+  cadastro, login e troca de senha: a seed já traz o hash pronto, então a carga da página não deriva nada. Hash de
+  versão anterior (SHA-256) confere uma última vez e é refeito no login. Num backend real: Argon2id no servidor.
 - **Sem limite de tentativas no login simulado**: um limite no navegador seria contornável por quem controla o
   navegador. No backend real: limite por IP e por conta no login, cadastro e recuperação de senha.
 - **Função de e-mail**: os limites são **em memória, por instância** da função (best-effort): zeram quando a

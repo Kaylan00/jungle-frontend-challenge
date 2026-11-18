@@ -29,6 +29,7 @@ dist-ssr
 /blob-report/
 /playwright/.cache/
 lighthouse/reports/tmp/
+/coverage/
 
 .vercel
 

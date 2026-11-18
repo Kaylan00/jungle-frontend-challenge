@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreateOrderInput, type CreateOrderInput as CreateOrderBody } from '@/api/contracts'
 import { createMemoryStorage } from '@/test/memory-storage'
 import * as db from './db'
+import { SEED_USERS } from './fixtures/users'
 
 const STORAGE_KEY = 'jungle.mock.db.v1'
 const ANA = 'usr-ana'
@@ -380,12 +381,37 @@ describe('pedido: idempotência e estoque reservado', () => {
 })
 
 describe('senha', () => {
-  it('hash SHA-256 com salt: determinístico, muda com o salt e nunca guarda a senha', async () => {
+  it('PBKDF2-SHA256: formato autodescritivo, determinístico, muda com o salt e nunca guarda a senha', async () => {
     const h = await db.hashPassword('Selva2026!', 'salt-a')
-    expect(h).toMatch(/^[0-9a-f]{64}$/)
+    expect(h).toMatch(new RegExp(`^pbkdf2-sha256\\$${db.PASSWORD_ITERATIONS}\\$[0-9a-f]{64}$`))
+    expect(db.PASSWORD_ITERATIONS).toBeGreaterThanOrEqual(600_000)
     expect(await db.hashPassword('Selva2026!', 'salt-a')).toBe(h)
     expect(await db.hashPassword('Selva2026!', 'salt-b')).not.toBe(h)
     expect(await db.hashPassword('Selva2026?', 'salt-a')).not.toBe(h)
+    expect(h).not.toContain('Selva2026!')
+  })
+
+  it('confere o vetor conhecido do PBKDF2-HMAC-SHA256 (RFC 7914, 1 iteração)', async () => {
+    // RFC 7914 §11: P="passwd", S="salt", c=1, dkLen=64; os primeiros 32 bytes.
+    const h = await db.hashPassword('passwd', 'salt', 1)
+    expect(h).toBe('pbkdf2-sha256$1$55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc')
+  })
+
+  it('o hash pronto de cada usuário da seed corresponde à senha documentada', async () => {
+    for (const u of SEED_USERS) {
+      expect(u.passwordHash.startsWith(`pbkdf2-sha256$${db.PASSWORD_ITERATIONS}$`), u.id).toBe(true)
+      expect(await db.hashPassword(u.password, u.salt), u.id).toBe(u.passwordHash)
+    }
+  })
+
+  it('montar a seed (reset e primeira carga) não deriva nenhuma senha', async () => {
+    const derive = vi.spyOn(crypto.subtle, 'deriveBits')
+    try {
+      await db.resetDb()
+      expect(derive).not.toHaveBeenCalled()
+    } finally {
+      derive.mockRestore()
+    }
   })
 
   it('usuários da seed: salt próprio, senha confere e não aparece no estado salvo', async () => {
@@ -402,6 +428,15 @@ describe('senha', () => {
     expect(db.publicUser(ana)).not.toHaveProperty('salt')
   })
 
+  it('cadastro guarda PBKDF2 com salt novo e confere só a senha certa', async () => {
+    const user = await db.createUser({ username: 'dani_1', email: 'dani@kurio.test', password: 'Dani2026x' })
+    expect(user.passwordHash).toMatch(/^pbkdf2-sha256\$600000\$[0-9a-f]{64}$/)
+    expect(user.salt).toMatch(/^[0-9a-f]{32}$/)
+    expect(await db.verifyPassword(user, 'Dani2026x')).toBe(true)
+    expect(await db.verifyPassword(user, 'Dani2026X')).toBe(false)
+    expect(storage.getItem(STORAGE_KEY)).not.toContain('Dani2026x')
+  })
+
   it('trocar a senha troca o salt e invalida a anterior', async () => {
     const user = await db.createUser({ username: 'carla_1', email: 'carla@kurio.test', password: 'Carla2026' })
     const oldSalt = user.salt
@@ -409,6 +444,34 @@ describe('senha', () => {
     expect(user.salt).not.toBe(oldSalt)
     expect(await db.verifyPassword(user, 'Carla2026')).toBe(false)
     expect(await db.verifyPassword(user, 'Nova2026x')).toBe(true)
+  })
+
+  it('hash de uma versão anterior (SHA-256) confere uma última vez e é migrado para PBKDF2', async () => {
+    const user = db.findUserByEmail('bruno@kurio.test')!
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`velho-salt:Pixel2026!`))
+    user.salt = 'velho-salt'
+    user.passwordHash = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')
+    expect(await db.verifyPassword(user, 'senha-errada')).toBe(false)
+    expect(user.passwordHash).not.toMatch(/^pbkdf2/)
+    expect(await db.verifyPassword(user, 'Pixel2026!')).toBe(true)
+    expect(user.passwordHash).toMatch(/^pbkdf2-sha256\$600000\$/)
+    expect(user.salt).not.toBe('velho-salt')
+    expect(await db.verifyPassword(user, 'Pixel2026!')).toBe(true)
+  })
+
+  it('hash PBKDF2 com outra contagem de iterações confere e é refeito com a atual', async () => {
+    const user = db.findUserByEmail('ana@kurio.test')!
+    user.passwordHash = await db.hashPassword('Selva2026!', user.salt, 1_000)
+    expect(await db.verifyPassword(user, 'Selva2026!')).toBe(true)
+    expect(user.passwordHash.startsWith(`pbkdf2-sha256$${db.PASSWORD_ITERATIONS}$`)).toBe(true)
+  })
+
+  it('hash corrompido nunca confere', async () => {
+    const user = db.findUserByEmail('ana@kurio.test')!
+    for (const bad of ['pbkdf2-sha256$abc$00', 'pbkdf2-sha256$0$00', 'pbkdf2-sha256$-5$00', '']) {
+      user.passwordHash = bad
+      expect(await db.verifyPassword(user, 'Selva2026!'), bad).toBe(false)
+    }
   })
 })
 

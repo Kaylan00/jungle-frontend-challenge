@@ -1,6 +1,9 @@
 /**
  * Usuários fictícios do cenário padrão (documentados no README).
- * As senhas aqui são só a entrada da seed: o "banco" simulado guarda apenas hash + salt.
+ * `password` é a credencial fictícia documentada no README (e conferida nos testes); o "banco" simulado guarda
+ * só `salt` + `passwordHash`. O hash (PBKDF2, ver `hashPassword` em mocks/db.ts) foi calculado uma vez e fica aqui
+ * pronto: criar a seed não deriva nenhuma senha, então a carga da página não paga as 600 mil iterações.
+ * Testes unitários conferem que cada hash corresponde à senha documentada.
  */
 import type { CouponKind, UserRole, Wallet } from '@/api/contracts'
 
@@ -15,6 +18,8 @@ export const SEED_USERS: Array<{
   username: string
   email: string
   password: string
+  salt: string
+  passwordHash: string
   role: UserRole
   ensName: string
   walletNickname: string
@@ -27,6 +32,8 @@ export const SEED_USERS: Array<{
     username: 'kurio_admin',
     email: 'admin@kurio.test',
     password: 'Kurio#Admin2026',
+    salt: '9bcb2c0f0dae40020d9f774772dedf82',
+    passwordHash: 'pbkdf2-sha256$600000$18cde6af88ddb282eb9427a4b1781c4ba863b005e7b9e282ae2d6ac3559ae2a0',
     role: 'admin',
     ensName: 'kurio-admin',
     walletNickname: 'Operação',
@@ -39,6 +46,8 @@ export const SEED_USERS: Array<{
     username: 'ana_nft',
     email: 'ana@kurio.test',
     password: 'Selva2026!',
+    salt: '2a9e7f1681eb59ac8276839198cd8b94',
+    passwordHash: 'pbkdf2-sha256$600000$e3fb8f93096dfff18058c91a8344dc963144de6e97605d9f182e0acc73ebca73',
     role: 'user',
     ensName: 'ana-kurio',
     walletNickname: 'Principal',
@@ -80,6 +89,8 @@ export const SEED_USERS: Array<{
     username: 'bruno_pixel',
     email: 'bruno@kurio.test',
     password: 'Pixel2026!',
+    salt: '6cac8d4cd218253b68e14505644faa0c',
+    passwordHash: 'pbkdf2-sha256$600000$2ae638cbdc45b653e0fb52e77732b33dda8d641fc774e4852b3ffabd3b6eefa8',
     role: 'user',
     ensName: 'bruno-pixel',
     walletNickname: 'Carteira de jogos',

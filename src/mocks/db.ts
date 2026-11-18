@@ -6,7 +6,7 @@
  * que o servidor Socket.IO simulado (mocks/realtime.ts) envia aos clientes conectados.
  *
  * Persistência: localStorage, para sobreviver ao refresh. `resetDb()` restaura a seed.
- * Senhas: só hash SHA-256 com salt aleatório por usuário; nunca em claro.
+ * Senhas: PBKDF2-HMAC-SHA-256 (600 mil iterações) com salt aleatório por usuário; nunca em claro (ver `hashPassword`).
  *
  * Várias abas, um "servidor" (ver "Transações e propagação entre abas" abaixo): cada aba roda o seu MSW e o
  * seu servidor Socket.IO, mas todas leem e gravam o mesmo estado. Cada escrita acontece numa transação
@@ -174,10 +174,39 @@ function randomHex(bytes: number) {
   return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-export async function hashPassword(password: string, salt: string) {
-  const data = new TextEncoder().encode(`${salt}:${password}`)
-  const digest = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')
+function toHex(buffer: ArrayBuffer) {
+  return Array.from(new Uint8Array(buffer), (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Hash de senha: PBKDF2-HMAC-SHA-256, a função de derivação de chave para senhas que o navegador tem nativa
+ * (Web Crypto). 600 mil iterações é a recomendação atual da OWASP para PBKDF2-SHA256; medido em ~80 ms num
+ * notebook comum, e só roda em cadastro, login e troca de senha (a seed já vem com o hash pronto). Com backend
+ * real, o hash ficaria no servidor, com Argon2id ou bcrypt.
+ *
+ * Formato guardado, autodescritivo: `pbkdf2-sha256$<iterações>$<hash hex>`. As iterações vão junto para um hash
+ * antigo continuar conferindo se a constante mudar (e ser refeito no próximo login).
+ */
+export const PASSWORD_ITERATIONS = 600_000
+const PASSWORD_SCHEME = 'pbkdf2-sha256'
+
+export async function hashPassword(password: string, salt: string, iterations = PASSWORD_ITERATIONS) {
+  const encoder = new TextEncoder()
+  const key = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode(salt), iterations }, key, 256)
+  return `${PASSWORD_SCHEME}$${iterations}$${toHex(bits)}`
+}
+
+/** Formato das versões anteriores (SHA-256 de `salt:senha`): só para conferir uma última vez e migrar. */
+async function legacySha256Hash(password: string, salt: string) {
+  return toHex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${password}`)))
+}
+
+/** Compara sem sair no primeiro caractere diferente (o tempo não revela quanto do hash bateu). */
+function constantTimeEqual(a: string, b: string) {
+  let diff = a.length ^ b.length
+  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0)
+  return diff === 0
 }
 
 export async function stableHash(value: unknown) {
@@ -428,8 +457,7 @@ const EDITION_STATUS_NAME = { on_sale: 'à venda', sold_out: 'esgotada', unavail
 
 // ---------- Seed / reset ----------
 
-async function seedUser(u: (typeof SEED_USERS)[number]): Promise<StoredUser> {
-  const salt = randomHex(16)
+function seedUser(u: (typeof SEED_USERS)[number]): StoredUser {
   return {
     id: u.id,
     name: u.name,
@@ -440,8 +468,9 @@ async function seedUser(u: (typeof SEED_USERS)[number]): Promise<StoredUser> {
     avatarUrl: null,
     createdAt: SEED_DATE,
     role: u.role,
-    salt,
-    passwordHash: await hashPassword(u.password, salt),
+    // Hash calculado uma vez nas fixtures: montar a seed não deriva senha nenhuma (CPU fora da carga da página).
+    salt: u.salt,
+    passwordHash: u.passwordHash,
   }
 }
 
@@ -454,7 +483,7 @@ async function buildSeed(): Promise<DbState> {
   const wallets: Record<string, Wallet[]> = {}
   const favorites: Record<string, string[]> = {}
   for (const u of SEED_USERS) {
-    users.push(await seedUser(u))
+    users.push(seedUser(u))
     wallets[u.id] = u.wallets.map((w) => ({ ...w, updatedAt: SEED_DATE }))
     favorites[u.id] = [...u.favorites]
   }
@@ -505,7 +534,7 @@ async function migrate(s: DbState) {
   }
   for (const seed of SEED_USERS) {
     if (seed.role === 'admin' && !s.users.some((u) => u.id === seed.id)) {
-      s.users.push(await seedUser(seed))
+      s.users.push(seedUser(seed))
       s.favorites[seed.id] ??= []
       s.wallets[seed.id] ??= []
       changed = true
@@ -604,7 +633,21 @@ export async function createUser(input: { username: string; email: string; passw
 }
 
 export async function verifyPassword(user: StoredUser, password: string) {
-  return (await hashPassword(password, user.salt)) === user.passwordHash
+  const [scheme, rawIterations] = user.passwordHash.split('$')
+  let ok: boolean
+  if (scheme === PASSWORD_SCHEME) {
+    const iterations = Number(rawIterations)
+    if (!Number.isSafeInteger(iterations) || iterations < 1) return false
+    ok = constantTimeEqual(await hashPassword(password, user.salt, iterations), user.passwordHash)
+    if (!ok || iterations === PASSWORD_ITERATIONS) return ok
+  } else {
+    // Estado salvo por uma versão anterior (SHA-256 com salt): confere e, se bater, migra abaixo.
+    ok = constantTimeEqual(await legacySha256Hash(password, user.salt), user.passwordHash)
+    if (!ok) return false
+  }
+  // Senha certa num formato antigo (ou com outra contagem de iterações): refaz no formato atual.
+  await setPassword(user, password)
+  return true
 }
 
 export async function setPassword(user: StoredUser, password: string) {
