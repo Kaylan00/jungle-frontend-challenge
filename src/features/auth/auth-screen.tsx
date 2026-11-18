@@ -21,6 +21,8 @@ import { useLogin, useSession, useSignup } from './use-session'
  * A janela é um Dialog do shadcn/ui (Radix): prende o foco dentro dela, fecha com Esc e devolve
  * o foco ao sair. Depois de entrar, volta para `redirect` (a página onde a pessoa estava).
  */
+const PRIVATE_PREFIXES = ['/pagamento', '/perfil', '/pedido']
+
 export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search: AuthSearch }) {
   const navigate = useNavigate()
   const { user } = useSession()
@@ -31,7 +33,13 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
     if (user) void navigate({ to: target, replace: true })
   }, [user, navigate, target])
 
-  const close = () => void navigate({ to: search.redirect && !search.redirect.startsWith('/pagamento') ? search.redirect : '/', replace: true })
+  // Fechar volta para a página de origem, exceto se ela exigir login (o guard mandaria de volta
+  // para cá e o X pareceria não funcionar): nesse caso vai para o início.
+  const close = () => {
+    const back = search.redirect
+    const isPrivate = !!back && PRIVATE_PREFIXES.some((p) => back.startsWith(p))
+    void navigate({ to: back && !isPrivate ? back : '/', replace: true })
+  }
 
   const isLogin = mode === 'login'
 
@@ -61,7 +69,7 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
               document.getElementById(isLogin ? 'login-email' : 'signup-username')?.focus()
             }}
           >
-            <DialogClose className={cn('absolute right-[9px] grid', isLogin ? 'top-[9px]' : 'top-[11px]', 'size-6 place-items-center rounded-sm text-[#d28a4c] hover:text-[#e89b55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')}>
+            <DialogClose className={cn('absolute right-[9px] grid', isLogin ? 'top-[9px]' : 'top-[11px]', 'size-6 place-items-center rounded-sm text-[#d28a4c] max-md:right-2 max-md:top-2 max-md:size-11 hover:text-[#e89b55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')}>
               <X className="size-[22px]" strokeWidth={1.5} aria-hidden="true" />
               <span className="sr-only">Fechar</span>
             </DialogClose>
