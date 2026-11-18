@@ -7,11 +7,12 @@ import { PasswordResetRequest } from '@/api/contracts'
 import { ApiError } from '@/api/http'
 import { FormField } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
-import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { DialogDescription } from '@/components/ui/dialog'
 import { announce } from '@/lib/announcer'
 import { applyApiFieldErrors } from '@/lib/form-errors'
+import { usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
-import { AuthBackdrop, AuthDialog, AuthMobileBrand } from './auth-dialog'
+import { AuthBackdrop, AuthDialog, AuthMobileBrand, AuthTitle } from './auth-dialog'
 import { useAuthFlow } from './auth-overlay'
 import { authInput, authSubmit } from './auth-ui'
 import type { AuthSearch } from './auth-search'
@@ -29,6 +30,7 @@ const SimulatedInboxLink = import.meta.env.VITE_ENABLE_MOCKS === 'true' ? lazy((
  */
 export function ForgotPasswordScreen({ search }: { search: AuthSearch }) {
   const flow = useAuthFlow(search)
+  usePageTitle('Recuperar senha')
   const [sent, setSent] = useState<{ email: string; message: string } | null>(null)
   const [email, setEmail] = useState('')
 
@@ -46,9 +48,9 @@ export function ForgotPasswordScreen({ search }: { search: AuthSearch }) {
       >
         <div className="flex flex-col px-6 pb-8 pt-[46px] max-md:px-7 max-md:pt-[127px] md:px-20">
           <AuthMobileBrand />
-          <DialogTitle className="text-center text-[20px] font-normal leading-6 text-[#e89b55] max-md:mt-[79px] max-md:font-bold max-md:text-foreground">
+          <AuthTitle standalone={!flow.overlay} className="text-center text-[20px] font-normal leading-6 text-[#e89b55] max-md:mt-[79px] max-md:font-bold max-md:text-foreground">
             Recuperar senha
-          </DialogTitle>
+          </AuthTitle>
           <DialogDescription className="mt-6 text-center text-[13px] leading-5 text-[#f5f1eb] md:-mx-[36px]">
             Informe o e-mail da sua conta. Enviaremos um link para você criar uma senha nova.
           </DialogDescription>

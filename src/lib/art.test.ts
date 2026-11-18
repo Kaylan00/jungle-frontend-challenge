@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ART_SIZES, artSources } from './art'
+import { ART_SIZES, artSources, parseArt } from './art'
 
 describe('artSources', () => {
   it('monta o srcset com as 4 larguras; a de 640 é o próprio arquivo base', () => {
@@ -29,6 +29,33 @@ describe('artSources', () => {
       const r = artSources(image, ART_SIZES.card)
       expect(r).toEqual({ src: image })
     }
+  })
+})
+
+describe('variação da arte (fragmento do caminho)', () => {
+  it('sem fragmento não acrescenta nada', () => {
+    const r = artSources('/nfts/emerald.webp', ART_SIZES.card)
+    expect(r.style).toBeUndefined()
+    expect(r['data-art-matiz']).toBeUndefined()
+  })
+
+  it('o fragmento sai do src e do srcset (mesmo arquivo e mesmo cache) e vira estilo', () => {
+    const r = artSources('/nfts/sage.webp#espelho&matiz=24', ART_SIZES.card)
+    expect(r.src).toBe('/nfts/sage.webp')
+    expect(r.srcSet).not.toContain('#')
+    expect(r.style).toEqual({ rotate: 'y 180deg', '--art-matiz': '24deg' })
+    expect(r['data-art-matiz']).toBe('')
+  })
+
+  it('só espelho: sem matiz nem atributo', () => {
+    const r = artSources('/nfts/ivory.webp#espelho', ART_SIZES.card)
+    expect(r.style).toEqual({ rotate: 'y 180deg' })
+    expect(r['data-art-matiz']).toBeUndefined()
+  })
+
+  it('matiz inválido ou exagerado é ignorado ou limitado', () => {
+    expect(parseArt('/nfts/a.webp#matiz=abc').variant).toEqual({ mirror: false, hue: 0 })
+    expect(parseArt('/nfts/a.webp#matiz=500').variant.hue).toBe(60)
   })
 })
 

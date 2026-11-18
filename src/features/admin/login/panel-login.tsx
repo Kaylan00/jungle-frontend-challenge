@@ -18,6 +18,7 @@ import { LoginInput } from '@/api/contracts'
 import { ApiError } from '@/api/http'
 import { FormField } from '@/components/shared/form-field'
 import { applyApiFieldErrors } from '@/lib/form-errors'
+import { PANEL_BRAND, usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
 import type { PanelAccess } from '../access'
 import { useAdminLogin } from '../hooks'
@@ -29,6 +30,7 @@ const fieldClass = 'h-11 rounded-[10px] border-[var(--kp-linha-forte)] bg-[var(-
 export function PanelLogin({ redirectTo, reason, access }: { redirectTo?: string; reason?: 'sem-permissao' | 'expirada' | 'saiu'; access: PanelAccess }) {
   const navigate = useNavigate()
   const login = useAdminLogin()
+  usePageTitle('Entrar no painel', PANEL_BRAND)
   const [forbidden, setForbidden] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const { register, handleSubmit, setError, formState } = useForm<LoginInput>({ resolver: zodResolver(LoginInput), defaultValues: { email: '', password: '' } })

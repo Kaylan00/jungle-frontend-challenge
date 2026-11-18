@@ -8,6 +8,7 @@ import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { ArrowDownToLine, Heart, LogOut, MapPin, ShoppingCart, SquareActivity, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useLogout } from '@/features/auth/use-session'
+import { usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
 
 /** `to`: página da conta. `soon`: seção fora do escopo, que abre a tela "Em breve" (/perfil/<soon>). */
@@ -35,6 +36,7 @@ export function ProfileLayout({ title, children }: { title: string; children: Re
   const logout = useLogout()
   const navigate = useNavigate()
   const listRef = useRef<HTMLUListElement>(null)
+  usePageTitle(title)
 
   // Celular: o menu é uma faixa com rolagem lateral; o item da página aberta fica à vista (ex.: "Ofertas").
   useEffect(() => {

@@ -1,8 +1,9 @@
 import { X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { use, useRef } from 'react'
-import { Dialog, DialogClose, DialogOverlay, DialogPortal } from '@/components/ui/dialog'
+import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { HomePage } from '@/features/catalog/home-page'
+import { DecorativeCopy } from '@/lib/decorative'
 import { cn } from '@/lib/utils'
 import { AuthReturnFocus } from './auth-overlay'
 import { isTouchLayout } from './auth-ui'
@@ -21,8 +22,24 @@ import { isTouchLayout } from './auth-ui'
 export function AuthBackdrop() {
   return (
     <div aria-hidden="true" inert className="pointer-events-none hidden md:block">
-      <HomePage search={{}} />
+      <DecorativeCopy value>
+        <HomePage search={{}} />
+      </DecorativeCopy>
     </div>
+  )
+}
+
+/**
+ * Título da tela de conta. Aberta pela rota direta (/login, /cadastro, /recuperar-senha...), a janela é a
+ * página: o título é o h1 dela (a página inicial ao fundo é só decorativa). Aberta sobre outra página, que já
+ * tem o seu h1, o título é h2.
+ */
+export function AuthTitle({ standalone, className, children }: { standalone: boolean; className?: string; children: React.ReactNode }) {
+  const Heading = standalone ? 'h1' : 'h2'
+  return (
+    <DialogTitle asChild className={className}>
+      <Heading>{children}</Heading>
+    </DialogTitle>
   )
 }
 

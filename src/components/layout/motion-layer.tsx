@@ -2,14 +2,18 @@
  * Camada de movimento do app (carregada sob demanda, depois do carregamento inicial — ver __root.tsx).
  * Concentra tudo o que é global e usa GSAP com useGSAP (limpeza automática no desmonte):
  *  1. transição curta do conteúdo do <main> ao trocar de página;
- *  2. entrada em cascata (stagger) dos itens de toda lista marcada com data-reveal-group;
+ *  2. realce em cascata (stagger) dos itens de toda lista marcada com data-reveal-group;
  *  3. contador do carrinho "pulando" quando aumenta (elementos com data-bump);
  *  4. rolagem suave com Lenis no desktop (roda de mouse/trackpad), sem mexer em toque nem teclado.
  *
- * Regras (requisitos de acessibilidade e de performance):
+ * Regras (requisitos de acessibilidade, de performance e de fidelidade ao layout):
  *  - com prefers-reduced-motion nada disso roda (a camada nem é montada; ver __root.tsx);
- *  - nada que já estava na tela no carregamento é escondido (sem opacity 0 acima da dobra: LCP);
- *    só o que aparece depois (troca de página, nova lista, rolagem) entra animado;
+ *  - NADA fica escondido esperando rolagem: todo o conteúdo está visível e no lugar final desde o
+ *    primeiro render (print de página inteira, impressão e leitores de tela veem tudo). O movimento é
+ *    só um realce: parte de opacity 0.88 e 10px abaixo, nunca de opacity 0;
+ *  - o realce só acontece em itens que entram na tela por rolagem de verdade do usuário (roda, toque,
+ *    teclado) ou que chegam depois de uma interação (filtro, página nova). Conteúdo da carga inicial,
+ *    capturas de página inteira e rolagens programáticas sem interação não animam nada;
  *  - só transform e opacity são animados (CLS continua 0) e os estilos são limpos ao terminar;
  *  - páginas com barra fixa (data-motion-fixed) só fazem fade: transform no <main> mudaria a
  *    referência do position: fixed durante a animação.
@@ -25,8 +29,10 @@ gsap.registerPlugin(useGSAP)
 void loadGsap()
 
 const ITEM = '[data-reveal-group] > *'
-/** Itens escondidos esperando entrar na tela. */
-const HIDDEN = 'data-reveal-pending'
+/** Itens abaixo da dobra sendo observados: ganham o realce se entrarem na tela por rolagem do usuário. */
+const WATCHED = 'data-reveal-watch'
+/** Ponto de partida do realce: sempre visível (opacity alta) e deslocamento curto. */
+const FROM = { opacity: 0.88, y: 10 }
 
 export default function MotionLayer() {
   const router = useRouter()
@@ -36,11 +42,17 @@ export default function MotionLayer() {
     const main = document.getElementById('conteudo')
     if (!main || prefersReducedMotion()) return
 
-    // O usuário já interagiu? Antes disso, conteúdo que chega dentro da tela aparece direto (LCP).
+    // O usuário já interagiu? E já rolou a página ele mesmo (rolagem depois de roda, toque ou tecla)?
+    // Antes disso nada anima: carga inicial, print de página inteira e scroll programático ficam estáticos.
     let interacted = false
+    let userScrolled = false
     const markInteracted = () => (interacted = true)
+    const onScroll = () => {
+      if (interacted) userScrolled = true
+    }
     const interactionEvents = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const
-    interactionEvents.forEach((t) => window.addEventListener(t, markInteracted, { once: true, passive: true, capture: true }))
+    interactionEvents.forEach((t) => window.addEventListener(t, markInteracted, { passive: true, capture: true }))
+    window.addEventListener('scroll', onScroll, { passive: true })
 
     /* ---------- 1. Transição entre páginas ---------- */
     const unsubscribe = router.subscribe('onResolved', (e) => {
@@ -51,23 +63,22 @@ export default function MotionLayer() {
       const slide = !main.querySelector('[data-motion-fixed]')
       gsap.fromTo(
         main,
-        { opacity: 0, y: slide ? 14 : 0 },
-        { opacity: 1, y: 0, duration: 0.32, ease: 'power2.out', clearProps: 'opacity,transform' },
+        { opacity: FROM.opacity, y: slide ? FROM.y : 0 },
+        { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out', clearProps: 'opacity,transform' },
       )
     })
 
-    /* ---------- 2. Entrada em cascata ---------- */
+    /* ---------- 2. Realce em cascata ---------- */
     const inView = (el: Element) => {
       const r = el.getBoundingClientRect()
       return r.top < window.innerHeight && r.bottom > 0
     }
-    const show = (items: Element[]) => {
+    const animate = (items: Element[]) => {
       if (!items.length) return
-      items.forEach((el) => el.removeAttribute(HIDDEN))
       gsap.fromTo(
         items,
-        { opacity: 0, y: 18 },
-        { opacity: 1, y: 0, duration: 0.42, stagger: { each: 0.055, from: 'start' }, ease: 'power2.out', overwrite: true, clearProps: 'opacity,transform' },
+        FROM,
+        { opacity: 1, y: 0, duration: 0.4, stagger: { each: 0.05, from: 'start' }, ease: 'power2.out', overwrite: true, clearProps: 'opacity,transform' },
       )
     }
     // Itens que entram na tela juntos animam juntos, em sequência.
@@ -80,44 +91,39 @@ export default function MotionLayer() {
           batchFrame = 0
           const items = batch.filter((el) => el.isConnected)
           batch = []
-          show(items)
+          animate(items)
         })
     }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue
-          io.unobserve(entry.target)
-          queue(entry.target)
-        }
-      },
-      { rootMargin: '0px 0px -6% 0px' },
-    )
-    const hide = (el: Element) => {
-      gsap.set(el, { opacity: 0, y: 18 })
-      el.setAttribute(HIDDEN, '')
+    // Sem rootMargin: o realce começa quando o item ainda está na borda da tela (a troca para 0.88 não se nota).
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        io.unobserve(entry.target)
+        entry.target.removeAttribute(WATCHED)
+        if (userScrolled) queue(entry.target)
+      }
+    })
+    const watch = (el: Element) => {
+      el.setAttribute(WATCHED, '')
       io.observe(el)
     }
-    /** Item novo: fora da tela fica esperando a rolagem; dentro da tela entra animado (se já houve interação). */
+    /** Item fora da tela: observado (nada muda nele até entrar). Item novo dentro da tela: realce, se já houve interação. */
     const handle = (el: Element, isNew: boolean) => {
-      if (el.hasAttribute(HIDDEN)) return
-      if (!inView(el)) hide(el)
-      else if (isNew && interacted) {
-        gsap.set(el, { opacity: 0, y: 18 })
-        queue(el)
-      }
+      if (el.hasAttribute(WATCHED)) return
+      if (!inView(el)) watch(el)
+      else if (isNew && interacted) queue(el)
     }
-    // O que já está na página: só o que está abaixo da dobra é preparado.
+    // O que já está na página: só o que está abaixo da dobra é observado.
     main.querySelectorAll(ITEM).forEach((el) => handle(el, false))
 
     const mo = new MutationObserver((mutations) => {
       for (const m of mutations) {
         if (m.type !== 'childList') continue
-        // Item que saiu da página antes de aparecer: para de observar.
+        // Item que saiu da página antes de entrar na tela: para de observar.
         m.removedNodes.forEach((node) => {
           if (!(node instanceof Element)) return
-          if (node.hasAttribute(HIDDEN)) io.unobserve(node)
-          node.querySelectorAll(`[${HIDDEN}]`).forEach((el) => io.unobserve(el))
+          if (node.hasAttribute(WATCHED)) io.unobserve(node)
+          node.querySelectorAll(`[${WATCHED}]`).forEach((el) => io.unobserve(el))
         })
         m.addedNodes.forEach((node) => {
           if (!(node instanceof Element)) return
@@ -127,17 +133,6 @@ export default function MotionLayer() {
       }
     })
     mo.observe(main, { childList: true, subtree: true })
-
-    // Foco por teclado num item ainda escondido: mostra na hora.
-    const onFocusIn = (e: FocusEvent) => {
-      const item = (e.target as Element | null)?.closest?.(`[${HIDDEN}]`)
-      if (item) {
-        io.unobserve(item)
-        item.removeAttribute(HIDDEN)
-        gsap.set(item, { clearProps: 'opacity,transform' })
-      }
-    }
-    main.addEventListener('focusin', onFocusIn)
 
     /* ---------- 3. Contador do carrinho ---------- */
     const last = new Map<string, number>()
@@ -205,17 +200,16 @@ export default function MotionLayer() {
 
     return () => {
       interactionEvents.forEach((t) => window.removeEventListener(t, markInteracted, { capture: true }))
+      window.removeEventListener('scroll', onScroll)
       unsubscribe()
       io.disconnect()
       mo.disconnect()
       bumpObserver.disconnect()
       lockObserver?.disconnect()
       cancelAnimationFrame(batchFrame)
-      main.removeEventListener('focusin', onFocusIn)
-      main.querySelectorAll(`[${HIDDEN}]`).forEach((el) => {
-        el.removeAttribute(HIDDEN)
-        gsap.set(el, { clearProps: 'opacity,transform' })
-      })
+      main.querySelectorAll(`[${WATCHED}]`).forEach((el) => el.removeAttribute(WATCHED))
+      const items = main.querySelectorAll(ITEM)
+      if (items.length) gsap.set(items, { clearProps: 'opacity,transform' })
       gsap.ticker.remove(tick)
       lenis?.destroy()
       lenisRef.current = null

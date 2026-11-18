@@ -4,7 +4,13 @@
  * Nomes, coleções, categorias, redes e edições seguem o Figma (Emerald Ape #042, Sage Nomad #009,
  * edições 1/1 · 1/10 · 1/50 · Aberta...). São 36 NFTs, o suficiente para exercitar busca,
  * filtros combinados e paginação (9 por página = 4 páginas, como no layout).
- * As 4 artes vêm do arquivo do Figma (public/nfts).
+ *
+ * As 4 artes vêm do arquivo do Figma (public/nfts). A distribuição abaixo foi escolhida para que dois cards
+ * vizinhos nunca repitam a arte nas listas que a loja mostra: grade padrão (lado a lado e na coluna do
+ * celular), abas "Novos lançamentos" e "Em alta", "Colecionadores também viram" e "Mais desta coleção".
+ * O primeiro card continua o Emerald Ape #042 (destaque/LCP e Figma), seguido de Sage Nomad e Neon Vessel.
+ * Além disso, cada repetição da mesma arte ganha uma variação própria (espelhada e/ou com outro matiz,
+ * aplicada por CSS: ver lib/art.ts), então a vitrine não mostra o mesmo quadro duas vezes.
  */
 import type { Category, Edition, Network, NftDetail } from '@/api/contracts'
 
@@ -16,6 +22,15 @@ const ART_ALT: Record<Art, string> = {
   ivory: 'Macaco de pelo escuro com blazer bege e gola alta verde',
   golden: 'Macaco dourado com fones de ouvido verdes e jaqueta creme',
 }
+
+/**
+ * Variações por ordem de aparição da arte: a 1ª é a original (as do Figma e a do destaque), a 2ª espelhada,
+ * a 3ª com o matiz deslocado e a 4ª espelhada com o matiz para o outro lado; depois o ciclo se repete com
+ * deslocamentos um pouco diferentes. Deslocamentos pequenos (e negativos menores): os marrons dos pelos
+ * puxam para o rosa se o matiz recua demais. Vão no fragmento do caminho (#espelho&matiz=…): o arquivo baixado é o
+ * mesmo (o fragmento não vai para a rede nem para o cache) e o caminho chega igual ao carrinho e ao pedido.
+ */
+const VARIANTS = ['', 'espelho', 'matiz=16', 'espelho&matiz=-10', 'matiz=-8', 'espelho&matiz=10', 'matiz=22', 'espelho&matiz=-6']
 
 const creators = [
   { id: 'cr-1', name: 'Nova Sato', avatarUrl: '/nfts/emerald.webp', verified: true },
@@ -45,33 +60,33 @@ const rows: Array<{
   { name: 'Emerald Ape #042', art: 'emerald', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/1', '4.80', 1, 1], ['1/10', '2.35', 4, 2], ['1/50', '1.19', 18, 10], ['Aberta', '0.42', 0, 20]], featured: true, likes: 842, rating: 4.8, reviews: 19, daysAgo: 1 },
   { name: 'Sage Nomad #009', art: 'sage', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/10', '1.69', 6, 2], ['1/50', '0.95', 22, 10]], featured: true, likes: 615, rating: 4.6, reviews: 12, daysAgo: 2 },
   { name: 'Neon Vessel #552', art: 'ivory', collection: 'Neon Vessels', category: 'colecionaveis', network: 'ethereum', editions: [['1/10', '1.99', 3, 2]], compareAt: '2.29', badge: 'raro', featured: true, likes: 1290, rating: 4.9, reviews: 31, daysAgo: 3 },
-  { name: 'Cosmic Bloom #118', art: 'sage', collection: 'Cosmic Garden', category: 'generativa', network: 'polygon', editions: [['1/50', '1.29', 30, 10], ['Aberta', '0.29', 300, 20]], likes: 210, rating: 4.4, reviews: 8, daysAgo: 4 },
-  { name: 'Violet Nomad #314', art: 'sage', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/1', '1.39', 1, 1], ['1/50', '0.69', 40, 10]], featured: true, likes: 377, rating: 4.7, reviews: 15, daysAgo: 5 },
-  { name: 'Ivory Baron #088', art: 'ivory', collection: 'Kurio Apes', category: 'colecionaveis', network: 'ethereum', editions: [['1/10', '1.79', 9, 9], ['1/50', '0.89', 25, 10]], likes: 455, rating: 4.5, reviews: 10, daysAgo: 6 },
-  { name: 'Golden Beat #207', art: 'golden', collection: 'Golden Frequencies', category: 'musica', network: 'polygon', editions: [['1/50', '0.99', 35, 10], ['Aberta', '0.19', 400, 20]], likes: 530, rating: 4.6, reviews: 22, daysAgo: 7 },
+  { name: 'Cosmic Bloom #118', art: 'emerald', collection: 'Cosmic Garden', category: 'generativa', network: 'polygon', editions: [['1/50', '1.29', 30, 10], ['Aberta', '0.29', 300, 20]], likes: 210, rating: 4.4, reviews: 8, daysAgo: 4 },
+  { name: 'Violet Nomad #314', art: 'golden', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/1', '1.39', 1, 1], ['1/50', '0.69', 40, 10]], featured: true, likes: 377, rating: 4.7, reviews: 15, daysAgo: 5 },
+  { name: 'Ivory Baron #088', art: 'sage', collection: 'Kurio Apes', category: 'colecionaveis', network: 'ethereum', editions: [['1/10', '1.79', 9, 9], ['1/50', '0.89', 25, 10]], likes: 455, rating: 4.5, reviews: 10, daysAgo: 6 },
+  { name: 'Golden Beat #207', art: 'ivory', collection: 'Golden Frequencies', category: 'musica', network: 'polygon', editions: [['1/50', '0.99', 35, 10], ['Aberta', '0.19', 400, 20]], likes: 530, rating: 4.6, reviews: 22, daysAgo: 7 },
   { name: 'Golden Wave #301', art: 'golden', collection: 'Golden Frequencies', category: 'musica', network: 'solana', editions: [['1/10', '0.74', 0, 2]], likes: 98, rating: 4.1, reviews: 4, daysAgo: 8 },
-  { name: 'Golden Signal #160', art: 'golden', collection: 'Golden Frequencies', category: 'musica', network: 'polygon', editions: [['1/50', '0.39', 44, 10]], likes: 188, rating: 4.3, reviews: 6, daysAgo: 9 },
+  { name: 'Golden Signal #160', art: 'emerald', collection: 'Golden Frequencies', category: 'musica', network: 'polygon', editions: [['1/50', '0.39', 44, 10]], likes: 188, rating: 4.3, reviews: 6, daysAgo: 9 },
   { name: 'Emerald Ape #017', art: 'emerald', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/1', '5.75', 1, 1]], badge: 'raro', likes: 1530, rating: 5, reviews: 40, daysAgo: 10 },
   { name: 'Ivory Baron #021', art: 'ivory', collection: 'Kurio Apes', category: 'arte-3d', network: 'ethereum', editions: [['1/10', '3.60', 2, 1]], likes: 980, rating: 4.8, reviews: 27, daysAgo: 11 },
-  { name: 'Sage Drifter #077', art: 'sage', collection: 'Cosmic Garden', category: 'fotografia', network: 'solana', editions: [['1/50', '0.52', 14, 5]], likes: 64, rating: 4.0, reviews: 3, daysAgo: 12 },
-  { name: 'Golden Pulse #044', art: 'golden', collection: 'Golden Frequencies', category: 'jogos', network: 'solana', editions: [['Aberta', '0.08', 500, 20]], badge: 'novo', likes: 301, rating: 4.2, reviews: 9, daysAgo: 13 },
-  { name: 'Neon Vessel #610', art: 'ivory', collection: 'Neon Vessels', category: 'arte-3d', network: 'polygon', editions: [['1/50', '0.64', 20, 5]], likes: 522, rating: 4.4, reviews: 11, daysAgo: 14 },
-  { name: 'Emerald Guard #133', art: 'emerald', collection: 'Kurio Editions', category: 'assinaturas', network: 'ethereum', editions: [['Aberta', '0.15', 250, 5]], likes: 143, rating: 4.1, reviews: 5, daysAgo: 15 },
+  { name: 'Sage Drifter #077', art: 'golden', collection: 'Cosmic Garden', category: 'fotografia', network: 'solana', editions: [['1/50', '0.52', 14, 5]], likes: 64, rating: 4.0, reviews: 3, daysAgo: 12 },
+  { name: 'Golden Pulse #044', art: 'sage', collection: 'Golden Frequencies', category: 'jogos', network: 'solana', editions: [['Aberta', '0.08', 500, 20]], badge: 'novo', likes: 301, rating: 4.2, reviews: 9, daysAgo: 13 },
+  { name: 'Neon Vessel #610', art: 'emerald', collection: 'Neon Vessels', category: 'arte-3d', network: 'polygon', editions: [['1/50', '0.64', 20, 5]], likes: 522, rating: 4.4, reviews: 11, daysAgo: 14 },
+  { name: 'Emerald Guard #133', art: 'ivory', collection: 'Kurio Editions', category: 'assinaturas', network: 'ethereum', editions: [['Aberta', '0.15', 250, 5]], likes: 143, rating: 4.1, reviews: 5, daysAgo: 15 },
   { name: 'Sage Monk #250', art: 'sage', collection: 'Kurio Editions', category: 'utilidade', network: 'polygon', editions: [['1/10', '0.88', 0, 2], ['1/50', '0.41', 0, 5]], likes: 77, rating: 3.9, reviews: 2, daysAgo: 16 },
-  { name: 'Ivory Duke #019', art: 'ivory', collection: 'Kurio Apes', category: 'colecionaveis', network: 'ethereum', editions: [['1/1', '6.20', 1, 1]], badge: 'raro', likes: 1102, rating: 4.9, reviews: 35, daysAgo: 17 },
+  { name: 'Ivory Duke #019', art: 'emerald', collection: 'Kurio Apes', category: 'colecionaveis', network: 'ethereum', editions: [['1/1', '6.20', 1, 1]], badge: 'raro', likes: 1102, rating: 4.9, reviews: 35, daysAgo: 17 },
   { name: 'Golden Echo #388', art: 'golden', collection: 'Golden Frequencies', category: 'musica', network: 'ethereum', editions: [['1/50', '0.36', 26, 10]], likes: 260, rating: 4.3, reviews: 7, daysAgo: 18 },
-  { name: 'Emerald Scout #205', art: 'emerald', collection: 'Kurio Apes', category: 'arte-digital', network: 'polygon', editions: [['1/50', '0.27', 33, 10]], likes: 233, rating: 4.2, reviews: 6, daysAgo: 19 },
+  { name: 'Emerald Scout #205', art: 'ivory', collection: 'Kurio Apes', category: 'arte-digital', network: 'polygon', editions: [['1/50', '0.27', 33, 10]], likes: 233, rating: 4.2, reviews: 6, daysAgo: 19 },
   { name: 'Sage Pilgrim #412', art: 'sage', collection: 'Cosmic Garden', category: 'generativa', network: 'solana', editions: [['Aberta', '0.12', 350, 20]], likes: 156, rating: 4.0, reviews: 4, daysAgo: 20 },
-  { name: 'Ivory Count #333', art: 'ivory', collection: 'Neon Vessels', category: 'fotografia', network: 'ethereum', editions: [['1/10', '4.15', 1, 1]], likes: 870, rating: 4.7, reviews: 18, daysAgo: 21 },
-  { name: 'Golden Groove #099', art: 'golden', collection: 'Golden Frequencies', category: 'musica', network: 'polygon', editions: [['1/50', '0.07', 45, 10]], likes: 112, rating: 4.1, reviews: 5, daysAgo: 22 },
-  { name: 'Emerald Ape #101', art: 'emerald', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/10', '3.85', 0, 1], ['1/50', '1.10', 9, 5]], compareAt: '1.35', likes: 1404, rating: 4.8, reviews: 29, daysAgo: 23 },
-  { name: 'Sage Wanderer #156', art: 'sage', collection: 'Kurio Apes', category: 'jogos', network: 'polygon', editions: [['1/50', '0.58', 11, 5]], likes: 340, rating: 4.3, reviews: 8, daysAgo: 24 },
+  { name: 'Ivory Count #333', art: 'golden', collection: 'Neon Vessels', category: 'fotografia', network: 'ethereum', editions: [['1/10', '4.15', 1, 1]], likes: 870, rating: 4.7, reviews: 18, daysAgo: 21 },
+  { name: 'Golden Groove #099', art: 'emerald', collection: 'Golden Frequencies', category: 'musica', network: 'polygon', editions: [['1/50', '0.07', 45, 10]], likes: 112, rating: 4.1, reviews: 5, daysAgo: 22 },
+  { name: 'Emerald Ape #101', art: 'sage', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/10', '3.85', 0, 1], ['1/50', '1.10', 9, 5]], compareAt: '1.35', likes: 1404, rating: 4.8, reviews: 29, daysAgo: 23 },
+  { name: 'Sage Wanderer #156', art: 'golden', collection: 'Kurio Apes', category: 'jogos', network: 'polygon', editions: [['1/50', '0.58', 11, 5]], likes: 340, rating: 4.3, reviews: 8, daysAgo: 24 },
   { name: 'Ivory Regent #072', art: 'ivory', collection: 'Kurio Editions', category: 'utilidade', network: 'ethereum', editions: [['1/10', '1.45', 3, 2]], likes: 410, rating: 4.4, reviews: 9, daysAgo: 25 },
-  { name: 'Golden Rhythm #275', art: 'golden', collection: 'Golden Frequencies', category: 'musica', network: 'solana', editions: [['1/50', '0.29', 16, 5]], likes: 198, rating: 4.2, reviews: 4, daysAgo: 26 },
+  { name: 'Golden Rhythm #275', art: 'sage', collection: 'Golden Frequencies', category: 'musica', network: 'solana', editions: [['1/50', '0.29', 16, 5]], likes: 198, rating: 4.2, reviews: 4, daysAgo: 26 },
   { name: 'Emerald Ranger #318', art: 'emerald', collection: 'Kurio Editions', category: 'arte-3d', network: 'polygon', editions: [['1/10', '0.88', 4, 2]], likes: 286, rating: 4.3, reviews: 7, daysAgo: 27 },
-  { name: 'Sage Hermit #064', art: 'sage', collection: 'Cosmic Garden', category: 'fotografia', network: 'ethereum', editions: [['1/1', '2.75', 1, 1]], badge: 'raro', likes: 760, rating: 4.7, reviews: 14, daysAgo: 28 },
-  { name: 'Ivory Marquis #145', art: 'ivory', collection: 'Neon Vessels', category: 'colecionaveis', network: 'solana', editions: [['1/50', '0.19', 30, 10]], likes: 121, rating: 4.0, reviews: 3, daysAgo: 29 },
-  { name: 'Golden Tempo #188', art: 'golden', collection: 'Golden Frequencies', category: 'jogos', network: 'polygon', editions: [['Aberta', '0.11', 100, 20]], likes: 95, rating: 3.9, reviews: 2, daysAgo: 30 },
+  { name: 'Sage Hermit #064', art: 'golden', collection: 'Cosmic Garden', category: 'fotografia', network: 'ethereum', editions: [['1/1', '2.75', 1, 1]], badge: 'raro', likes: 760, rating: 4.7, reviews: 14, daysAgo: 28 },
+  { name: 'Ivory Marquis #145', art: 'sage', collection: 'Neon Vessels', category: 'colecionaveis', network: 'solana', editions: [['1/50', '0.19', 30, 10]], likes: 121, rating: 4.0, reviews: 3, daysAgo: 29 },
+  { name: 'Golden Tempo #188', art: 'ivory', collection: 'Golden Frequencies', category: 'jogos', network: 'polygon', editions: [['Aberta', '0.11', 100, 20]], likes: 95, rating: 3.9, reviews: 2, daysAgo: 30 },
   { name: 'Emerald Sentinel #222', art: 'emerald', collection: 'Kurio Apes', category: 'arte-digital', network: 'ethereum', editions: [['1/10', '1.55', 0, 2]], likes: 433, rating: 4.5, reviews: 10, daysAgo: 31 },
   { name: 'Sage Oracle #390', art: 'sage', collection: 'Kurio Editions', category: 'assinaturas', network: 'solana', editions: [['1/50', '0.52', 7, 3]], likes: 177, rating: 4.1, reviews: 4, daysAgo: 32 },
   { name: 'Ivory Knight #256', art: 'ivory', collection: 'Kurio Apes', category: 'arte-3d', network: 'polygon', editions: [['Aberta', '0.06', 70, 10]], likes: 59, rating: 3.8, reviews: 2, daysAgo: 33 },
@@ -90,6 +105,7 @@ function editionStatus(available: number): Edition['status'] {
 const tokenOf = (name: string) => name.match(/#(\d+)/)?.[1] ?? '0000'
 
 export function buildNftFixtures(): NftDetail[] {
+  const seen: Partial<Record<Art, number>> = {}
   return rows.map((r, i) => {
     const id = `nft-${String(i + 1).padStart(2, '0')}`
     const editions: Edition[] = r.editions.map(([name, price, available, maxPerOrder], j) => ({
@@ -107,7 +123,8 @@ export function buildNftFixtures(): NftDetail[] {
     const pool = onSale.length ? onSale : editions
     const minPrice = pool.reduce((m, e) => (Number(e.price) < Number(m) ? e.price : m), pool[0].price)
     const token = tokenOf(r.name).padStart(4, '0')
-    const img = `/nfts/${r.art}.webp`
+    const variant = VARIANTS[(seen[r.art] = (seen[r.art] ?? -1) + 1) % VARIANTS.length]
+    const img = `/nfts/${r.art}.webp${variant && `#${variant}`}`
     return {
       id,
       name: r.name,

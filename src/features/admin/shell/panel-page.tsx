@@ -7,6 +7,7 @@
  */
 import { Menu, Search } from 'lucide-react'
 import { useState } from 'react'
+import { PANEL_BRAND, usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
 import { LiveStatus } from './live-status'
 import { cameFromSkeleton, usePanelShell } from './shell-context'
@@ -30,6 +31,7 @@ export function PanelPage({
   pending?: boolean
 }) {
   const shell = usePanelShell()
+  usePageTitle(title, PANEL_BRAND)
   // Lido uma vez: a primeira seção depois do skeleton da casca entra sem animação.
   const [enter] = useState(() => pending || !cameFromSkeleton())
   return (

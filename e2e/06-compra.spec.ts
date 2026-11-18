@@ -34,3 +34,31 @@ test('compra completa do catálogo ao recibo; recibo é snapshot do pedido', asy
   await expect(page.getByTestId('receipt-total')).toHaveText('2.396 ETH')
   expect(await app.mock('getOrders')).toHaveLength(1)
 })
+
+test('compra confirmada com itens sobrando no carrinho: o cupom continua aplicado sobre o que ficou', async ({ app, page }) => {
+  await app.login('ana')
+  await app.addToCart('nft-01', { edition: 'nft-01-ed-3' })
+  await page.getByLabel('Código promocional').fill('KURIO10')
+  await page.getByRole('button', { name: 'Aplicar' }).click()
+  await expect(page.getByTestId('applied-coupon')).toContainText('KURIO10')
+
+  // Pagamento mais lento: dá tempo de pôr outro item no carrinho enquanto o pedido está pendente.
+  await app.setScenario({ paymentDelayMs: 6000 })
+  await page.getByTestId('checkout-button').click()
+  await connectAndReview(page)
+  await expect(page.getByTestId('review-dialog').getByTestId('summary-discount')).toHaveText('(-) 0.119 ETH')
+  await confirmPurchase(page)
+  await expect(page.getByTestId('order-page')).toHaveAttribute('data-status', 'pending')
+
+  // Item que não entrou no pedido (adicionado depois da revisão).
+  await app.addToCart('nft-02', { edition: 'nft-02-ed-2' })
+  await expect.poll(async () => (await app.mock('getOrders'))[0]?.status, { timeout: 15_000 }).toBe('confirmed')
+
+  // Só o comprado saiu; o cupom continua e o desconto é recalculado sobre o que ficou (0.95 − 10%).
+  await page.reload()
+  await expect(app.cartItems()).toHaveCount(1)
+  await expect(app.cartItems().first()).toContainText('Sage Nomad #009')
+  await expect(page.getByTestId('applied-coupon')).toContainText('KURIO10')
+  await expect(page.getByTestId('summary-subtotal')).toHaveText('0.95 ETH')
+  await expect(page.getByTestId('summary-discount')).toHaveText('(-) 0.095 ETH')
+})

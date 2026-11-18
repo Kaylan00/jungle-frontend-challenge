@@ -46,18 +46,51 @@ export const ART_SIZES = {
   receiptRow: `${wide(66)}, (min-width: 768px) 66px, 48px`,
 } as const
 
+/** Variação visual de uma arte, descrita no fragmento do caminho: /nfts/sage.webp#espelho&matiz=24. */
+export type ArtVariant = { mirror: boolean; hue: number }
+
 /**
- * src, srcSet e sizes de uma arte. Caminhos que não seguem o padrão /nfts/<nome>.webp (ex.: uma imagem
- * externa) voltam só com o src.
+ * Separa o caminho do arquivo da variação. O fragmento não vai para a rede: todas as variações usam o mesmo
+ * arquivo (e o mesmo cache, inclusive o preload do destaque).
  */
-export function artSources(image: string, sizes: string): { src: string; srcSet?: string; sizes?: string } {
-  const match = /^(.*\/nfts\/[\w-]+)\.webp$/.exec(image)
+export function parseArt(image: string): { path: string; variant: ArtVariant } {
+  const hash = image.indexOf('#')
+  if (hash < 0) return { path: image, variant: { mirror: false, hue: 0 } }
+  const params = new URLSearchParams(image.slice(hash + 1))
+  const hue = Number(params.get('matiz'))
+  return { path: image.slice(0, hash), variant: { mirror: params.has('espelho'), hue: Number.isFinite(hue) ? Math.max(-60, Math.min(60, hue)) : 0 } }
+}
+
+type ArtProps = { src: string; srcSet?: string; sizes?: string; style?: React.CSSProperties; 'data-art-matiz'?: '' }
+
+/**
+ * Estilo da variação: espelhamento com `rotate: y 180deg` (propriedade própria, que não briga com o `scale`
+ * do hover nem com o `transform` das animações) e matiz por variável CSS, aplicada pela regra
+ * img[data-art-matiz] do index.css (que mantém o brilho do hover). Sem variação, nada é acrescentado.
+ */
+function variantProps({ mirror, hue }: ArtVariant): Pick<ArtProps, 'style' | 'data-art-matiz'> {
+  if (!mirror && !hue) return {}
+  const style: Record<string, string> = {}
+  if (mirror) style.rotate = 'y 180deg'
+  if (hue) style['--art-matiz'] = `${hue}deg`
+  return { style: style as React.CSSProperties, ...(hue ? { 'data-art-matiz': '' as const } : {}) }
+}
+
+/**
+ * src, srcSet e sizes de uma arte (mais o estilo da variação, se houver). Caminhos que não seguem o padrão
+ * /nfts/<nome>.webp (ex.: uma imagem externa) voltam só com o src.
+ */
+export function artSources(image: string, sizes: string): ArtProps {
+  const { path, variant } = parseArt(image)
+  const extra = variantProps(variant)
+  const match = /^(.*\/nfts\/[\w-]+)\.webp$/.exec(path)
   // Já é uma das versões redimensionadas (<nome>-320.webp etc.): usa como está.
-  if (!match || /-\d+$/.test(match[1])) return { src: image }
+  if (!match || /-\d+$/.test(match[1])) return { src: path, ...extra }
   const base = match[1]
   return {
-    src: image,
-    srcSet: WIDTHS.map((w) => `${w === 640 ? image : `${base}-${w}.webp`} ${w}w`).join(', '),
+    src: path,
+    srcSet: WIDTHS.map((w) => `${w === 640 ? path : `${base}-${w}.webp`} ${w}w`).join(', '),
     sizes,
+    ...extra,
   }
 }

@@ -10,11 +10,12 @@ import { ErrorState } from '@/components/shared/error-state'
 import { FormField } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { DialogDescription } from '@/components/ui/dialog'
 import { announce } from '@/lib/announcer'
 import { applyApiFieldErrors } from '@/lib/form-errors'
+import { usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
-import { AuthBackdrop, AuthDialog, AuthMobileBrand } from './auth-dialog'
+import { AuthBackdrop, AuthDialog, AuthMobileBrand, AuthTitle } from './auth-dialog'
 import { authInput, authSubmit, isTouchLayout } from './auth-ui'
 import { isResetLinkError, passwordResetQuery, useConfirmPasswordReset } from './use-password-reset'
 
@@ -29,6 +30,7 @@ const INVALID_LINK = 'Este link de redefinição não é válido. Confira o ende
  */
 export function ResetPasswordScreen({ token }: { token: string | undefined }) {
   const navigate = useNavigate()
+  usePageTitle('Criar nova senha')
   const [linkError, setLinkError] = useState<string | null>(null)
   const check = useQuery({ ...passwordResetQuery(token ?? ''), enabled: Boolean(token) && !linkError })
 
@@ -72,9 +74,9 @@ export function ResetPasswordScreen({ token }: { token: string | undefined }) {
       >
         <div className="flex flex-col px-6 pb-8 pt-[46px] max-md:px-7 max-md:pt-[127px] md:px-20">
           <AuthMobileBrand />
-          <DialogTitle className="text-center text-[20px] font-normal leading-6 text-[#e89b55] max-md:mt-[79px] max-md:font-bold max-md:text-foreground">
+          <AuthTitle standalone className="text-center text-[20px] font-normal leading-6 text-[#e89b55] max-md:mt-[79px] max-md:font-bold max-md:text-foreground">
             Criar nova senha
-          </DialogTitle>
+          </AuthTitle>
           <DialogDescription className="mt-6 text-center text-[13px] leading-5 text-[#f5f1eb] md:-mx-[36px]">
             Escolha uma senha nova para a sua conta. Depois de salvar, entre com ela.
           </DialogDescription>

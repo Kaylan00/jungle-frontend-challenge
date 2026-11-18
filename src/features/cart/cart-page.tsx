@@ -13,6 +13,8 @@ import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
 import { useBottomBar } from '@/lib/bottom-bars'
 import { FLOW_PAGES, useSmartBack } from '@/lib/back-navigation'
+import { usePageTitle } from '@/lib/page-title'
+import { useIsDesktop } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 import { VitrineCardSkeleton, VitrineDotsSkeleton } from '@/features/nft/vitrine-skeleton'
 import { CouponForm, CouponSkeleton, SummaryLines } from './cart-summary'
@@ -21,6 +23,10 @@ import { useAcknowledgePrices, useCart, useRemoveCartItem, useUpdateCartItem } f
 export function CartPage() {
   const cart = useCart()
   const goBack = useSmartBack({ fallback: '/', avoid: FLOW_PAGES })
+  usePageTitle('Carrinho')
+  // Um único h1 na página: o título visível do celular ou, no desktop (sem título visível no Figma), o oculto.
+  const isDesktop = useIsDesktop()
+  const MobileTitle = isDesktop ? 'p' : 'h1'
 
   return (
     // Mobile (Figma 414): margens de 28px, resumo num painel que vai até o fim da tela.
@@ -34,7 +40,7 @@ export function CartPage() {
         >
           <ChevronLeft className="size-5" strokeWidth={1.75} aria-hidden="true" />
         </button>
-        <h1 className="flex-1 pl-[25px] text-center text-[20px] font-bold leading-7">Carrinho de NFTs</h1>
+        <MobileTitle className="flex-1 pl-[25px] text-center text-[20px] font-bold leading-7">Carrinho de NFTs</MobileTitle>
         <span className="size-[35px] shrink-0" />
       </div>
       <nav aria-label="Trilha de navegação" className="hidden text-[15px] font-bold leading-6 md:block xl:leading-4">
@@ -54,7 +60,7 @@ export function CartPage() {
           <li aria-current="page">Carrinho</li>
         </ol>
       </nav>
-      <h1 className="sr-only">Carrinho de NFTs</h1>
+      {isDesktop && <h1 className="sr-only">Carrinho de NFTs</h1>}
 
       {cart.isError && !cart.data ? (
         <ErrorState title="Não foi possível carregar o carrinho" message={cart.error.message} onRetry={() => void cart.refetch()} retrying={cart.isFetching} />

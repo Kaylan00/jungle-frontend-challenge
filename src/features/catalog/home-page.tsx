@@ -13,6 +13,8 @@ import { announce } from '@/lib/announcer'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { compareEth } from '@/lib/eth'
 import { useIsDesktop } from '@/lib/use-media-query'
+import { useIsDecorativeCopy } from '@/lib/decorative'
+import { usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
 import { ActiveFilters } from './active-filters'
 import { CatalogFilters } from './filters'
@@ -37,6 +39,8 @@ const TABS: Array<{ label: string; sort: SortOption | undefined }> = [
 
 export function HomePage({ search }: { search: CatalogSearch }) {
   const isDesktop = useIsDesktop()
+  // A cópia decorativa atrás da janela de login não mexe no título da aba.
+  usePageTitle(useIsDecorativeCopy() ? undefined : 'Marketplace de NFTs')
   return (
     <>
       {!isDesktop && <MobileCatalogBar search={search} />}

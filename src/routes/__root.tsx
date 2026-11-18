@@ -9,6 +9,7 @@ import { MobileNav } from '@/components/layout/mobile-nav'
 import { MotionBoot } from '@/components/layout/motion-boot'
 import { hasMobileNav } from '@/components/layout/mobile-nav-routes'
 import { RealtimeBadge } from '@/components/layout/realtime-badge'
+import { RouteAnnouncer } from '@/components/layout/route-announcer'
 import { useAuthOverlay } from '@/features/auth/auth-overlay'
 import { AuthOverlayHost } from '@/features/auth/auth-overlay-host'
 import { PriceDropNotifier } from '@/features/favorites/price-drop-notifier'
@@ -73,6 +74,7 @@ function PanelRoot() {
     <>
       <Outlet />
       <LiveAnnouncer />
+      <RouteAnnouncer />
       <Toaster
         theme={theme === 'claro' ? 'light' : 'dark'}
         position="bottom-right"
@@ -129,6 +131,7 @@ function StoreLayout() {
       </div>
       {authOverlay && <AuthOverlayHost overlay={authOverlay} />}
       <LiveAnnouncer />
+      <RouteAnnouncer />
       <PriceDropNotifier />
       <MotionBoot />
       <Toaster

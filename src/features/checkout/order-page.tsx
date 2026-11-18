@@ -24,6 +24,7 @@ import { NETWORK_LABEL } from '@/features/catalog/search-params'
 import { announce } from '@/lib/announcer'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
+import { usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
 import { useRealtimeClient } from '@/realtime/use-realtime'
 import { rememberPendingOrder } from './order-attempt'
@@ -40,6 +41,9 @@ export function OrderPage({ orderId }: { orderId: string }) {
   const realtime = useRealtimeClient()
   const status = query.data?.status
   const previous = useRef(status)
+  const notFound = query.error instanceof ApiError && (query.error.code === 'NOT_FOUND' || query.error.code === 'FORBIDDEN')
+  // Não encontrado: o título vem do <NotFound />.
+  usePageTitle(query.data ? `Pedido ${query.data.number}` : query.isPending ? 'Carregando pedido' : notFound ? undefined : 'Erro ao carregar o pedido')
 
   // Versão vinda da REST entra no controle de versões do socket (evento mais velho é ignorado).
   useEffect(() => {
@@ -55,7 +59,7 @@ export function OrderPage({ orderId }: { orderId: string }) {
   }, [status, user])
 
   if (query.isError) {
-    if (query.error instanceof ApiError && (query.error.code === 'NOT_FOUND' || query.error.code === 'FORBIDDEN')) {
+    if (notFound) {
       return <NotFound title="Pedido não encontrado" description="Este pedido não existe ou pertence a outra conta." />
     }
     return (

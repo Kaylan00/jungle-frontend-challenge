@@ -20,15 +20,19 @@ import { ART_SIZES, artSources } from '@/lib/art'
 import { useBottomBar } from '@/lib/bottom-bars'
 import { formatEth } from '@/lib/eth'
 import { FLOW_PAGES, useSmartBack } from '@/lib/back-navigation'
+import { usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
 import { ShareButton } from './share-button'
 import { SkeletonLine, VitrineCardSkeleton, VitrineDotsSkeleton } from './vitrine-skeleton'
 
 export function NftDetailPage({ nftId, editionId }: { nftId: string; editionId?: string }) {
   const query = useQuery(nftDetailQuery(nftId))
+  const notFound = query.error instanceof ApiError && query.error.code === 'NOT_FOUND'
+  // Não encontrado: o título vem do <NotFound />.
+  usePageTitle(query.data?.name ?? (query.isPending ? 'Carregando NFT' : notFound ? undefined : 'Erro ao carregar o NFT'))
 
   if (query.isError) {
-    if (query.error instanceof ApiError && query.error.code === 'NOT_FOUND') {
+    if (notFound) {
       return <NotFound title="NFT não encontrado" description={`Não existe NFT com o identificador “${nftId}”. Ele pode ter sido removido do catálogo.`} />
     }
     return (

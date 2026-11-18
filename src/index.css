@@ -337,3 +337,20 @@ html.lenis body {
     pointer-events: auto !important;
   }
 }
+
+/* Impressão: o realce de entrada (camada de movimento) nunca deixa nada translúcido ou deslocado no papel. */
+@media print {
+  #conteudo,
+  [data-reveal-group] > * {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/*
+ * Variação de matiz das artes repetidas (lib/art.ts põe --art-matiz e data-art-matiz no <img>). Inclui o
+ * brilho do Tailwind (--tw-brightness) para o realce do hover continuar funcionando nessas artes.
+ */
+img[data-art-matiz] {
+  filter: hue-rotate(var(--art-matiz, 0deg)) var(--tw-brightness,);
+}

@@ -7,11 +7,12 @@ import { LoginInput, SignupInput } from '@/api/contracts'
 import { ApiError } from '@/api/http'
 import { FormField } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
-import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { DialogDescription } from '@/components/ui/dialog'
 import { announce } from '@/lib/announcer'
 import { applyApiFieldErrors } from '@/lib/form-errors'
+import { usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
-import { AuthBackdrop, AuthDialog, AuthMobileBrand } from './auth-dialog'
+import { AuthBackdrop, AuthDialog, AuthMobileBrand, AuthTitle } from './auth-dialog'
 import { useAuthFlow, type AuthMode } from './auth-overlay'
 import { authInput, authSubmit } from './auth-ui'
 import type { AuthSearch } from './auth-search'
@@ -35,6 +36,7 @@ export function AuthScreen({ mode, search }: { mode: Extract<AuthMode, 'login' |
   }, [user])
 
   const isLogin = mode === 'login'
+  usePageTitle(isLogin ? 'Entrar' : 'Criar conta')
 
   return (
     <>
@@ -74,7 +76,9 @@ export function AuthScreen({ mode, search }: { mode: Extract<AuthMode, 'login' |
               Criar conta
             </Link>
           </nav>
-          <DialogTitle className="sr-only">{isLogin ? 'Entrar na Kurio' : 'Criar conta na Kurio'}</DialogTitle>
+          <AuthTitle standalone={!flow.overlay} className="sr-only">
+            {isLogin ? 'Entrar na Kurio' : 'Criar conta na Kurio'}
+          </AuthTitle>
           <DialogDescription className="mt-[37px] text-center text-[13px] leading-4 text-[#f5f1eb] max-md:sr-only md:-mx-[36px]">
             {isLogin ? 'Entre para gerenciar sua carteira, coleção e perfil de criador.' : 'Crie seu perfil de colecionador e conecte uma carteira quando quiser.'}
           </DialogDescription>

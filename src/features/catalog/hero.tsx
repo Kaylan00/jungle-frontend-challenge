@@ -5,7 +5,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { featuredQuery } from '@/api/queries'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ART_SIZES, artSources } from '@/lib/art'
+import { useIsDecorativeCopy } from '@/lib/decorative'
 import { loadedGsap, loadGsap, prefersReducedMotion, whenIdle } from '@/lib/motion'
+import { useIsDesktop } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 /*
@@ -56,6 +58,12 @@ export function Hero() {
   const lastChange = useRef(0)
   // Depois que a pessoa troca de slide por conta própria, o carrossel não troca mais sozinho.
   const stopped = useRef(false)
+  // Desktop e celular têm títulos diferentes no Figma, mas a página tem um único h1: o do layout visível
+  // (o outro, escondido por CSS, vira parágrafo). Na cópia decorativa atrás do login, nenhum é h1.
+  const isDesktop = useIsDesktop()
+  const decorative = useIsDecorativeCopy()
+  const DesktopTitle = isDesktop && !decorative ? 'h1' : 'p'
+  const MobileTitle = !isDesktop && !decorative ? 'h1' : 'p'
 
   useEffect(() => whenIdle(() => setReady(true)), [])
 
@@ -75,7 +83,7 @@ export function Hero() {
     place(mobileTrack.current, index, 0, true)
     const gsap = loadedGsap()
     if (gsap && smallArt.current && !prefersReducedMotion())
-      gsap.fromTo(smallArt.current, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(2)', clearProps: 'opacity,transform' })
+      gsap.fromTo(smallArt.current, { opacity: 0.88, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(2)', clearProps: 'opacity,transform' })
   }, [index])
 
   // Troca automática.
@@ -111,17 +119,17 @@ export function Hero() {
   const next = items[(index + 1) % Math.max(count, 1)]
 
   return (
-    <section aria-labelledby="hero-title" className="container-page" {...sectionHandlers}>
+    <section aria-labelledby={isDesktop ? 'hero-title' : 'hero-title-mobile'} className="container-page" {...sectionHandlers}>
       {/* Desktop (Figma 1440: arte 450x450 em x=870, texto em x=160). Em telas largas arte, recuos e
           pontos crescem na mesma proporção do conteúdo; o texto fica centralizado na altura da arte, como no Figma. */}
       <div className="hidden grid-cols-[1fr_450px] gap-10 pt-8 md:grid wide:grid-cols-[1fr_calc(450*var(--u))] wide:gap-[calc(40*var(--u))]">
         <div className="pt-[39px] md:pl-4 xl:pl-10 wide:self-center wide:pl-[calc(40*var(--u))] wide:pt-0">
           <p className="text-sm leading-6 tracking-[0.1em]">Bem-vindo à Kurio</p>
-          <h1 id="hero-title" className="mt-[5px] text-[34px] font-bold uppercase leading-[1.6] lg:text-[43px] lg:leading-[70px]">
+          <DesktopTitle id="hero-title" className="mt-[5px] text-[34px] font-bold uppercase leading-[1.6] lg:text-[43px] lg:leading-[70px]">
             Seja dono do futuro
             <br />
             da arte digital
-          </h1>
+          </DesktopTitle>
           <p className="mt-[3px] max-w-[560px] leading-6 text-muted-foreground">
             Descubra NFTs selecionados de criadores emergentes e consagrados. Colecione arte digital rara, apoie artistas e tenha uma parte da cultura da internet.
           </p>
@@ -189,7 +197,9 @@ export function Hero() {
         ))}
         <div className="absolute left-4 top-[5px] w-[min(190px,calc(100%_-_170px))] max-[379px]:w-[calc(100%_-_152px)]">
           <p className="text-[12px] leading-4">Bem-vindo à Kurio</p>
-          <h1 className="mt-[6px] text-[18px] font-bold uppercase leading-[29px] max-[379px]:text-[16px] max-[379px]:leading-[26px]">Seja dono da cultura digital</h1>
+          <MobileTitle id="hero-title-mobile" className="mt-[6px] text-[18px] font-bold uppercase leading-[29px] max-[379px]:text-[16px] max-[379px]:leading-[26px]">
+            Seja dono da cultura digital
+          </MobileTitle>
           <p className="mt-[6px] text-[12px] leading-[18px] text-muted-foreground">Descubra NFTs selecionados de criadores do mundo todo.</p>
           <Link
             to="/"
