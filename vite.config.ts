@@ -38,8 +38,14 @@ function mswLightCookieStore() {
 export default defineConfig({
   plugins: [
     { ...mswLightCookieStore(), enforce: 'pre' } satisfies Plugin,
-    // Gera src/routeTree.gen.ts a partir de src/routes e divide cada rota em um chunk próprio.
-    tanstackRouter({ target: 'react', autoCodeSplitting: true }),
+    // Gera src/routeTree.gen.ts a partir de src/routes e divide cada rota em um chunk próprio. O skeleton de
+    // espera (pendingComponent) também vai para um chunk da rota: o padrão do plugin o deixa no pacote comum,
+    // e com ele iriam as páginas de onde os skeletons vêm (pagamento, perfil, seções do painel).
+    tanstackRouter({
+      target: 'react',
+      autoCodeSplitting: true,
+      codeSplittingOptions: { defaultBehavior: [['component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']] },
+    }),
     react(),
     tailwindcss(),
   ],

@@ -10,10 +10,17 @@ import { useRouter, type AnyRouter } from '@tanstack/react-router'
  */
 let previousPath: string | null = null
 
-/** Chamado uma vez ao criar o router: guarda a página de onde veio cada navegação concluída. */
+/**
+ * Chamado uma vez ao criar o router: guarda a página de onde veio cada navegação, já no início dela.
+ * Não usa o fim da navegação: quem volta antes de uma página terminar de carregar (pagamento conferindo a
+ * sessão) também passou por ela, e o `fromLocation` dos eventos é a última página que terminou de carregar.
+ */
 export function trackPreviousPage(router: AnyRouter) {
-  return router.subscribe('onResolved', ({ fromLocation, toLocation }) => {
-    if (fromLocation && fromLocation.pathname !== toLocation.pathname) previousPath = fromLocation.pathname
+  let currentPath = router.state.location.pathname
+  return router.subscribe('onBeforeNavigate', ({ toLocation }) => {
+    if (toLocation.pathname === currentPath) return
+    previousPath = currentPath
+    currentPath = toLocation.pathname
   })
 }
 
