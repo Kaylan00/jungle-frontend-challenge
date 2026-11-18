@@ -207,9 +207,13 @@ Cada teste roda num contexto novo (seed limpa). Eventos saem do servidor simulad
 
 ## 11. Performance (Lighthouse)
 
-Resultados, ambiente e condições em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md).
+Resultados, ambiente, condições e o passo a passo das otimizações em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Mediana de 5: mobile 90 (início) e 94 (detalhe), desktop 100 e 100.
 
-O principal custo no perfil mobile é a camada de mocks (MSW + interceptors + binding, ≈150 kB gzip), que precisa estar ativa antes da primeira requisição e do socket. É infraestrutura da demonstração: contra um backend real esse chunk não existe. Alternativas medidas e descartadas (app e mocks em paralelo, renderizar antes e segurar a rede, `socket.io-client` sob demanda) pioraram a nota ou o TBT. Mantido: code splitting por rota, preload da arte de destaque, fonte local, WebP com `srcset` e dimensões declaradas, cache longo para assets com hash.
+- **Medição como produção**: `npm run lighthouse` serve o build em HTTPS/HTTP2 (certificado local de uso único), como a Vercel.
+- **Chunks**: React num chunk próprio (vai com a entrada), núcleo das bibliotecas da loja num `vendor` carregado com o app, zod e decimal.js com os contratos (os mocks usam antes do app), skeletons de espera (`pendingComponent`) separados por rota (`vite.config.ts`).
+- **Main thread**: primeira renderização em `startTransition`; barras fixas e grade do catálogo medem sem forçar layout fora de hora.
+- **Mocks antes do app**: a camada MSW precisa estar ativa antes da primeira requisição e do socket; com backend real ela não existe.
+- Mantido: code splitting por rota, preload da arte de destaque, fonte local, WebP com `srcset` e dimensões declaradas, cache longo para assets com hash.
 
 ## 12. Princípios
 

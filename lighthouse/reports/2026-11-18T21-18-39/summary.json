@@ -1,0 +1,316 @@
+{
+  "date": "2026-11-18T21:18:40.360Z",
+  "baseUrl": "https://localhost:4175",
+  "runs": 5,
+  "environment": {
+    "lighthouse": "13.6.0",
+    "node": "v22.23.5",
+    "chrome": "/home/kaylan/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome",
+    "os": "linux 6.18.58.1-microsoft-standard-WSL2",
+    "cpus": "4x 13th Gen Intel(R) Core(TM) i5-13450HX",
+    "memoryGb": 8,
+    "conditions": "Build de produção (vite build) servido por vite preview em HTTPS/HTTP2 (como a Vercel); cenário padrão dos mocks (latência normal 150–400 ms); perfil mobile = throttling simulado padrão do Lighthouse (Moto G Power, 4G lento, CPU 4x); desktop = preset desktop do Lighthouse."
+  },
+  "results": [
+    {
+      "page": "/",
+      "profile": "mobile",
+      "median": {
+        "performance": 90,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100,
+        "lcpMs": 2192,
+        "cls": 0,
+        "tbtMs": 363
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 91,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2192,
+          "cls": 0,
+          "tbtMs": 330,
+          "fcpMs": 921
+        },
+        {
+          "scores": {
+            "performance": 90,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2174,
+          "cls": 0,
+          "tbtMs": 363,
+          "fcpMs": 935
+        },
+        {
+          "scores": {
+            "performance": 90,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2196,
+          "cls": 0,
+          "tbtMs": 369,
+          "fcpMs": 928
+        },
+        {
+          "scores": {
+            "performance": 87,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2219,
+          "cls": 0,
+          "tbtMs": 455,
+          "fcpMs": 937
+        },
+        {
+          "scores": {
+            "performance": 92,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2158,
+          "cls": 0,
+          "tbtMs": 296,
+          "fcpMs": 922
+        }
+      ]
+    },
+    {
+      "page": "/",
+      "profile": "desktop",
+      "median": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100,
+        "lcpMs": 546,
+        "cls": 0,
+        "tbtMs": 9
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 513,
+          "cls": 0,
+          "tbtMs": 4,
+          "fcpMs": 261
+        },
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 516,
+          "cls": 0,
+          "tbtMs": 1,
+          "fcpMs": 263
+        },
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 563,
+          "cls": 0,
+          "tbtMs": 9,
+          "fcpMs": 280
+        },
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 553,
+          "cls": 0,
+          "tbtMs": 15,
+          "fcpMs": 270
+        },
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 546,
+          "cls": 0,
+          "tbtMs": 15,
+          "fcpMs": 273
+        }
+      ]
+    },
+    {
+      "page": "/nft/nft-01",
+      "profile": "mobile",
+      "median": {
+        "performance": 94,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100,
+        "lcpMs": 2121,
+        "cls": 0,
+        "tbtMs": 266
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 89,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2183,
+          "cls": 0,
+          "tbtMs": 389,
+          "fcpMs": 938
+        },
+        {
+          "scores": {
+            "performance": 95,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2121,
+          "cls": 0,
+          "tbtMs": 229,
+          "fcpMs": 928
+        },
+        {
+          "scores": {
+            "performance": 95,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2104,
+          "cls": 0,
+          "tbtMs": 220,
+          "fcpMs": 924
+        },
+        {
+          "scores": {
+            "performance": 94,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2106,
+          "cls": 0,
+          "tbtMs": 266,
+          "fcpMs": 921
+        },
+        {
+          "scores": {
+            "performance": 92,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 2145,
+          "cls": 0,
+          "tbtMs": 294,
+          "fcpMs": 929
+        }
+      ]
+    },
+    {
+      "page": "/nft/nft-01",
+      "profile": "desktop",
+      "median": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100,
+        "lcpMs": 506,
+        "cls": 0,
+        "tbtMs": 0
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 506,
+          "cls": 0,
+          "tbtMs": 0,
+          "fcpMs": 262
+        },
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 507,
+          "cls": 0,
+          "tbtMs": 0,
+          "fcpMs": 260
+        },
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 502,
+          "cls": 0,
+          "tbtMs": 0,
+          "fcpMs": 263
+        },
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 502,
+          "cls": 0,
+          "tbtMs": 0,
+          "fcpMs": 263
+        },
+        {
+          "scores": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 100,
+            "seo": 100
+          },
+          "lcpMs": 516,
+          "cls": 0,
+          "tbtMs": 0,
+          "fcpMs": 274
+        }
+      ]
+    }
+  ]
+}

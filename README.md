@@ -76,7 +76,7 @@ npm run dev                        # http://localhost:5173, com mocks
 | `npm run test:e2e:desktop` / `test:e2e:mobile` | Só um viewport |
 | `npm run test:e2e:update` | Regrava as baselines visuais |
 | `npm run test:e2e:report` | Abre o relatório HTML (com os traces das falhas) |
-| `npm run lighthouse` | 3 medições por página e perfil; rode `npm run build` antes |
+| `npm run lighthouse` | 5 medições por página e perfil, em HTTPS/HTTP2 local; rode `npm run build` antes |
 
 ## Variáveis de ambiente
 
@@ -178,16 +178,16 @@ A descrição de cada arquivo está em [ARCHITECTURE.md §10](./ARCHITECTURE.md#
 
 ## Lighthouse
 
-Build de produção servido por `vite preview`, cenário padrão dos mocks, 3 medições por página e perfil, mediana:
+Build de produção servido por `vite preview` em HTTPS/HTTP2 (como a Vercel), cenário padrão dos mocks, 5 medições por página e perfil, mediana:
 
 | Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `/` | mobile | 76 | 100 | 100 | 100 | 4.10 s | 0 | 451 ms |
-| `/` | desktop | 96 | 100 | 100 | 100 | 1.36 s | 0 | 6 ms |
-| `/nft/nft-01` | mobile | 78 | 100 | 100 | 100 | 4.01 s | 0 | 376 ms |
-| `/nft/nft-01` | desktop | 96 | 100 | 100 | 100 | 1.30 s | 0 | 0 ms |
+| `/` | mobile | 90 | 100 | 100 | 100 | 2.19 s | 0 | 363 ms |
+| `/` | desktop | 100 | 100 | 100 | 100 | 0.55 s | 0 | 9 ms |
+| `/nft/nft-01` | mobile | 94 | 100 | 100 | 100 | 2.12 s | 0 | 266 ms |
+| `/nft/nft-01` | desktop | 100 | 100 | 100 | 100 | 0.51 s | 0 | 0 ms |
 
-Performance mobile fica abaixo da meta de 90. A causa medida é a avaliação do JavaScript comum e a inicialização do MSW antes da primeira requisição, com CPU 4× mais lenta; a análise, as otimizações feitas, as alternativas descartadas, versões e ambiente estão em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Relatórios HTML e JSON de cada medição: [`lighthouse/reports/2026-11-18T20-11-55/`](./lighthouse/reports/2026-11-18T20-11-55/). No mobile a mesma build oscila entre execuções (69 a 80 nesta rodada); a tabela é a mediana de 3.
+Todas as metas atingidas. No mobile a mesma build oscila entre execuções (início: 87 a 92), por isso a mediana de 5. O que levou o mobile de 76 / 78 a 90 / 94, as alternativas descartadas, versões e ambiente estão em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md). Relatórios HTML e JSON de cada medição: [`lighthouse/reports/2026-11-18T21-18-39/`](./lighthouse/reports/2026-11-18T21-18-39/).
 
 ## Deploy
 
