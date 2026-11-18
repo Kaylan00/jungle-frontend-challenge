@@ -79,12 +79,28 @@ http.interceptors.response.use(undefined, (error) => {
   return Promise.reject(apiError)
 })
 
+let networkRecovery: (() => Promise<void>) | null = null
+/** Registra quem consegue restabelecer a camada de rede (no modo demonstração, o service worker do MSW). */
+export function setNetworkRecovery(fn: () => Promise<void>) {
+  networkRecovery = fn
+}
+
 /**
  * Faz a requisição e valida a resposta com o schema do contrato.
  * Se o servidor mandar algo fora do contrato, falha aqui (borda), não no componente.
  */
-export async function request<S extends z.ZodTypeAny>(schema: S, config: AxiosRequestConfig): Promise<z.infer<S>> {
+export async function request<S extends z.ZodTypeAny>(schema: S, config: AxiosRequestConfig, attempt = 0): Promise<z.infer<S>> {
   const res = await http.request(config)
+  // A API sempre responde JSON. Se chegou outra coisa (ex.: o index.html do host, quando a camada de
+  // rede que atende a API não interceptou o pedido), não é "resposta inválida": é falha de conexão.
+  // Pede à camada de rede para se restabelecer (se houver quem saiba fazer isso) e tenta uma vez.
+  if (!String(res.headers['content-type'] ?? '').includes('json')) {
+    if (attempt === 0 && networkRecovery) {
+      await networkRecovery()
+      return request(schema, config, 1)
+    }
+    throw new ApiError({ code: 'NETWORK_ERROR', message: 'Sem conexão com o servidor.', status: null })
+  }
   const parsed = schema.safeParse(res.data)
   if (!parsed.success) {
     console.error('[api] resposta fora do contrato', config.url, parsed.error.issues)
