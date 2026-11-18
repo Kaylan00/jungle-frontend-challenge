@@ -13,11 +13,16 @@ import {
   Network,
   NftListParams,
   PasswordChangeInput,
+  PasswordResetConfirmRequest,
+  PasswordResetRequest,
   ProfileInput,
   QuoteInput,
   SignupRequest,
   WalletInput,
   type NftListResponse,
+  type PasswordResetAccepted,
+  type PasswordResetDone,
+  type PasswordResetTokenInfo,
   type Session,
 } from '@/api/contracts'
 import { compareEth } from '@/lib/eth'
@@ -45,6 +50,26 @@ function cartFor(request: Request) {
   // Token presente mas expirado: não cai silenciosamente no carrinho de visitante.
   if (!user && bearer(request)) return requireUser(request) as Response
   return db.getOrCreateCart({ userId: user?.id ?? null, guestCartId })
+}
+
+/** a***@kurio.test: confirma a conta sem expor o endereço inteiro. */
+function maskEmail(email: string) {
+  const [local, domain] = email.split('@')
+  return `${local.slice(0, 1)}***@${domain}`
+}
+
+/** Token desconhecido: 400. Vencido, já usado ou substituído por um pedido mais novo: 410 (Gone). */
+function resetTokenError(status: 'invalid' | 'expired' | 'used' | 'superseded') {
+  switch (status) {
+    case 'expired':
+      return apiError('RESET_TOKEN_EXPIRED', 'Este link de redefinição expirou. Peça um novo.', { details: { reason: status } })
+    case 'used':
+      return apiError('RESET_TOKEN_EXPIRED', 'Este link de redefinição já foi usado. Peça um novo se precisar.', { details: { reason: status } })
+    case 'superseded':
+      return apiError('RESET_TOKEN_EXPIRED', 'Este link foi substituído por um pedido mais recente. Use o último e-mail que enviamos.', { details: { reason: status } })
+    default:
+      return apiError('RESET_TOKEN_INVALID', 'Este link de redefinição não é válido. Confira o endereço ou peça um novo.', { details: { reason: 'invalid' } })
+  }
 }
 
 /** Conexões de carteira ativas (em memória: recarregar a página "desconecta" a extensão). */
@@ -90,6 +115,56 @@ export const handlers = [
     const token = bearer(request)
     if (token) db.deleteSession(token)
     return new HttpResponse(null, { status: 204 })
+  }),
+
+  // ---------- Recuperação de senha ----------
+  // Resposta sempre igual (202), exista ou não a conta: não dá para descobrir e-mails cadastrados.
+  // Se a conta existe, cria o token e "envia" o e-mail para a caixa de saída simulada (db.outbox).
+  route('post', '/auth/password-reset', async ({ request }) => {
+    const parsed = PasswordResetRequest.safeParse(await readJson(request))
+    if (!parsed.success) return apiError('VALIDATION_ERROR', 'Confira os campos destacados', { fields: zodFields(parsed.error.issues) })
+    const user = db.findUserByEmail(parsed.data.email)
+    if (user) {
+      const token = await db.createPasswordReset(user.id)
+      const path = `/redefinir-senha?token=${encodeURIComponent(token)}`
+      const link = new URL(path, request.url).href
+      db.sendEmail({
+        to: user.email,
+        subject: 'Redefinição de senha da sua conta Kurio',
+        text:
+          `Olá, ${user.name}.\n\nRecebemos um pedido para redefinir a senha da sua conta Kurio. ` +
+          `Para criar uma senha nova, abra o link abaixo. Ele vale por ${db.PASSWORD_RESET_TTL_MIN} minutos e só pode ser usado uma vez.\n\n${link}\n\n` +
+          'Se não foi você, ignore este e-mail: sua senha continua a mesma.',
+        link,
+        path,
+      })
+    }
+    return HttpResponse.json<PasswordResetAccepted>(
+      {
+        message: `Se houver uma conta com esse e-mail, enviamos um link para criar uma senha nova. O link vale por ${db.PASSWORD_RESET_TTL_MIN} minutos.`,
+        expiresInMinutes: db.PASSWORD_RESET_TTL_MIN,
+      },
+      { status: 202 },
+    )
+  }),
+
+  route<{ token: string }>('get', '/auth/password-reset/:token', async ({ params }) => {
+    const found = await db.lookupPasswordReset(params.token)
+    if (found.status !== 'ok') return resetTokenError(found.status)
+    return HttpResponse.json<PasswordResetTokenInfo>({ email: maskEmail(found.user.email), expiresAt: new Date(found.reset.expiresAt).toISOString() })
+  }),
+
+  route('post', '/auth/password-reset/confirm', async ({ request }) => {
+    const parsed = PasswordResetConfirmRequest.safeParse(await readJson(request))
+    if (!parsed.success) {
+      const fields = zodFields(parsed.error.issues)
+      if (fields.token) return resetTokenError('invalid')
+      return apiError('VALIDATION_ERROR', 'Confira os campos destacados', { fields })
+    }
+    const found = await db.lookupPasswordReset(parsed.data.token)
+    if (found.status !== 'ok') return resetTokenError(found.status)
+    await db.completePasswordReset(found.reset, found.user, parsed.data.password)
+    return HttpResponse.json<PasswordResetDone>({ message: 'Senha alterada. Entre com a senha nova.' })
   }),
 
   // ---------- NFTs ----------

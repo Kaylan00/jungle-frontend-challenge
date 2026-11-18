@@ -16,7 +16,7 @@ socket.io-client ──► WebSocket ─────────┘   eventos nf
 
 - **Uma fonte de contratos**: `src/api/contracts.ts` (zod). O cliente valida toda resposta na borda (`request()` em `api/http.ts`) e os handlers do MSW montam as respostas com os mesmos tipos. Um mock não consegue devolver um formato que o app não entende sem que o erro apareça na hora.
 - **Mocks só na rede**: componentes, hooks e o cliente Axios não têm dados fictícios nem “se mock, faça X”. Desligar `VITE_ENABLE_MOCKS` e apontar `VITE_API_URL`/`VITE_SOCKET_URL` para um backend real não exige mudar o app.
-- **Rotas** (TanStack Router, por arquivo): `/`, `/nft/$nftId`, `/carrinho`, `/login`, `/cadastro` e, sob o layout protegido `_auth`, `/pagamento`, `/pedido/$orderId`, `/perfil`, `/perfil/carteiras`, `/perfil/favoritos`. Rota inexistente cai no `NotFound`.
+- **Rotas** (TanStack Router, por arquivo): `/`, `/nft/$nftId`, `/carrinho`, `/login`, `/cadastro`, `/recuperar-senha`, `/redefinir-senha?token=` e, sob o layout protegido `_auth`, `/pagamento`, `/pedido/$orderId`, `/perfil`, `/perfil/carteiras`, `/perfil/favoritos`. Rota inexistente cai no `NotFound`.
 
 ## 2. Contratos REST
 
@@ -29,6 +29,9 @@ Todo erro segue `{ error: { code, message, fields?, details? } }`.
 | | Login | `POST /auth/login` | 200 `Session` · 401 `INVALID_CREDENTIALS` |
 | | Consulta | `GET /auth/session` | 200 `Session` · 401 `SESSION_EXPIRED` / `UNAUTHENTICATED` |
 | | Logout | `POST /auth/logout` | 204 |
+| Recuperação de senha | Pedir link por e-mail | `POST /auth/password-reset` `{email}` | 202 `{message, expiresInMinutes}` (sempre igual, exista a conta ou não) · 422 |
+| | Conferir link | `GET /auth/password-reset/:token` | 200 `{email (mascarado), expiresAt}` · 400 `RESET_TOKEN_INVALID` · 410 `RESET_TOKEN_EXPIRED` (vencido, usado ou substituído; motivo em `details.reason`) |
+| | Trocar a senha | `POST /auth/password-reset/confirm` `{token,password}` | 200 `{message}` · 400 · 410 · 422 (regras de senha em `fields`) |
 | NFTs | Listagem | `GET /nfts?q&category=a,b&network&minPrice&maxPrice&onlyAvailable&sort&page&pageSize` | 200 `{items,page,pageSize,total,totalPages,facets}` · 422 |
 | | Destaques | `GET /nfts/featured` | 200 |
 | | Detalhe | `GET /nfts/:id` | 200 `NftDetail` · 404 |
@@ -100,6 +103,17 @@ O socket é **aviso**; a REST é a **fonte da verdade**.
 - **Logout e troca de usuário**: remove `['private', ...]` do cache inteiro e reinicia o socket. As chaves privadas sempre incluem o id do dono (`['private', userId, 'cart']`), então nem uma resposta atrasada da sessão anterior cai no cache do usuário novo. Outra aba que faz login/logout é acompanhada pelo evento `storage`.
 - **Senhas**: o servidor simulado guarda só `SHA-256(salt + senha)` com salt aleatório por usuário. A senha em claro nunca é persistida.
 
+### Recuperação de senha
+
+1. `/recuperar-senha` envia `POST /auth/password-reset`. A resposta é **sempre** `202` com a mesma mensagem neutra, exista ou não a conta: a tela não pode servir para descobrir quais e-mails estão cadastrados.
+2. Se a conta existe, o servidor cria um token aleatório (`rst_` + 24 bytes), guarda **só o hash** dele com validade de 30 min e invalida os pedidos anteriores ainda pendentes (só o link mais recente vale). O token em claro existe apenas no e-mail.
+3. `/redefinir-senha?token=` confere o link na abertura (`GET`): inválido (400), vencido, já usado ou substituído (410) aparecem antes de a pessoa digitar a senha, com “Pedir um novo link”. O `POST .../confirm` confere de novo, troca a senha (novo salt + hash), marca o token como usado e **encerra todas as sessões da conta**. Se este navegador tinha uma, ela é limpa localmente. Depois vai para `/login?reason=password-reset` com o aviso “Senha alterada”.
+4. Rede, timeout e 5xx: mensagem no formulário e o botão vira “Tentar novamente” (mutations não repetem sozinhas). A conferência do link é uma consulta: repete com backoff e, se continuar falhando, mostra o `ErrorState` com “Tentar novamente”. Os cenários do painel (latência, `sem-conexao`, falhas por rota) valem para essas rotas como para as outras.
+
+**Por que o envio do e-mail é simulado.** A demonstração não tem backend nem servidor de e-mail. O handler do MSW faz o papel do backend: monta o e-mail e o guarda numa **caixa de saída** do servidor simulado (`db.outbox`, últimas 20 mensagens). Ela é lida pela API de controle (`__jungleMock.lastEmail(to?)`, `outbox()`) e, só com os mocks ligados, por um quadro “Simulação” na tela de sucesso, com o link “Abrir e-mail simulado” (`mocks/simulated-inbox-link.tsx`, carregado sob demanda como o painel de cenários; sem a flag não entra no bundle). A resposta da API continua neutra e nunca traz o link.
+
+Em produção o envio seria feito **pelo backend**, com um provedor transacional como o **Brevo** (ou similar), nunca pelo front: a chave de API do provedor daria a qualquer visitante o poder de mandar e-mails em nome da Kurio e não pode ficar no navegador. O front continuaria igual, chamando os mesmos três endpoints. No backend real entrariam também limite de pedidos por IP e por e-mail e tempo de resposta constante (para o tempo também não revelar se a conta existe).
+
 ## 5. Carrinho
 
 - O carrinho é **do servidor**: o cliente nunca calcula total. Toda mutation devolve o carrinho inteiro, que vai direto para o cache.
@@ -144,7 +158,7 @@ O socket é **aviso**; a REST é a **fonte da verdade**.
 - `mocks/handlers.ts`: rotas REST, validando a entrada com os contratos zod.
 - `mocks/realtime.ts`: servidor Socket.IO com `ws.link` + `toSocketIo`.
 - `mocks/scenario.ts`: latência (com gerador pseudoaleatório de semente fixa → reproduzível), falhas por rota com contador, resultado do pagamento, timeout do pedido, recusa da carteira, duração da sessão, socket fora do ar.
-- `mocks/controls.ts`: API de controle (`window.__jungleMock`) usada pelo painel e pelos testes. Ela altera o servidor; nunca a interface.
+- `mocks/controls.ts`: API de controle (`window.__jungleMock`) usada pelo painel e pelos testes. Ela altera o servidor; nunca a interface. Inclui a caixa de saída dos e-mails simulados (`lastEmail`, `outbox`) e `expirePasswordResets` (link vencido sem esperar 30 min).
 - Pagamentos pendentes são liquidados por um relógio do “servidor” (`settleDueOrders`, a cada 500 ms e no carregamento), então um pedido continua andando mesmo depois de um refresh.
 - **Ativação por configuração** (`VITE_ENABLE_MOCKS`), disponível no build de demonstração. Sem a flag, nada do MSW entra no bundle.
 - Fixtures: 36 NFTs (9 categorias, 3 redes, edições 1/1 · 1/10 · 1/50 · Aberta, esgotadas e indisponíveis), 2 usuários, 3 cupons, datas fixas (baselines visuais estáveis).
@@ -167,8 +181,9 @@ O socket é **aviso**; a REST é a **fonte da verdade**.
 ### Desvios e ajustes em relação ao Figma
 
 - **Assets**: o arquivo do Figma estava em modo visualização. As 4 artes (Emerald, Sage, Ivory, Golden) foram extraídas do protótipo em resolução de tela (≈250–435 px) e convertidas para WebP. Num projeto real seriam exportadas do Figma em 2×.
-- **Login e cadastro** são um Dialog sobre a página inicial (como no Figma) e também têm rota própria (`/login`, `/cadastro`), para o retorno ao fluxo e o acesso direto funcionarem.
-- **Login social, recuperação de senha, newsletter, Criadores/Aprenda, Atividade/Ofertas/Downloads/Suporte e o “Diário da Cunhagem”** estão fora do escopo: aparecem desabilitados ou com aviso “em breve/não faz parte da demonstração”, nunca simulando sucesso.
+- **Login e cadastro** são um Dialog sobre a página inicial (como no Figma) e também têm rota própria (`/login`, `/cadastro`), para o retorno ao fluxo e o acesso direto funcionarem. **Recuperar e redefinir senha** (não estão no Figma) usam a mesma moldura (`features/auth/auth-dialog.tsx`).
+- **Foco ao abrir as telas de conta**: no desktop vai para o primeiro campo. Em tela de toque ou estreita (`(pointer: coarse)` ou abaixo de 768 px) nenhum campo é focado, para o teclado virtual não subir sozinho e rolar a tela; o foco vai para a própria janela (continua preso nela e o leitor de tela anuncia o título). No mobile o X fica numa faixa `sticky` no topo da área que rola, com 44 × 44 px, sempre visível.
+- **Login social, newsletter, Criadores/Aprenda, Atividade/Ofertas/Downloads/Suporte e o “Diário da Cunhagem”** estão fora do escopo: aparecem desabilitados ou com aviso “em breve/não faz parte da demonstração”, nunca simulando sucesso.
 - **Revisão do pedido**: o Figma vai direto do formulário para “Confirmar compra”. Foi adicionada a etapa de revisão (Dialog) exigida pelo enunciado (“permitir revisão antes do envio” e “mudanças devem exigir nova confirmação”).
 - **Conexão da carteira**: adicionado o bloco “Conectar / Conectada / Desconectar” no pagamento, para a simulação de conexão, recusa e desconexão pedida.
 - **Separador decimal**: ponto (`1.19 ETH`), como no Figma e no mercado cripto.
@@ -193,6 +208,7 @@ O socket é **aviso**; a REST é a **fonte da verdade**.
 | 10 | `10-eventos-reconexao` | duplicata e evento antigo, queda e reconciliação, pedido pendente com socket fora e refresh |
 | 11 | `11-teclado-acessibilidade` | skip link, foco preso no diálogo, Esc, erros ligados aos campos, catálogo por teclado, axe |
 | 12 | `12-carregamento-falhas` | skeletons em rede lenta, erro 500 e sem conexão com “Tentar novamente” |
+| 13 | `13-recuperar-senha` | pedido para a Ana, e-mail simulado, senha nova (validação), login com a nova e recusa da antiga, link reusado (410), token inválido e expirado, resposta neutra para e-mail desconhecido, falha de rede e 500 com “Tentar novamente”, foco inicial (desktop × toque) e X sempre visível no mobile, axe |
 | — | `visual` | regressão visual de início, detalhe, carrinho e pagamento (desktop e mobile), baselines versionadas |
 
 Cada teste roda num contexto novo (seed limpa). Eventos de tempo real são disparados pelo servidor simulado e chegam pelo `socket.io-client`; as respostas REST vêm dos handlers MSW. Relatório HTML e traces das falhas: `npm run test:e2e:report`.

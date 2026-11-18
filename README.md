@@ -29,7 +29,7 @@ npm run dev            # http://localhost:5173 com mocks ligados
 | `npm run preview` | Serve o build em http://localhost:4173 |
 | `npm run typecheck` | `tsc -b` (app, config e testes) |
 | `npm run lint` | oxlint em `src/` e `e2e/` |
-| `npm run test:e2e` | Playwright: 12 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
+| `npm run test:e2e` | Playwright: 13 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
 | `npm run test:e2e:desktop` / `:mobile` | Só um viewport |
 | `npm run test:e2e:update` | Regrava as baselines visuais |
 | `npm run test:e2e:report` | Abre o relatório HTML (traces das falhas incluídos) |
@@ -55,6 +55,17 @@ Arquivo `.env` (versionado, sem segredos) e `.env.example`:
 | Bruno Pixel | `bruno@kurio.test` | `Pixel2026!` | Sem carteiras (bom para testar o cadastro), 1 favorito |
 
 Cupons: `KURIO10` (10%), `GENESIS25` (25%), `BLACK2025` (expirado). Qualquer outro código é inválido.
+
+### Recuperar a senha
+
+Não há servidor de e-mail na demonstração: o e-mail de redefinição fica guardado na **caixa de saída do servidor simulado**.
+
+1. No login, clique em **“Esqueceu a senha?”** (ou abra `/recuperar-senha`) e informe `ana@kurio.test`.
+2. A tela confirma com uma mensagem neutra (igual para qualquer e-mail, exista a conta ou não). Com os mocks ligados aparece o quadro **“Simulação”** com o link **“Abrir e-mail simulado”**, que leva ao link do e-mail (`/redefinir-senha?token=...`). No console: `window.__jungleMock.lastEmail('ana@kurio.test')` mostra o e-mail inteiro.
+3. Crie a senha nova (mesmas regras do cadastro: 8+ caracteres, letras e números). Você vai para o login com o aviso “Senha alterada”. A senha antiga deixa de funcionar e as sessões abertas da conta são encerradas.
+4. O link vale **30 minutos** e **uma vez só**; pedir de novo invalida o anterior. Para ver o erro: abra o mesmo link de novo (já usado), `/redefinir-senha?token=qualquer` (inválido) ou `await window.__jungleMock.expirePasswordResets()` antes de abrir (expirado). Todos oferecem “Pedir um novo link”.
+
+“Resetar tudo” no painel volta a senha da Ana para `Selva2026!`.
 
 ## Cenários da simulação
 
@@ -98,6 +109,7 @@ O cenário fica salvo no `localStorage` (sobrevive ao refresh). **Reset**: botã
 | Carteira recusa conexão | `?mock=carteira-recusa` e clique em “Conectar” no pagamento. |
 | Erros de API | `?mock=catalogo-500` ou `?mock=sem-conexao`: mensagem de erro com “Tentar novamente”. |
 | Conflito de cadastro | Crie conta com `ana@kurio.test` ou usuário `ana_nft`. |
+| Recuperação de senha com falha | `?mock=sem-conexao` em `/recuperar-senha` (ou `?mock=lento` para ver o carregamento): mensagem com “Tentar novamente”, sem perder o que foi digitado. Link inválido, usado ou expirado: ver “Recuperar a senha” acima. |
 
 ## Estrutura
 
@@ -110,7 +122,7 @@ src/
   features/     telas por domínio (catalog, nft, cart, checkout, auth, profile, favorites)
   components/   layout, componentes compartilhados e ui/ (shadcn)
   mocks/        servidor simulado: db, handlers REST, servidor Socket.IO, cenários, painel
-e2e/            testes Playwright (12 cenários + visual) e baselines em __screenshots__
+e2e/            testes Playwright (13 cenários + visual) e baselines em __screenshots__
 lighthouse/     script de auditoria e relatórios
 ```
 

@@ -48,6 +48,8 @@ export const ApiErrorCode = z.enum([
   'IDEMPOTENCY_CONFLICT',
   'WALLET_REJECTED',
   'INVALID_CREDENTIALS',
+  'RESET_TOKEN_INVALID',
+  'RESET_TOKEN_EXPIRED',
   'TRANSIENT_FAILURE',
   'INTERNAL_ERROR',
 ])
@@ -119,6 +121,52 @@ export const SignupInput = SignupRequest.extend({ confirmPassword: z.string().mi
   { path: ['confirmPassword'], message: 'As senhas não conferem' },
 )
 export type SignupInput = z.infer<typeof SignupInput>
+
+// ---------- Recuperação de senha ----------
+
+/** Corpo de POST /auth/password-reset (pedido do link por e-mail). */
+export const PasswordResetRequest = z.object({
+  email: z.string().trim().email('Informe um e-mail válido'),
+})
+export type PasswordResetRequest = z.infer<typeof PasswordResetRequest>
+
+/**
+ * 202 de POST /auth/password-reset. A mensagem é sempre a mesma, exista ou não a conta:
+ * a resposta não pode servir para descobrir quais e-mails estão cadastrados.
+ */
+export const PasswordResetAccepted = z.object({
+  message: z.string(),
+  /** Validade do link em minutos (informativa, igual para todos) */
+  expiresInMinutes: z.number().int().positive(),
+})
+export type PasswordResetAccepted = z.infer<typeof PasswordResetAccepted>
+
+/** 200 de GET /auth/password-reset/:token: o link ainda vale. E-mail mascarado (a***@dominio). */
+export const PasswordResetTokenInfo = z.object({
+  email: z.string(),
+  expiresAt: z.string(),
+})
+export type PasswordResetTokenInfo = z.infer<typeof PasswordResetTokenInfo>
+
+/** Corpo de POST /auth/password-reset/confirm. Mesmas regras de senha do cadastro. */
+export const PasswordResetConfirmRequest = z.object({
+  token: z.string().min(1, 'Link inválido'),
+  password: passwordRule,
+})
+export type PasswordResetConfirmRequest = z.infer<typeof PasswordResetConfirmRequest>
+
+/** 200 de POST /auth/password-reset/confirm */
+export const PasswordResetDone = z.object({ message: z.string() })
+export type PasswordResetDone = z.infer<typeof PasswordResetDone>
+
+/** Formulário "Criar nova senha" (a confirmação não vai para a API) */
+export const PasswordResetForm = z
+  .object({
+    password: passwordRule,
+    confirmPassword: z.string().min(1, 'Confirme sua senha'),
+  })
+  .refine((v) => v.password === v.confirmPassword, { path: ['confirmPassword'], message: 'As senhas não conferem' })
+export type PasswordResetForm = z.infer<typeof PasswordResetForm>
 
 /** Nome ENS sem o sufixo .eth (o sufixo é fixo no layout) */
 const ensRule = z

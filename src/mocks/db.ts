@@ -75,10 +75,38 @@ interface IdempotencyRecord {
   orderId: string
 }
 
+/** Pedido de redefinição de senha. Só o hash do token fica guardado (como num backend real). */
+interface StoredPasswordReset {
+  id: string
+  userId: string
+  tokenHash: string
+  createdAt: number
+  expiresAt: number
+  /** Quando foi usado para trocar a senha */
+  usedAt: number | null
+  /** Quando um pedido mais novo o substituiu */
+  supersededAt: number | null
+}
+
+/** E-mail que o servidor "enviaria". Não há servidor de e-mail: ele fica nesta caixa de saída. */
+export interface SimulatedEmail {
+  id: string
+  to: string
+  subject: string
+  text: string
+  /** Link de ação do e-mail (absoluto) e o mesmo caminho relativo ao app */
+  link: string
+  path: string
+  sentAt: string
+}
+
 export interface DbState {
   schema: 1
   users: StoredUser[]
   sessions: StoredSession[]
+  /** Opcionais: estados salvos antes da recuperação de senha não têm esses campos. */
+  passwordResets?: StoredPasswordReset[]
+  outbox?: SimulatedEmail[]
   nfts: NftDetail[]
   favorites: Record<string, string[]>
   carts: Record<string, StoredCart>
@@ -183,6 +211,8 @@ async function buildSeed(): Promise<DbState> {
     schema: 1,
     users,
     sessions: [],
+    passwordResets: [],
+    outbox: [],
     nfts: buildNftFixtures(),
     favorites,
     carts: {},
@@ -305,6 +335,86 @@ export function deleteSession(token: string) {
 export function expireAllSessions() {
   state.sessions.forEach((s) => (s.expiresAt = now() - 1))
   persist()
+}
+
+/** Encerra todas as sessões de um usuário (ex.: depois de redefinir a senha). */
+export function deleteUserSessions(userId: string) {
+  state.sessions = state.sessions.filter((s) => s.userId !== userId)
+  persist()
+}
+
+// ---------- Recuperação de senha e e-mails simulados ----------
+
+export const PASSWORD_RESET_TTL_MIN = 30
+const OUTBOX_LIMIT = 20
+
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Cria um token de redefinição para o usuário e invalida os anteriores ainda pendentes
+ * (só o link mais recente vale). Devolve o token em claro, que só vai no e-mail.
+ */
+export async function createPasswordReset(userId: string) {
+  const resets = (state.passwordResets ??= [])
+  const t = now()
+  resets.forEach((r) => {
+    if (r.userId === userId && !r.usedAt && !r.supersededAt) r.supersededAt = t
+  })
+  const token = `rst_${randomHex(24)}`
+  resets.push({ id: nextId('rst'), userId, tokenHash: await sha256Hex(token), createdAt: t, expiresAt: t + PASSWORD_RESET_TTL_MIN * 60_000, usedAt: null, supersededAt: null })
+  persist()
+  return token
+}
+
+export type PasswordResetLookup =
+  | { status: 'ok'; reset: StoredPasswordReset; user: StoredUser }
+  | { status: 'invalid' }
+  | { status: 'expired' | 'used' | 'superseded' }
+
+export async function lookupPasswordReset(token: string): Promise<PasswordResetLookup> {
+  const hash = await sha256Hex(token)
+  const reset = state.passwordResets?.find((r) => r.tokenHash === hash)
+  const user = reset && findUser(reset.userId)
+  if (!reset || !user) return { status: 'invalid' }
+  if (reset.usedAt) return { status: 'used' }
+  if (reset.supersededAt) return { status: 'superseded' }
+  if (reset.expiresAt <= now()) return { status: 'expired' }
+  return { status: 'ok', reset, user }
+}
+
+/** Troca a senha, marca o token como usado e encerra as sessões abertas do usuário. */
+export async function completePasswordReset(reset: StoredPasswordReset, user: StoredUser, password: string) {
+  reset.usedAt = now()
+  await setPassword(user, password)
+  deleteUserSessions(user.id)
+}
+
+/** "Envia" um e-mail: guarda na caixa de saída simulada (as últimas 20 mensagens). */
+export function sendEmail(email: Omit<SimulatedEmail, 'id' | 'sentAt'>) {
+  const outbox = (state.outbox ??= [])
+  const message: SimulatedEmail = { ...email, id: nextId('mail'), sentAt: iso() }
+  outbox.push(message)
+  if (outbox.length > OUTBOX_LIMIT) outbox.splice(0, outbox.length - OUTBOX_LIMIT)
+  persist()
+  return message
+}
+
+/** Vence todos os links de redefinição pendentes (testa o "link expirado" sem esperar 30 min). */
+export function expirePasswordResets() {
+  state.passwordResets?.forEach((r) => (r.expiresAt = Math.min(r.expiresAt, now() - 1)))
+  persist()
+}
+
+/** Último e-mail enviado (opcionalmente só para um destinatário). */
+export function lastEmail(to?: string) {
+  const outbox = state.outbox ?? []
+  for (let i = outbox.length - 1; i >= 0; i--) {
+    if (!to || outbox[i].to.toLowerCase() === to.trim().toLowerCase()) return outbox[i]
+  }
+  return null
 }
 
 export function updateUser(user: StoredUser, patch: Partial<Pick<User, 'name' | 'username' | 'email' | 'ensName' | 'walletNickname' | 'avatarUrl'>>) {

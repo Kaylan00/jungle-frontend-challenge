@@ -10,6 +10,9 @@ import {
   NftDetail,
   NftListResponse,
   Order,
+  PasswordResetAccepted,
+  PasswordResetDone,
+  PasswordResetTokenInfo,
   Quote,
   Session,
   User,
@@ -21,6 +24,8 @@ import {
   type Network,
   type NftListParams,
   type PasswordChangeInput,
+  type PasswordResetConfirmRequest,
+  type PasswordResetRequest,
   type ProfileInput,
   type QuoteInput,
   type SignupRequest,
@@ -51,6 +56,13 @@ export const api = {
   login: (body: LoginInput) => request(Session, { method: 'POST', url: '/auth/login', data: body }),
   getSession: ({ signal }: Opts = {}) => request(Session, { url: '/auth/session', signal }),
   logout: () => request(z.any(), { method: 'POST', url: '/auth/logout' }),
+
+  // Recuperação de senha
+  requestPasswordReset: (body: PasswordResetRequest) => request(PasswordResetAccepted, { method: 'POST', url: '/auth/password-reset', data: body }),
+  getPasswordReset: (token: string, { signal }: Opts = {}) =>
+    request(PasswordResetTokenInfo, { url: `/auth/password-reset/${encodeURIComponent(token)}`, signal }),
+  confirmPasswordReset: (body: PasswordResetConfirmRequest) =>
+    request(PasswordResetDone, { method: 'POST', url: '/auth/password-reset/confirm', data: body }),
 
   // Catálogo
   listNfts: (p: NftListParams, { signal }: Opts = {}) => request(NftListResponse, { url: '/nfts', params: nftListQueryString(p), signal }),

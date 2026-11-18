@@ -1,7 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { X } from 'lucide-react'
-import { Dialog as DialogPrimitive } from 'radix-ui'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -9,11 +7,12 @@ import { LoginInput, SignupInput } from '@/api/contracts'
 import { ApiError } from '@/api/http'
 import { applyApiFieldErrors, FormField } from '@/components/shared/form-field'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogClose, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
-import { HomePage } from '@/features/catalog/home-page'
+import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { announce } from '@/lib/announcer'
 import { cn } from '@/lib/utils'
-import type { AuthSearch } from './auth-search'
+import { AuthBackdrop, AuthDialog, AuthMobileBrand } from './auth-dialog'
+import { authInput, authSubmit } from './auth-ui'
+import { closeTarget, type AuthSearch } from './auth-search'
 import { useLogin, useSession, useSignup } from './use-session'
 
 /**
@@ -21,8 +20,6 @@ import { useLogin, useSession, useSignup } from './use-session'
  * A janela é um Dialog do shadcn/ui (Radix): prende o foco dentro dela, fecha com Esc e devolve
  * o foco ao sair. Depois de entrar, volta para `redirect` (a página onde a pessoa estava).
  */
-const PRIVATE_PREFIXES = ['/pagamento', '/perfil', '/pedido']
-
 export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search: AuthSearch }) {
   const navigate = useNavigate()
   const { user } = useSession()
@@ -33,105 +30,86 @@ export function AuthScreen({ mode, search }: { mode: 'login' | 'signup'; search:
     if (user) void navigate({ to: target, replace: true })
   }, [user, navigate, target])
 
-  // Fechar volta para a página de origem, exceto se ela exigir login (o guard mandaria de volta
-  // para cá e o X pareceria não funcionar): nesse caso vai para o início.
-  const close = () => {
-    const back = search.redirect
-    const isPrivate = !!back && PRIVATE_PREFIXES.some((p) => back.startsWith(p))
-    void navigate({ to: back && !isPrivate ? back : '/', replace: true })
-  }
+  // Fechar volta para a página de origem (ou para o início, se ela exigir login).
+  const close = () => void navigate({ to: closeTarget(search.redirect), replace: true })
 
   const isLogin = mode === 'login'
 
   return (
     <>
-      <div aria-hidden="true" className="pointer-events-none hidden md:block">
-        <HomePage search={{}} />
-      </div>
-      <Dialog open onOpenChange={(open) => !open && close()}>
-        <DialogPortal>
-          {/* No Figma a página inicial aparece sem escurecer por trás da janela. */}
-          <DialogOverlay className="bg-transparent" />
-          <DialogPrimitive.Content
-            data-slot="dialog-content"
-            className={cn(
-              'fixed left-1/2 top-1/2 z-50 flex w-[500px] max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col bg-[#241612] text-foreground outline-none',
-              'border-b-[10px] border-[#d28a4c]',
-              isLogin ? 'min-h-[600px]' : 'min-h-[656px] rounded-[8px]',
-              // Telas altas: mesma posição do Figma (janela a 160px do topo); telas baixas: centralizada.
-              isLogin ? '[@media(min-height:860px)]:md:top-[160px]' : '[@media(min-height:860px)]:md:top-[158px]',
-              '[@media(min-height:860px)]:md:translate-y-0',
-              // Mobile (Figma 414): tela cheia no fundo da página, sem a faixa laranja.
-              'max-md:inset-0 max-md:h-dvh max-md:w-auto max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:overflow-y-auto max-md:rounded-none max-md:border-b-0 max-md:bg-background',
-            )}
-            onOpenAutoFocus={(e) => {
-              e.preventDefault()
-              document.getElementById(isLogin ? 'login-email' : 'signup-username')?.focus()
-            }}
-          >
-            <DialogClose className={cn('absolute right-[9px] grid', isLogin ? 'top-[9px]' : 'top-[11px]', 'size-6 place-items-center rounded-sm text-[#d28a4c] max-md:right-2 max-md:top-2 max-md:size-11 hover:text-[#e89b55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')}>
-              <X className="size-[22px]" strokeWidth={1.5} aria-hidden="true" />
-              <span className="sr-only">Fechar</span>
-            </DialogClose>
-            <div className="flex flex-col px-6 pb-8 pt-[46px] max-md:px-7 max-md:pt-[127px] md:px-20">
-              {/* Mobile: marca grande e título da tela no lugar das abas e do texto de apoio. */}
-              <p aria-hidden="true" className="text-center text-[32px] font-bold leading-[44px] tracking-[0.11em] md:hidden">
-                KURIO
-              </p>
-              <p aria-hidden="true" className={cn('text-center font-bold leading-6 md:hidden', isLogin ? 'mt-[79px] text-[20px]' : 'mt-[80px] text-[18px]')}>
-                {isLogin ? 'Entrar' : 'Criar perfil de colecionador'}
-              </p>
-              <nav aria-label="Entrar ou criar conta" className="flex items-center justify-center gap-2 text-[20px] leading-6 max-md:hidden">
-                <Link
-                  to="/login"
-                  search={search}
-                  replace
-                  aria-current={isLogin ? 'page' : undefined}
-                  className={cn(isLogin ? 'text-[#e89b55]' : 'text-[#f5f1eb] hover:text-[#e89b55]')}
-                >
-                  Entrar
-                </Link>
-                <span aria-hidden="true" className="h-5 w-px bg-[#8a4b38]" />
-                <Link
-                  to="/cadastro"
-                  search={search}
-                  replace
-                  aria-current={!isLogin ? 'page' : undefined}
-                  className={cn(!isLogin ? 'text-[#e89b55]' : 'text-[#f5f1eb] hover:text-[#e89b55]')}
-                >
-                  Criar conta
-                </Link>
-              </nav>
-              <DialogTitle className="sr-only">{isLogin ? 'Entrar na Kurio' : 'Criar conta na Kurio'}</DialogTitle>
-              <DialogDescription className="mt-[37px] text-center text-[13px] leading-4 text-[#f5f1eb] max-md:sr-only md:-mx-[36px]">
-                {isLogin ? 'Entre para gerenciar sua carteira, coleção e perfil de criador.' : 'Crie seu perfil de colecionador e conecte uma carteira quando quiser.'}
-              </DialogDescription>
-              {search.reason === 'expired' && (
-                <p role="alert" className="mt-4 rounded-[4px] border border-warning/50 bg-warning/10 px-3 py-2 text-[12px] text-warning">
-                  Sua sessão expirou. Entre novamente: você volta para onde estava.
-                </p>
-              )}
-              {isLogin ? <LoginForm onDone={() => void navigate({ to: target, replace: true })} /> : <SignupForm onDone={() => void navigate({ to: target, replace: true })} />}
-              <SocialLogins roomy={!isLogin} />
-              <p className="mt-[41px] text-center text-[15px] leading-5 text-muted-foreground md:hidden">
-                {isLogin ? 'Novo na Kurio? ' : 'Já tem uma conta? '}
-                <Link to={isLogin ? '/cadastro' : '/login'} search={search} replace className="hover:text-highlight hover:underline">
-                  {isLogin ? 'Crie uma conta' : 'Entre'}
-                </Link>
-              </p>
-            </div>
-          </DialogPrimitive.Content>
-        </DialogPortal>
-      </Dialog>
+      <AuthBackdrop />
+      <AuthDialog
+        onClose={close}
+        // Desktop: foco no primeiro campo. Toque/mobile: foco na própria janela (sem abrir o teclado).
+        initialFocusId={isLogin ? 'login-email' : 'signup-username'}
+        className={cn(
+          isLogin ? 'min-h-[600px]' : 'min-h-[656px] rounded-[8px]',
+          // Telas altas: mesma posição do Figma (janela a 160px do topo); telas baixas: centralizada.
+          isLogin ? '[@media(min-height:860px)]:md:top-[160px]' : '[@media(min-height:860px)]:md:top-[158px]',
+          '[@media(min-height:860px)]:md:translate-y-0',
+        )}
+        closeClassName={isLogin ? undefined : 'top-[11px]'}
+      >
+        <div className="flex flex-col px-6 pb-8 pt-[46px] max-md:px-7 max-md:pt-[127px] md:px-20">
+          {/* Mobile: marca grande e título da tela no lugar das abas e do texto de apoio. */}
+          <AuthMobileBrand />
+          <p aria-hidden="true" className={cn('text-center font-bold leading-6 md:hidden', isLogin ? 'mt-[79px] text-[20px]' : 'mt-[80px] text-[18px]')}>
+            {isLogin ? 'Entrar' : 'Criar perfil de colecionador'}
+          </p>
+          <nav aria-label="Entrar ou criar conta" className="flex items-center justify-center gap-2 text-[20px] leading-6 max-md:hidden">
+            <Link
+              to="/login"
+              search={search}
+              replace
+              aria-current={isLogin ? 'page' : undefined}
+              className={cn(isLogin ? 'text-[#e89b55]' : 'text-[#f5f1eb] hover:text-[#e89b55]')}
+            >
+              Entrar
+            </Link>
+            <span aria-hidden="true" className="h-5 w-px bg-[#8a4b38]" />
+            <Link
+              to="/cadastro"
+              search={search}
+              replace
+              aria-current={!isLogin ? 'page' : undefined}
+              className={cn(!isLogin ? 'text-[#e89b55]' : 'text-[#f5f1eb] hover:text-[#e89b55]')}
+            >
+              Criar conta
+            </Link>
+          </nav>
+          <DialogTitle className="sr-only">{isLogin ? 'Entrar na Kurio' : 'Criar conta na Kurio'}</DialogTitle>
+          <DialogDescription className="mt-[37px] text-center text-[13px] leading-4 text-[#f5f1eb] max-md:sr-only md:-mx-[36px]">
+            {isLogin ? 'Entre para gerenciar sua carteira, coleção e perfil de criador.' : 'Crie seu perfil de colecionador e conecte uma carteira quando quiser.'}
+          </DialogDescription>
+          {search.reason === 'expired' && (
+            <p role="alert" className="mt-4 rounded-[4px] border border-warning/50 bg-warning/10 px-3 py-2 text-[12px] text-warning">
+              Sua sessão expirou. Entre novamente: você volta para onde estava.
+            </p>
+          )}
+          {search.reason === 'password-reset' && isLogin && (
+            <p role="status" data-testid="password-reset-notice" className="mt-4 rounded-[4px] border border-success/50 bg-success/10 px-3 py-2 text-[12px] text-success">
+              Senha alterada. Entre com a senha nova.
+            </p>
+          )}
+          {isLogin ? (
+            <LoginForm search={search} onDone={() => void navigate({ to: target, replace: true })} />
+          ) : (
+            <SignupForm onDone={() => void navigate({ to: target, replace: true })} />
+          )}
+          <SocialLogins roomy={!isLogin} />
+          <p className="mt-[41px] text-center text-[15px] leading-5 text-muted-foreground md:hidden">
+            {isLogin ? 'Novo na Kurio? ' : 'Já tem uma conta? '}
+            <Link to={isLogin ? '/cadastro' : '/login'} search={search} replace className="hover:text-highlight hover:underline">
+              {isLogin ? 'Crie uma conta' : 'Entre'}
+            </Link>
+          </p>
+        </div>
+      </AuthDialog>
     </>
   )
 }
 
-/** Campos e botões da janela de login/cadastro (Figma: 340px de largura, raio de 4px). */
-const authInput = 'rounded-[4px] pl-4 max-md:h-[50px] max-md:rounded-[10px]'
-const authSubmit = 'h-[45px] rounded-[4px] bg-[#d28a4c] text-[16px] font-bold text-[#140d0a] hover:bg-[#dd9a60] max-md:h-[60px] max-md:rounded-[10px]'
-
-function LoginForm({ onDone }: { onDone: () => void }) {
+function LoginForm({ onDone, search }: { onDone: () => void; search: AuthSearch }) {
   const login = useLogin()
   const [formError, setFormError] = useState<string | null>(null)
   const form = useForm<LoginInput>({ resolver: zodResolver(LoginInput), defaultValues: { email: '', password: '' } })
@@ -169,13 +147,14 @@ function LoginForm({ onDone }: { onDone: () => void }) {
           {...form.register('password')}
         />
       </div>
-      <button
-        type="button"
+      <Link
+        to="/recuperar-senha"
+        search={{ redirect: search.redirect }}
+        replace
         className="mt-[10px] self-end text-[14px] leading-5 text-[#e89b55] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={() => toast.info('Recuperação de senha não faz parte desta demonstração.')}
       >
         Esqueceu a senha?
-      </button>
+      </Link>
       {formError && (
         <p role="alert" className="mt-3 text-[13px] text-destructive" data-testid="form-error">
           {formError}

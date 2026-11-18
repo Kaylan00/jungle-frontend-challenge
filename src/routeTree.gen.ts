@@ -14,6 +14,8 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as CarrinhoRouteImport } from './routes/carrinho'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as AuthPagamentoRouteImport } from './routes/_auth/pagamento'
 import { Route as NftNftIdRouteImport } from './routes/nft.$nftId'
 import { Route as AuthPedidoOrderIdRouteImport } from './routes/_auth/pedido.$orderId'
@@ -43,6 +45,16 @@ const CarrinhoRoute = CarrinhoRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
+  id: '/recuperar-senha',
+  path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthPagamentoRoute = AuthPagamentoRouteImport.update({
@@ -81,6 +93,8 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/carrinho': typeof CarrinhoRoute
   '/login': typeof LoginRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/pagamento': typeof AuthPagamentoRoute
   '/nft/$nftId': typeof NftNftIdRoute
   '/pedido/$orderId': typeof AuthPedidoOrderIdRoute
@@ -93,6 +107,8 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/carrinho': typeof CarrinhoRoute
   '/login': typeof LoginRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/pagamento': typeof AuthPagamentoRoute
   '/nft/$nftId': typeof NftNftIdRoute
   '/pedido/$orderId': typeof AuthPedidoOrderIdRoute
@@ -107,6 +123,8 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/carrinho': typeof CarrinhoRoute
   '/login': typeof LoginRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/_auth/pagamento': typeof AuthPagamentoRoute
   '/nft/$nftId': typeof NftNftIdRoute
   '/_auth/pedido/$orderId': typeof AuthPedidoOrderIdRoute
@@ -121,6 +139,8 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/carrinho'
     | '/login'
+    | '/recuperar-senha'
+    | '/redefinir-senha'
     | '/pagamento'
     | '/nft/$nftId'
     | '/pedido/$orderId'
@@ -133,6 +153,8 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/carrinho'
     | '/login'
+    | '/recuperar-senha'
+    | '/redefinir-senha'
     | '/pagamento'
     | '/nft/$nftId'
     | '/pedido/$orderId'
@@ -146,6 +168,8 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/carrinho'
     | '/login'
+    | '/recuperar-senha'
+    | '/redefinir-senha'
     | '/_auth/pagamento'
     | '/nft/$nftId'
     | '/_auth/pedido/$orderId'
@@ -160,6 +184,8 @@ export interface RootRouteChildren {
   CadastroRoute: typeof CadastroRoute
   CarrinhoRoute: typeof CarrinhoRoute
   LoginRoute: typeof LoginRoute
+  RecuperarSenhaRoute: typeof RecuperarSenhaRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   NftNftIdRoute: typeof NftNftIdRoute
 }
 
@@ -198,6 +224,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar-senha': {
+      id: '/recuperar-senha'
+      path: '/recuperar-senha'
+      fullPath: '/recuperar-senha'
+      preLoaderRoute: typeof RecuperarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/pagamento': {
@@ -269,6 +309,8 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroRoute: CadastroRoute,
   CarrinhoRoute: CarrinhoRoute,
   LoginRoute: LoginRoute,
+  RecuperarSenhaRoute: RecuperarSenhaRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   NftNftIdRoute: NftNftIdRoute,
 }
 export const routeTree = rootRouteImport

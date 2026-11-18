@@ -17,6 +17,13 @@ export const mockControls = {
     dropAllConnections()
   },
   expireSessions: () => db.expireAllSessions(),
+  /**
+   * Caixa de saída do "servidor de e-mail" simulado (não há envio real nesta demonstração).
+   * `lastEmail('ana@kurio.test')` devolve o último e-mail para esse endereço, com o link de ação.
+   */
+  lastEmail: (to?: string) => db.lastEmail(to),
+  outbox: () => [...(db.getState().outbox ?? [])],
+  expirePasswordResets: () => db.expirePasswordResets(),
   changePrice(nftId: string, editionId: string, price: string) {
     return Boolean(db.updateEdition(nftId, editionId, { price }))
   },
