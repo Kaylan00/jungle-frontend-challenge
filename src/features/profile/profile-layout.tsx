@@ -34,7 +34,7 @@ export function ProfileLayout({ title, children }: { title: string; children: Re
   const navigate = useNavigate()
 
   return (
-    <div className="container-page grid gap-6 py-6 md:grid-cols-[310px_minmax(0,1fr)] md:gap-7 md:pb-16 md:pt-8">
+    <div className="container-page grid gap-6 py-6 md:grid-cols-[310px_minmax(0,1fr)] md:gap-7 md:pb-16 md:pt-8 wide:grid-cols-[calc(310*var(--u))_minmax(0,1fr)] wide:gap-x-[calc(28*var(--u))]">
       <h1 className="sr-only">{title}</h1>
       <aside className="min-w-0 self-start rounded-lg bg-[#241612] md:rounded-none md:pb-2 md:pt-[14px]">
         <nav aria-labelledby="profile-menu-title">

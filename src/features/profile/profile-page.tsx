@@ -91,7 +91,7 @@ function ProfileForm({ user, children }: { user: User; children?: React.ReactNod
         <h2 id="profile-form-title" className="mb-[38px] text-[16px] font-bold leading-4 text-[#f5f1eb]">
           Perfil do colecionador
         </h2>
-        <div className="grid gap-x-7 gap-y-[30px] md:grid-cols-2">
+        <div className="grid gap-x-7 gap-y-[30px] md:grid-cols-2 wide:gap-x-[calc(28*var(--u))]">
           <FormField id="profile-name" label="Nome de exibição" required autoComplete="name" containerClassName={profileField} error={errors.name?.message} {...form.register('name')} />
           <FormField
             id="profile-username"
@@ -299,7 +299,7 @@ function PasswordForm() {
   const showSubmit = isDirty || isSubmitting || Boolean(formError) || Object.keys(errors).length > 0
 
   return (
-    <form onSubmit={onSubmit} noValidate aria-labelledby="password-form-title" data-testid="password-form" className="mt-8 md:w-[calc(50%-14px)]">
+    <form onSubmit={onSubmit} noValidate aria-labelledby="password-form-title" data-testid="password-form" className="mt-8 md:w-[calc(50%-14px)] wide:w-[calc(50%-14*var(--u))]">
       <h2 id="password-form-title" className="mb-[23px] text-[16px] font-bold leading-4 text-[#f5f1eb]">
         Alterar senha
       </h2>
@@ -383,7 +383,7 @@ function ProfileSkeleton() {
       <p className="sr-only">Carregando perfil…</p>
       <div className="flex flex-col" aria-hidden="true">
         <p className="mb-[38px] text-[16px] font-bold leading-4 text-[#f5f1eb]">Perfil do colecionador</p>
-        <div className="grid gap-x-7 gap-y-[30px] md:grid-cols-2">
+        <div className="grid gap-x-7 gap-y-[30px] md:grid-cols-2 wide:gap-x-[calc(28*var(--u))]">
           {['Nome de exibição', 'Nome de usuário', 'E-mail', 'Nome ENS', 'Apelido da carteira'].map((label) => (
             <FieldSkeleton key={label} label={label} className={profileField} />
           ))}
@@ -396,7 +396,7 @@ function ProfileSkeleton() {
             </div>
           </div>
         </div>
-        <div className="mt-8 md:w-[calc(50%-14px)]">
+        <div className="mt-8 md:w-[calc(50%-14px)] wide:w-[calc(50%-14*var(--u))]">
           <p className="mb-[23px] text-[16px] font-bold leading-4 text-[#f5f1eb]">Alterar senha</p>
           <div className="flex flex-col gap-[23px]">
             {['Senha atual', 'Nova senha', 'Confirmar nova senha'].map((label) => (

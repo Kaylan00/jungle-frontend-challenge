@@ -41,7 +41,7 @@ function RootLayout() {
         Pular para o conteúdo
       </a>
       <Header />
-      <main id="conteudo" ref={mainRef} tabIndex={-1} className={cn('min-h-dvh flex-1 outline-none', hasMobileNav(pathname) && 'max-md:pb-24')}>
+      <main id="conteudo" ref={mainRef} tabIndex={-1} className={cn('scale-frame min-h-dvh flex-1 outline-none', hasMobileNav(pathname) && 'max-md:pb-24')}>
         <Outlet />
       </main>
       <Footer />

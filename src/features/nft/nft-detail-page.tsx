@@ -16,6 +16,7 @@ import { useAddToCart, useCart } from '@/features/cart/hooks'
 import { NftCard } from '@/features/catalog/nft-card'
 import { NETWORK_LABEL } from '@/features/catalog/search-params'
 import { FavoriteButton } from '@/features/favorites/favorite-button'
+import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
 import { SkeletonLine, VitrineCardSkeleton, VitrineDotsSkeleton } from './vitrine-skeleton'
@@ -121,11 +122,12 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
         </ol>
       </nav>
 
-      {/* Em 1440 a galeria tem 572 px + 33 de respiro (Figma); acima disso cresce na mesma proporção (arte quadrada). */}
-      <div className="grid gap-0 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[max(572px,47.6%)_minmax(0,1fr)] xl:gap-[33px]">
+      {/* Em 1440 a galeria tem 572 px + 33 de respiro (Figma); em telas largas miniaturas, arte e respiros
+          crescem na mesma proporção (as miniaturas continuam com a altura da arte). */}
+      <div className="grid gap-0 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[572px_minmax(0,1fr)] xl:gap-[33px] wide:grid-cols-[calc(572*var(--u))_minmax(0,1fr)] wide:gap-[calc(33*var(--u))]">
         {/* Galeria */}
-        <div className="grid gap-3 md:grid-cols-[100px_1fr] xl:min-h-[448px] xl:grid-cols-[100px_minmax(0,1fr)] xl:self-start xl:items-center xl:gap-[28px]">
-          <ul className="order-2 flex gap-3 max-md:hidden md:order-1 md:flex-col xl:gap-4" aria-label="Imagens do NFT">
+        <div className="grid gap-3 md:grid-cols-[100px_1fr] xl:min-h-[448px] xl:grid-cols-[100px_minmax(0,1fr)] xl:self-start xl:items-center xl:gap-[28px] wide:min-h-[calc(448*var(--u))] wide:grid-cols-[calc(100*var(--u))_minmax(0,1fr)] wide:gap-[calc(28*var(--u))]">
+          <ul className="order-2 flex gap-3 max-md:hidden md:order-1 md:flex-col xl:gap-4 wide:gap-[calc(16*var(--u))]" aria-label="Imagens do NFT">
             {nft.gallery.map((g, i) => (
               <li key={i}>
                 <button
@@ -135,19 +137,19 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
                   aria-current={i === image ? 'true' : undefined}
                   className={cn('block overflow-hidden rounded-sm border-2 border-transparent transition-colors duration-200 hover:border-primary/50 xl:rounded-lg xl:border', i === image && 'border-primary')}
                 >
-                  <img src={g.src} alt="" width={100} height={100} loading="lazy" className="aspect-square w-16 object-cover md:w-[100px] xl:w-[98px]" />
+                  <img {...artSources(g.src, ART_SIZES.detailThumb)} alt="" width={100} height={100} loading="lazy" className="aspect-square w-16 object-cover md:w-[100px] xl:w-[98px] wide:w-[calc(98*var(--u))]" />
                 </button>
               </li>
             ))}
           </ul>
-          <div className="relative order-1 rounded-md md:order-2 md:bg-card md:p-5 xl:flex xl:aspect-square xl:w-full xl:items-center xl:justify-center xl:rounded-[6px] xl:p-4">
+          <div className="relative order-1 rounded-md md:order-2 md:bg-card md:p-5 xl:flex xl:aspect-square xl:w-full xl:items-center xl:justify-center xl:rounded-[6px] xl:p-4 wide:p-[calc(16*var(--u))]">
             <img
-              src={nft.gallery[image]?.src ?? nft.image}
+              {...artSources(nft.gallery[image]?.src ?? nft.image, ART_SIZES.detail)}
               alt={nft.gallery[image]?.alt ?? nft.name}
               width={430}
               height={430}
               fetchPriority="high"
-              className="aspect-square w-full rounded-[20px] object-cover md:rounded-xl xl:w-[calc(100%_-_8px)] xl:rounded-[24px]"
+              className="aspect-square w-full rounded-[20px] object-cover md:rounded-xl xl:w-[calc(100%_-_8px)] xl:rounded-[24px] wide:w-[calc(100%-8*var(--u))]"
             />
             <button
               type="button"
@@ -173,7 +175,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
               <span className="-ml-[5px] text-muted-foreground">({nft.reviewsCount})</span>
             </p>
           </div>
-          <div className="hidden flex-wrap items-center justify-between gap-2 md:flex xl:mt-[9px] xl:w-[calc(100%_-_22px)] xl:flex-nowrap xl:border-b xl:border-border xl:pb-[6px]">
+          <div className="hidden flex-wrap items-center justify-between gap-2 md:flex xl:mt-[9px] xl:w-[calc(100%_-_22px)] xl:flex-nowrap xl:border-b xl:border-border xl:pb-[6px] wide:w-[calc(100%-22*var(--u))]">
             <p className="text-xl font-bold text-primary xl:text-[22px] xl:leading-[28px] xl:text-highlight" data-testid="detail-price">
               {formatEth(edition.price)}
               {nft.compareAtPrice && edition.price === nft.price && (
@@ -183,7 +185,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
                 </s>
               )}
             </p>
-            <p className="flex items-center gap-1 text-[13px] xl:-mr-[21px] xl:gap-1 xl:text-[15px]">
+            <p className="flex items-center gap-1 text-[13px] xl:-mr-[21px] xl:gap-1 xl:text-[15px] wide:-mr-[calc(21*var(--u))]">
               <span className="flex xl:gap-1" aria-label={`Nota ${nft.rating.toFixed(1)} de 5`} role="img">
                 {Array.from({ length: 5 }, (_, i) => (
                   <Star
@@ -206,7 +208,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
             <p className="text-[14px] leading-[24px] text-muted-foreground md:hidden">
               Um colecionável digital {edition.name} finalizado à mão da coleção {nft.collection}, verificado na {network}.
             </p>
-            <p className="text-[13px] leading-relaxed text-muted-foreground max-md:hidden xl:max-w-[574px] xl:text-[14px] xl:leading-[24px] xl:text-[#cfb28c]">
+            <p className="text-[13px] leading-relaxed text-muted-foreground max-md:hidden xl:max-w-[574px] xl:text-[14px] xl:leading-[24px] xl:text-[#cfb28c] wide:max-w-[calc(574*var(--u))]">
               Um colecionável digital finalizado à mão da coleção {nft.collection}, verificado na {network}, com arte desbloqueável e acesso para colecionadores.
             </p>
           </section>
@@ -406,7 +408,7 @@ function DetailView({ nft, editionId }: { nft: NftDetail; editionId?: string }) 
         <DialogContent className="max-w-[min(90vw,720px)] border-border bg-card p-3">
           <DialogTitle className="sr-only">{nft.name} ampliado</DialogTitle>
           <DialogDescription className="sr-only">{nft.gallery[image]?.alt}</DialogDescription>
-          <img src={nft.gallery[image]?.src ?? nft.image} alt={nft.gallery[image]?.alt ?? nft.name} className="w-full rounded-lg" />
+          <img {...artSources(nft.gallery[image]?.src ?? nft.image, ART_SIZES.zoom)} alt={nft.gallery[image]?.alt ?? nft.name} width={720} height={720} className="h-auto w-full rounded-lg" />
         </DialogContent>
       </Dialog>
     </article>
@@ -439,7 +441,7 @@ function MoreFromCollection({ nft }: { nft: NftDetail }) {
       <h2 id="mais-colecao" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary xl:mb-8 xl:pb-[11px] xl:text-[17px] xl:font-bold xl:leading-4 xl:text-highlight">
         Mais desta coleção
       </h2>
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:gap-[26px]" aria-live="polite" data-reveal-group>
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:gap-[26px] wide:gap-[calc(26*var(--u))]" aria-live="polite" data-reveal-group>
         {items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE).map((n) => (
           <li key={n.id}>
             <NftCard nft={n} variant="detail" />
@@ -472,7 +474,7 @@ function CollectionSkeleton() {
         Mais desta coleção
       </h2>
       <p className="sr-only">Carregando NFTs da coleção…</p>
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:gap-[26px]" aria-hidden="true">
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:gap-[26px] wide:gap-[calc(26*var(--u))]" aria-hidden="true">
         {Array.from({ length: PER_PAGE }, (_, i) => (
           <li key={i}>
             <VitrineCardSkeleton variant="detail" />
@@ -507,15 +509,15 @@ function DetailSkeleton() {
         {/* Trilha (13px no md, 15/16 no xl) */}
         <SkeletonLine className="mb-3 hidden h-[19.5px] w-[150px] md:flex xl:h-4" />
 
-        <div className="grid gap-0 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[max(572px,47.6%)_minmax(0,1fr)] xl:gap-[33px]">
-          <div className="grid gap-3 md:grid-cols-[100px_1fr] xl:min-h-[448px] xl:grid-cols-[100px_minmax(0,1fr)] xl:self-start xl:items-center xl:gap-[28px]">
-            <div className="order-2 flex gap-3 max-md:hidden md:order-1 md:flex-col xl:gap-4">
+        <div className="grid gap-0 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[572px_minmax(0,1fr)] xl:gap-[33px] wide:grid-cols-[calc(572*var(--u))_minmax(0,1fr)] wide:gap-[calc(33*var(--u))]">
+          <div className="grid gap-3 md:grid-cols-[100px_1fr] xl:min-h-[448px] xl:grid-cols-[100px_minmax(0,1fr)] xl:self-start xl:items-center xl:gap-[28px] wide:min-h-[calc(448*var(--u))] wide:grid-cols-[calc(100*var(--u))_minmax(0,1fr)] wide:gap-[calc(28*var(--u))]">
+            <div className="order-2 flex gap-3 max-md:hidden md:order-1 md:flex-col xl:gap-4 wide:gap-[calc(16*var(--u))]">
               {Array.from({ length: 4 }, (_, i) => (
-                <Skeleton key={i} className="size-[104px] rounded-sm xl:size-[100px] xl:rounded-lg" />
+                <Skeleton key={i} className="size-[104px] rounded-sm xl:size-[100px] xl:rounded-lg wide:size-[calc(98*var(--u)+2px)]" />
               ))}
             </div>
-            <div className="relative order-1 rounded-md md:order-2 md:bg-card md:p-5 xl:flex xl:aspect-square xl:w-full xl:items-center xl:justify-center xl:rounded-[6px] xl:p-4">
-              <Skeleton className="aspect-square w-full rounded-[20px] md:rounded-xl xl:w-[calc(100%_-_8px)] xl:rounded-[24px]" />
+            <div className="relative order-1 rounded-md md:order-2 md:bg-card md:p-5 xl:flex xl:aspect-square xl:w-full xl:items-center xl:justify-center xl:rounded-[6px] xl:p-4 wide:p-[calc(16*var(--u))]">
+              <Skeleton className="aspect-square w-full rounded-[20px] md:rounded-xl xl:w-[calc(100%_-_8px)] xl:rounded-[24px] wide:w-[calc(100%-8*var(--u))]" />
             </div>
           </div>
 
@@ -524,7 +526,7 @@ function DetailSkeleton() {
               <SkeletonLine className="h-7 w-[58%] md:h-[37px] md:w-[270px]" />
               <Skeleton className="h-[27px] w-[78px] rounded-full md:hidden" />
             </div>
-            <div className="hidden items-center justify-between gap-2 md:flex xl:mt-[9px] xl:w-[calc(100%_-_22px)] xl:border-b xl:border-border xl:pb-[6px]">
+            <div className="hidden items-center justify-between gap-2 md:flex xl:mt-[9px] xl:w-[calc(100%_-_22px)] xl:border-b xl:border-border xl:pb-[6px] wide:w-[calc(100%-22*var(--u))]">
               <SkeletonLine className="h-7 w-[104px]" />
               <SkeletonLine className="h-[19.5px] w-[300px] xl:-mr-[21px] xl:h-[22.5px] xl:w-[372px]" />
             </div>

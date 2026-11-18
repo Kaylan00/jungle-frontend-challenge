@@ -61,17 +61,17 @@ export function Header() {
 
   return (
     // Mobile (Figma 414): sem cabeçalho; a navegação fica na barra inferior.
-    <header className="sticky top-0 z-40 bg-background max-md:hidden">
+    <header className="scale-frame sticky top-0 z-40 bg-background max-md:hidden">
       <div className="container-page relative flex h-16 items-center justify-between gap-4 xl:h-[69px] xl:items-start xl:justify-start xl:gap-0">
         {/* Linha divisória (Figma: 1px em y=68, o sublinhado do item ativo passa por cima dela).
             Nos frames do Mercado (detalhe, carrinho, pagamento) o Figma não tem a linha.
-            Até 1440 tem no máximo 1200 px (como no Figma); acima disso vai de ponta a ponta, como as faixas do rodapé. */}
-        {!marketActive && <span aria-hidden="true" className="pointer-events-none absolute inset-x-[min(var(--band-m),max(0px,(100%_-_1200px)_/_2))] bottom-0 h-px bg-border" />}
+            Acompanha o conteúdo (1200 px em 1440, como no Figma; até 1680 px em telas largas). */}
+        {!marketActive && <span aria-hidden="true" className="pointer-events-none absolute inset-x-[max(0px,(100%_-_1200px)_/_2)] bottom-0 h-px bg-border wide:inset-x-[var(--page-x)]" />}
         <Link to="/" className="text-sm font-bold leading-5 tracking-[0.1em] xl:mt-[31px]" aria-label="Kurio, página inicial">
           KURIO
         </Link>
 
-        <nav aria-label="Principal" className="hidden h-full items-stretch gap-10 md:flex xl:absolute xl:left-[calc(var(--page-x)_+_max(376px,(100%_-_2_*_var(--page-x))_*_0.3125))] xl:top-0 xl:gap-[40.5px]">
+        <nav aria-label="Principal" className="hidden h-full items-stretch gap-10 md:flex xl:absolute xl:left-[calc(var(--page-x)_+_max(376px,(100%_-_2_*_var(--page-x))_*_0.3125))] xl:top-0 xl:gap-[40.5px] wide:gap-[calc(40.5*var(--u))]">
           <Link to="/" className={cn(navItem, homeActive && navActive)} aria-current={homeActive ? 'page' : undefined}>
             Início
           </Link>

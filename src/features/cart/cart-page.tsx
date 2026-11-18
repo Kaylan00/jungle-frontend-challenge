@@ -10,6 +10,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from '@/features/auth/use-session'
 import { NftCard } from '@/features/catalog/nft-card'
+import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
 import { VitrineCardSkeleton, VitrineDotsSkeleton } from '@/features/nft/vitrine-skeleton'
@@ -79,7 +80,7 @@ export function CartPage() {
 
 function CartLayout({ list, summary, busy }: { list: React.ReactNode; summary: React.ReactNode; busy?: boolean }) {
   return (
-    <div className="grid gap-8 max-md:flex max-md:flex-1 max-md:flex-col max-md:gap-1 md:mt-[4px] lg:grid-cols-[minmax(0,1fr)_332px] lg:gap-12 xl:mt-[11px] xl:gap-[86px]" aria-busy={busy}>
+    <div className="grid gap-8 max-md:flex max-md:flex-1 max-md:flex-col max-md:gap-1 md:mt-[4px] lg:grid-cols-[minmax(0,1fr)_332px] lg:gap-12 xl:mt-[11px] xl:gap-[86px] wide:grid-cols-[minmax(0,1fr)_calc(332*var(--u))] wide:gap-[calc(86*var(--u))]" aria-busy={busy}>
       <section aria-label="Itens do carrinho">{list}</section>
       <aside
         aria-labelledby="resumo-title"
@@ -132,9 +133,9 @@ function ListSkeleton() {
         <tbody>
           {rows.map((i) => (
             <tr key={i} className="bg-[#241612]">
-              <td className="h-[70px] p-0">
-                <div className="flex items-center gap-[17px]">
-                  <Skeleton className="size-[70px] shrink-0 rounded-[4px]" />
+              <td className="h-[70px] p-0 wide:h-[calc(70*var(--u))]">
+                <div className="flex items-center gap-[17px] wide:gap-[calc(17*var(--u))]">
+                  <Skeleton className="size-[70px] shrink-0 rounded-[4px] wide:size-[calc(70*var(--u))]" />
                   <div className="min-w-0 flex-1">
                     <Line className="h-[22px] xl:h-4" bar="w-[150px]" />
                     <Line className="h-5 xl:mt-1.5 xl:h-4" bar="w-[100px]" />
@@ -251,9 +252,9 @@ function CartItems({ cart }: { cart: Cart }) {
         <tbody>
           {cart.items.map((item) => (
             <tr key={item.id} className="bg-[#241612]" data-testid="cart-item" data-item-nft={item.nftId}>
-              <td className="h-[70px] p-0">
-                <div className="flex items-center gap-[17px]">
-                  <img src={item.image} alt="" width={70} height={70} className="size-[70px] shrink-0 rounded-[4px] object-cover" />
+              <td className="h-[70px] p-0 wide:h-[calc(70*var(--u))]">
+                <div className="flex items-center gap-[17px] wide:gap-[calc(17*var(--u))]">
+                  <img {...artSources(item.image, ART_SIZES.cartRow)} alt="" width={70} height={70} className="size-[70px] shrink-0 rounded-[4px] object-cover wide:size-[calc(70*var(--u))]" />
                   <div className="min-w-0">
                     <Link
                       to="/nft/$nftId"
@@ -307,7 +308,7 @@ function CartItems({ cart }: { cart: Cart }) {
       <ul className="space-y-5 md:hidden">
         {cart.items.map((item) => (
           <li key={item.id} className="relative flex min-h-[100px] overflow-hidden rounded-[12px] bg-card" data-testid="cart-item-mobile">
-            <img src={item.image} alt="" width={100} height={100} className="w-[100px] shrink-0 self-stretch object-cover" />
+            <img {...artSources(item.image, ART_SIZES.cartRow)} alt="" width={100} height={100} className="w-[100px] shrink-0 self-stretch object-cover" />
             <div className="min-w-0 flex-1 pb-2 pl-[10px] pr-4 pt-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-bold leading-5">{item.name}</p>
@@ -394,7 +395,7 @@ function AlsoViewed() {
       <h2 id="tambem-viram" className="mb-4 border-b border-border pb-2 text-[14px] font-semibold text-primary lg:mb-8 lg:border-[#442c1b] lg:pb-[11px] lg:text-[17px] lg:font-bold lg:leading-4 lg:text-[#e89b55]">
         Colecionadores também viram
       </h2>
-      <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5 lg:gap-[26px]" aria-live="polite" data-reveal-group>
+      <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5 lg:gap-[26px] wide:gap-[calc(26*var(--u))]" aria-live="polite" data-reveal-group>
         {items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE).map((n) => (
           <li key={n.id}>
             <NftCard nft={n} variant="cart" />
@@ -427,7 +428,7 @@ function AlsoViewedSkeleton() {
         Colecionadores também viram
       </h2>
       <p className="sr-only">Carregando sugestões…</p>
-      <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5 lg:gap-[26px]" aria-hidden="true">
+      <ul className="grid grid-cols-3 gap-4 lg:grid-cols-5 lg:gap-[26px] wide:gap-[calc(26*var(--u))]" aria-hidden="true">
         {Array.from({ length: PER_PAGE }, (_, i) => (
           <li key={i}>
             <VitrineCardSkeleton variant="cart" />

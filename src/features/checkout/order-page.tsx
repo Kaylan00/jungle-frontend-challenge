@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from '@/features/auth/use-session'
 import { NETWORK_LABEL } from '@/features/catalog/search-params'
 import { announce } from '@/lib/announcer'
+import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
 import { useRealtimeClient } from '@/realtime/provider'
@@ -201,7 +202,7 @@ function Line({ className, bar }: { className?: string; bar?: string }) {
  */
 function ReceiptSkeleton() {
   return (
-    <div className="relative w-full max-w-[578px] bg-card" aria-hidden="true">
+    <div className="relative w-full max-w-[578px] bg-card wide:max-w-[calc(578*var(--u))]" aria-hidden="true">
       <div className="px-6 pb-[18px] pt-[19px] text-center">
         <Skeleton className="mx-auto h-[86px] w-[72px] rounded-lg" />
         <Line className="mt-[9px] h-6" bar="mx-auto w-[300px] max-w-full" />
@@ -213,7 +214,7 @@ function ReceiptSkeleton() {
           ['Total', 'w-[80px]'],
           ['Carteira', 'w-[80px]'],
         ].map(([label, w]) => (
-          <div key={label} className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
+          <div key={label} className="px-[18px] first:pl-0 last:pr-0 max-md:px-0 wide:px-[calc(18*var(--u))] wide:first:pl-0 wide:last:pr-0">
             <dt className="font-bold">{label}</dt>
             <dd className="text-[15px]">
               <Line className="h-[18px]" bar={w} />
@@ -221,13 +222,13 @@ function ReceiptSkeleton() {
           </div>
         ))}
       </dl>
-      <div className="px-[44px] pb-[48px] pt-[17px] max-md:px-5 max-md:pb-8">
+      <div className="px-[44px] pb-[48px] pt-[17px] max-md:px-5 max-md:pb-8 wide:px-[calc(44*var(--u))]">
         <p className="text-[15px] font-bold leading-5">Detalhes da transação</p>
         <table className="mt-2 w-full table-fixed">
           <colgroup>
             <col />
-            <col className="w-[56px] md:w-[92px]" />
-            <col className="w-[96px] md:w-[113px]" />
+            <col className="w-[56px] md:w-[92px] wide:w-[calc(92*var(--u))]" />
+            <col className="w-[96px] md:w-[113px] wide:w-[calc(113*var(--u))]" />
           </colgroup>
           <thead>
             <tr className="border-b border-[#503320] text-left text-[16px] leading-5 tracking-[-0.4px]">
@@ -240,7 +241,7 @@ function ReceiptSkeleton() {
             <tr>
               <td className="py-2 pt-3">
                 <div className="flex items-center gap-3">
-                  <Skeleton className="size-12 shrink-0 rounded-[4px] md:size-[66px]" />
+                  <Skeleton className="size-12 shrink-0 rounded-[4px] md:size-[66px] wide:size-[calc(66*var(--u))]" />
                   <div className="min-w-0 flex-1">
                     <Line className="h-[22px]" bar="w-[150px] max-w-full" />
                     <Line className="h-[22px]" bar="w-[100px] max-w-full" />
@@ -256,7 +257,7 @@ function ReceiptSkeleton() {
             </tr>
           </tbody>
         </table>
-        <dl className="ml-auto mt-[3px] w-full md:w-[321px]">
+        <dl className="ml-auto mt-[3px] w-full md:w-[321px] wide:w-[calc(321*var(--u))]">
           {['Taxa de rede', 'Total'].map((label) => (
             <div key={label} className={cn('flex h-[30px] items-center justify-between', label === 'Total' && 'font-bold')}>
               <dt className="text-[15px]">{label}</dt>
@@ -267,7 +268,7 @@ function ReceiptSkeleton() {
           ))}
         </dl>
         <div className="mt-[4px] border-t border-[#503320] pt-[12px]">
-          <div className="mx-auto max-w-[470px]">
+          <div className="mx-auto max-w-[470px] wide:max-w-[calc(470*var(--u))]">
             <Line className="h-[22px]" />
             <Line className="h-[22px]" bar="mx-auto w-3/4" />
             <Line className="h-[22px]" bar="mx-auto w-1/2" />
@@ -285,7 +286,8 @@ function ReceiptSkeleton() {
 function Receipt({ order }: { order: Order }) {
   const short = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`.toUpperCase().replace('0X', '0x')
   return (
-    <section className="relative w-full max-w-[578px] bg-card" aria-labelledby="receipt-title" data-testid="receipt">
+    // Telas largas: o recibo é ampliado como o resto da página (caixa, colunas e miniaturas); textos no mesmo tamanho.
+    <section className="relative w-full max-w-[578px] bg-card wide:max-w-[calc(578*var(--u))]" aria-labelledby="receipt-title" data-testid="receipt">
       <Link to="/" className="absolute right-[6px] top-[10px] grid size-8 place-items-center rounded text-primary hover:bg-secondary" aria-label="Fechar e voltar ao início">
         <X className="size-[22px]" strokeWidth={1.5} aria-hidden="true" />
       </Link>
@@ -298,7 +300,7 @@ function Receipt({ order }: { order: Order }) {
 
       {/* Mobile (sem frame no Figma): os quatro dados em grade 2x2 para caber em 390px. */}
       <dl className="flex justify-center divide-x divide-primary border-y border-primary pb-[16px] pt-[13px] text-[14px] leading-[18px] text-[#cfb28c] max-md:grid max-md:grid-cols-2 max-md:gap-y-3 max-md:divide-x-0 max-md:px-6">
-        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
+        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0 wide:px-[calc(18*var(--u))] wide:first:pl-0 wide:last:pr-0">
           <dt className="font-bold">ID da transação</dt>
           <dd className="flex items-center gap-1 text-[15px]" data-testid="tx-hash">
             {order.txHash ? short(order.txHash) : '—'}
@@ -314,28 +316,28 @@ function Receipt({ order }: { order: Order }) {
             )}
           </dd>
         </div>
-        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
+        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0 wide:px-[calc(18*var(--u))] wide:first:pl-0 wide:last:pr-0">
           <dt className="font-bold">Data</dt>
           <dd className="text-[15px]">{receiptDate(order.updatedAt)}</dd>
         </div>
-        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
+        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0 wide:px-[calc(18*var(--u))] wide:first:pl-0 wide:last:pr-0">
           <dt className="font-bold">Total</dt>
           <dd className="text-[15px]">{formatEth(order.total)}</dd>
         </div>
-        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0">
+        <div className="px-[18px] first:pl-0 last:pr-0 max-md:px-0 wide:px-[calc(18*var(--u))] wide:first:pl-0 wide:last:pr-0">
           <dt className="font-bold">Carteira</dt>
           <dd className="text-[15px]">{PROVIDER_LABEL[order.wallet.provider]}</dd>
         </div>
       </dl>
 
-      <div className="px-[44px] pb-[48px] pt-[17px] max-md:px-5 max-md:pb-8">
+      <div className="px-[44px] pb-[48px] pt-[17px] max-md:px-5 max-md:pb-8 wide:px-[calc(44*var(--u))]">
         <h2 className="text-[15px] font-bold leading-5">Detalhes da transação</h2>
         <table className="mt-2 w-full table-fixed">
           <caption className="sr-only">Itens do pedido {order.number}</caption>
           <colgroup>
             <col />
-            <col className="w-[56px] md:w-[92px]" />
-            <col className="w-[96px] md:w-[113px]" />
+            <col className="w-[56px] md:w-[92px] wide:w-[calc(92*var(--u))]" />
+            <col className="w-[96px] md:w-[113px] wide:w-[calc(113*var(--u))]" />
           </colgroup>
           <thead>
             <tr className="border-b border-[#503320] text-left text-[16px] leading-5 tracking-[-0.4px]">
@@ -355,7 +357,7 @@ function Receipt({ order }: { order: Order }) {
               <tr key={`${l.nftId}-${l.editionId}`} data-testid="receipt-line">
                 <td className="py-2">
                   <div className="flex items-center gap-3">
-                    <img src={l.image} alt="" width={66} height={66} className="size-12 shrink-0 rounded-[4px] object-cover md:size-[66px]" />
+                    <img {...artSources(l.image, ART_SIZES.receiptRow)} alt="" width={66} height={66} className="size-12 shrink-0 rounded-[4px] object-cover md:size-[66px] wide:size-[calc(66*var(--u))]" />
                     <div className="min-w-0 leading-[22px]">
                       <p className="truncate text-[14px] font-semibold tracking-[-0.4px] md:text-[16px]">{l.name}</p>
                       <p className="text-[13px] text-[#b09161] md:text-[14px]">Edição: {l.editionName}</p>
@@ -368,7 +370,7 @@ function Receipt({ order }: { order: Order }) {
             ))}
           </tbody>
         </table>
-        <dl className="ml-auto mt-[3px] w-full md:w-[321px] [&_dd]:tracking-[-0.3px]">
+        <dl className="ml-auto mt-[3px] w-full md:w-[321px] wide:w-[calc(321*var(--u))] [&_dd]:tracking-[-0.3px]">
           {order.discount !== '0' && (
             <div className="flex h-[30px] items-center justify-between">
               <dt className="text-[15px]">Desconto</dt>
@@ -387,7 +389,7 @@ function Receipt({ order }: { order: Order }) {
           </div>
         </dl>
         <p className="mt-[4px] border-t border-[#503320] pt-[12px] text-center text-[14px] leading-[22px] text-[#cbae89]">
-          <span className="mx-auto block max-w-[470px]">Transação confirmada na {NETWORK_LABEL[order.network]}. A propriedade foi transferida para sua carteira conectada e registrada na rede.</span>
+          <span className="mx-auto block max-w-[470px] wide:max-w-[calc(470*var(--u))]">Transação confirmada na {NETWORK_LABEL[order.network]}. A propriedade foi transferida para sua carteira conectada e registrada na rede.</span>
         </p>
         {order.explorerUrl && (
           <div className="mt-[20px] text-center">

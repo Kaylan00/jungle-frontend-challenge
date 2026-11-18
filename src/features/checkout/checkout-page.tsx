@@ -35,6 +35,7 @@ import { CouponForm, SummaryLines } from '@/features/cart/cart-summary'
 import { useCart } from '@/features/cart/hooks'
 import { NETWORK_LABEL } from '@/features/catalog/search-params'
 import { announce } from '@/lib/announcer'
+import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
 import { cn } from '@/lib/utils'
 import { clearAttempt, loadAttempt, newIdempotencyKey, rememberPendingOrder, saveAttempt, submitAttempt, type OrderAttempt } from './order-attempt'
@@ -361,13 +362,13 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
 
   return (
     <>
-      <form onSubmit={onReview} noValidate className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_405px] lg:gap-x-8 lg:gap-y-[25px]" aria-label="Pagamento" data-testid="checkout-form">
+      <form onSubmit={onReview} noValidate className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_405px] lg:gap-x-8 lg:gap-y-[25px] wide:grid-cols-[minmax(0,1fr)_calc(405*var(--u))] wide:gap-x-[calc(32*var(--u))]" aria-label="Pagamento" data-testid="checkout-form">
         {/* Perfil do colecionador (no mobile vem depois da carteira, como no Figma) */}
         <section aria-labelledby="perfil-colecionador" className="max-lg:order-2 lg:row-span-2">
           <h2 id="perfil-colecionador" className="mb-3 text-[15px] font-semibold lg:mb-[13px] lg:text-[17px] lg:font-bold lg:leading-6">
             Perfil do colecionador
           </h2>
-          <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:gap-x-[23px] lg:gap-y-[17px]">
+          <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:gap-x-[23px] lg:gap-y-[17px] wide:gap-x-[calc(23*var(--u))]">
             <FormField label="Nome de exibição" required error={errors.displayName?.message} {...reg('displayName')} />
             <FormField label="Nome de usuário" required error={errors.username?.message} autoComplete="username" {...reg('username')} />
             <div className="flex flex-col gap-1.5 lg:gap-2">
@@ -449,7 +450,7 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
             <Textarea
               id="checkout-note"
               rows={5}
-              className="max-w-md bg-card lg:h-[152px] lg:w-[350px] lg:max-w-none lg:resize-none lg:rounded-[2px] lg:border-[#3f2319] lg:bg-transparent lg:text-[14px] lg:shadow-none"
+              className="max-w-md bg-card lg:h-[152px] lg:w-[350px] lg:max-w-none wide:w-[calc(350*var(--u))] lg:resize-none lg:rounded-[2px] lg:border-[#3f2319] lg:bg-transparent lg:text-[14px] lg:shadow-none"
               aria-describedby={errors.note ? 'checkout-note-error' : undefined}
               {...reg('note')}
             />
@@ -475,8 +476,8 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
             </div>
             <ul className="space-y-2 lg:space-y-3">
               {cart.items.map((i) => (
-                <li key={i.id} className="flex items-center gap-2 rounded-md bg-card p-1.5 text-[13px] lg:h-[70px] lg:rounded-none lg:bg-[#241612] lg:py-0 lg:pl-1 lg:pr-3">
-                  <img src={i.image} alt="" width={70} height={70} className="size-10 rounded-sm object-cover lg:size-[70px] lg:rounded-[4px]" />
+                <li key={i.id} className="flex items-center gap-2 rounded-md bg-card p-1.5 text-[13px] lg:h-[70px] lg:rounded-none lg:bg-[#241612] lg:py-0 lg:pl-1 lg:pr-3 wide:h-[calc(70*var(--u))]">
+                  <img {...artSources(i.image, ART_SIZES.checkoutRow)} alt="" width={70} height={70} className="size-10 rounded-sm object-cover lg:size-[70px] lg:rounded-[4px] wide:size-[calc(70*var(--u))]" />
                   <div className="min-w-0 flex-1 lg:ml-[1px]">
                     <p className="truncate font-bold lg:text-[15px] lg:leading-[22px] lg:tracking-[0.5px]">{i.name}</p>
                     <p className="text-[11px] text-muted-foreground lg:text-[13px] lg:leading-5 lg:tracking-[0.3px] lg:text-[#a98b5d]">Edição {i.editionName}</p>
@@ -674,7 +675,7 @@ function CheckoutForm_({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
               <ul className="space-y-2">
                 {quote.lines.map((l) => (
                   <li key={`${l.nftId}-${l.editionId}`} className="flex items-center gap-2">
-                    <img src={l.image} alt="" width={36} height={36} className="size-9 rounded-sm object-cover" />
+                    <img {...artSources(l.image, ART_SIZES.reviewRow)} alt="" width={36} height={36} className="size-9 rounded-sm object-cover" />
                     <span className="flex-1">
                       {l.name}{' '}
                       <span className="text-muted-foreground">
@@ -845,11 +846,11 @@ function FieldSkeleton({ label, required = true, className }: { label: string; r
  */
 function CheckoutSkeleton() {
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_405px] lg:gap-x-8 lg:gap-y-[25px]" aria-busy="true" aria-label="Carregando pagamento" data-testid="checkout-loading">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_405px] lg:gap-x-8 lg:gap-y-[25px] wide:grid-cols-[minmax(0,1fr)_calc(405*var(--u))] wide:gap-x-[calc(32*var(--u))]" aria-busy="true" aria-label="Carregando pagamento" data-testid="checkout-loading">
       <p className="sr-only">Carregando pagamento…</p>
       <div className="max-lg:order-2 lg:row-span-2" aria-hidden="true">
         <p className="mb-3 text-[15px] font-semibold lg:mb-[13px] lg:text-[17px] lg:font-bold lg:leading-6">Perfil do colecionador</p>
-        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:gap-x-[23px] lg:gap-y-[17px]">
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:gap-x-[23px] lg:gap-y-[17px] wide:gap-x-[calc(23*var(--u))]">
           <FieldSkeleton label="Nome de exibição" />
           <FieldSkeleton label="Nome de usuário" />
           <div className="flex flex-col gap-1.5 lg:gap-2">
@@ -870,7 +871,7 @@ function CheckoutSkeleton() {
         </div>
         <div className="mt-4 flex flex-col gap-1.5 lg:mt-6 lg:gap-2">
           <p className="text-[13px] font-medium lg:text-[14px] lg:font-normal lg:leading-4">Observação do colecionador (opcional)</p>
-          <Skeleton className="h-16 w-full max-w-md rounded-md lg:h-[152px] lg:w-[350px] lg:max-w-none lg:rounded-[2px]" />
+          <Skeleton className="h-16 w-full max-w-md rounded-md lg:h-[152px] lg:w-[350px] lg:max-w-none lg:rounded-[2px] wide:w-[calc(350*var(--u))]" />
         </div>
       </div>
 
@@ -883,8 +884,8 @@ function CheckoutSkeleton() {
               <span>Subtotal</span>
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-md bg-card p-1.5 text-[13px] lg:h-[70px] lg:rounded-none lg:bg-[#241612] lg:py-0 lg:pl-1 lg:pr-3">
-            <Skeleton className="size-10 shrink-0 rounded-sm lg:size-[70px] lg:rounded-[4px]" />
+          <div className="flex items-center gap-2 rounded-md bg-card p-1.5 text-[13px] lg:h-[70px] lg:rounded-none lg:bg-[#241612] lg:py-0 lg:pl-1 lg:pr-3 wide:h-[calc(70*var(--u))]">
+            <Skeleton className="size-10 shrink-0 rounded-sm lg:size-[70px] lg:rounded-[4px] wide:size-[calc(70*var(--u))]" />
             <div className="min-w-0 flex-1 lg:ml-[1px]">
               <Line className="h-[19.5px] lg:h-[22px]" bar="w-[140px]" />
               <Line className="h-[16.5px] lg:h-5" bar="w-[90px]" />

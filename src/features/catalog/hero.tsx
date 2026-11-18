@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { featuredQuery } from '@/api/queries'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ART_SIZES, artSources } from '@/lib/art'
 import { loadedGsap, loadGsap, prefersReducedMotion, whenIdle } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
@@ -111,10 +112,10 @@ export function Hero() {
 
   return (
     <section aria-labelledby="hero-title" className="container-page" {...sectionHandlers}>
-      {/* Desktop (Figma 1440: arte 450x450 em x=870, texto em x=160). Acima de 1440 a arte cresce
-          na mesma proporção do conteúdo (37,5%) e os pontos ficam no mesmo lugar relativo. */}
-      <div className="hidden grid-cols-[1fr_450px] gap-10 pt-8 md:grid xl:grid-cols-[1fr_max(450px,37.4%)]">
-        <div className="pt-[39px] md:pl-4 xl:pl-10 min-[1441px]:self-center min-[1441px]:pt-0!">
+      {/* Desktop (Figma 1440: arte 450x450 em x=870, texto em x=160). Em telas largas arte, recuos e
+          pontos crescem na mesma proporção do conteúdo; o texto fica centralizado na altura da arte, como no Figma. */}
+      <div className="hidden grid-cols-[1fr_450px] gap-10 pt-8 md:grid wide:grid-cols-[1fr_calc(450*var(--u))] wide:gap-[calc(40*var(--u))]">
+        <div className="pt-[39px] md:pl-4 xl:pl-10 wide:self-center wide:pl-[calc(40*var(--u))] wide:pt-0">
           <p className="text-sm leading-6 tracking-[0.1em]">Bem-vindo à Kurio</p>
           <h1 id="hero-title" className="mt-[5px] text-[34px] font-bold uppercase leading-[1.6] lg:text-[43px] lg:leading-[70px]">
             Seja dono do futuro
@@ -131,7 +132,7 @@ export function Hero() {
           >
             Explorar
           </Link>
-          <Dots count={count || 3} index={index} onSelect={go} className="mt-9 xl:ml-[max(556px,calc(79.3%_+_23px))]" />
+          <Dots count={count || 3} index={index} onSelect={go} className="mt-9 xl:ml-[556px] wide:ml-[calc(556*var(--u))]" />
         </div>
         <div className="relative aspect-square w-full">
           {isPending || !items[0] ? (
@@ -151,7 +152,7 @@ export function Hero() {
                       className="block size-full shrink-0"
                     >
                       <img
-                        src={nft.image}
+                        {...artSources(nft.image, ART_SIZES.hero)}
                         alt={`Arte do NFT ${nft.name}`}
                         width={450}
                         height={450}
@@ -206,7 +207,7 @@ export function Hero() {
                 i === 0 || ready ? (
                   <img
                     key={nft.id}
-                    src={nft.image}
+                    {...artSources(nft.image, ART_SIZES.hero)}
                     alt=""
                     width={138}
                     height={139}
@@ -226,7 +227,7 @@ export function Hero() {
         {count > 1 && next ? (
           <img
             ref={smallArt}
-            src={next.image}
+            {...artSources(next.image, ART_SIZES.heroThumb)}
             alt=""
             width={57}
             height={57}

@@ -29,15 +29,15 @@ export function VitrineCardSkeleton({ variant }: { variant: 'detail' | 'cart' })
       <div
         className={cn(
           'bg-card px-1 pb-5 pt-3 max-md:rounded-[18px] max-md:bg-[#271813] max-md:[li:nth-child(even)_&]:pb-3 max-md:[li:nth-child(even)_&]:pt-5 md:py-[25px]',
-          detail && 'xl:h-[255px] xl:pb-[28px] xl:pt-4 min-[1441px]:h-auto!',
-          cart && 'xl:flex xl:h-[255px] xl:items-center xl:justify-center xl:p-0 min-[1441px]:h-auto! min-[1441px]:py-[21.5px]!',
+          detail && 'xl:h-[255px] xl:pb-[28px] xl:pt-4 wide:h-auto wide:pb-[calc(28*var(--u))] wide:pt-[calc(16*var(--u))]',
+          cart && 'xl:flex xl:h-[255px] xl:items-center xl:justify-center xl:p-0 wide:h-auto wide:py-[calc(21.5*var(--u))]',
         )}
       >
         <Skeleton
           className={cn(
             'aspect-square w-full rounded-xl max-md:rounded-[14px]',
             detail && 'xl:rounded-[13px]',
-            cart && 'xl:size-[212px] xl:rounded-[17px] min-[1441px]:h-auto! min-[1441px]:w-[96.7%]!',
+            cart && 'xl:size-[212px] xl:rounded-[17px] wide:h-auto wide:w-[96.7%]',
           )}
         />
       </div>

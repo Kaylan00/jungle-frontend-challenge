@@ -246,7 +246,7 @@ function WalletForm({
           )}
         </div>
       )}
-      <div className="grid gap-x-7 gap-y-[29px] md:grid-cols-2">
+      <div className="grid gap-x-7 gap-y-[29px] md:grid-cols-2 wide:gap-x-[calc(28*var(--u))]">
         <FormField id={id('displayName')} label="Nome de exibição" required containerClassName={walletField} error={errors.displayName?.message} {...form.register('displayName')} />
         <FormField id={id('nickname')} label="Apelido da carteira" required containerClassName={walletField} error={errors.nickname?.message} {...form.register('nickname')} />
         <SelectField id={id('network')} label="Rede" required options={networks} error={errors.network?.message} {...form.register('network', { deps: ['address', 'secondaryAddress'] })} />
@@ -366,7 +366,7 @@ const SelectField = forwardRef<
 /** Os 10 campos do WalletForm em carregamento (rótulos fixos; o campo secundário não tem rótulo visível). */
 function WalletFieldsSkeleton() {
   return (
-    <div className="grid gap-x-7 gap-y-[29px] md:grid-cols-2">
+    <div className="grid gap-x-7 gap-y-[29px] md:grid-cols-2 wide:gap-x-[calc(28*var(--u))]">
       {['Nome de exibição', 'Apelido da carteira', 'Rede', 'Nome do perfil', 'Endereço da carteira'].map((label) => (
         <FieldSkeleton key={label} label={label} className={walletField} />
       ))}

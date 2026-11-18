@@ -9,15 +9,20 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ART_SIZES, artSources } from '@/lib/art'
 import { cn } from '@/lib/utils'
 import { CatalogFilters } from './filters'
 import { Hero } from './hero'
 import { NftCard, NftCardSkeleton } from './nft-card'
 import { PAGE_SIZE, SORT_LABEL, toListParams, type CatalogSearch } from './search-params'
 
-/** Grade do catálogo (lista e skeleton). Mobile (Figma 414): duas colunas, a da direita 32px mais baixa. */
+/**
+ * Grade do catálogo (lista e skeleton). Mobile (Figma 414): duas colunas, a da direita 32px mais baixa.
+ * Desktop: sempre 3 colunas como no Figma (9 por página = 3 linhas cheias); em telas largas os cards e
+ * os espaços entre eles crescem na mesma proporção.
+ */
 const CATALOG_GRID =
-  'grid grid-cols-2 gap-x-4 gap-y-[22px] pb-8 max-md:[&>li:nth-child(even)]:translate-y-8 md:gap-y-8 md:pb-0 lg:grid-cols-3 lg:gap-x-7 xl:grid-cols-[repeat(auto-fill,minmax(257px,1fr))] xl:gap-x-[34px] xl:gap-y-[66px]'
+  'grid grid-cols-2 gap-x-4 gap-y-[22px] pb-8 max-md:[&>li:nth-child(even)]:translate-y-8 md:gap-y-8 md:pb-0 lg:grid-cols-3 lg:gap-x-7 xl:gap-x-[34px] xl:gap-y-[66px] wide:gap-x-[calc(34*var(--u))] wide:gap-y-[calc(66*var(--u))]'
 
 const TABS: Array<{ label: string; sort: SortOption | undefined }> = [
   { label: 'Todos os NFTs', sort: undefined },
@@ -156,7 +161,7 @@ function Catalog({ search }: { search: CatalogSearch }) {
         Catálogo de NFTs
       </h2>
 
-      <div className="grid gap-10 md:grid-cols-[240px_1fr] xl:grid-cols-[310px_1fr] xl:gap-12">
+      <div className="grid gap-10 md:grid-cols-[240px_1fr] xl:grid-cols-[310px_1fr] xl:gap-12 wide:grid-cols-[calc(310*var(--u))_1fr] wide:gap-[calc(48*var(--u))]">
         <aside className="hidden md:block" aria-label="Filtros do catálogo">
           <div className="mt-px bg-card px-5 pb-5 pt-[15px]">
             <CatalogFilters search={search} facets={list.data?.facets} onChange={(p) => void update(p)} />
@@ -334,12 +339,12 @@ function FeaturedBox() {
   const nft = data?.items[1]
   return (
     <div className="mt-6 overflow-hidden bg-gradient-to-b from-[#271910] to-[#1a110c]">
-      <p className="pl-[19px] pt-6 text-2xl font-bold uppercase leading-8 text-highlight">NFT em destaque</p>
+      <p className="pl-[19px] pt-6 text-2xl font-bold uppercase leading-8 text-highlight wide:pl-[calc(19*var(--u))]">NFT em destaque</p>
       <p className="mt-2.5 text-center text-[22px] font-bold uppercase leading-7">Oferta limitada</p>
       {nft ? (
         <Link to="/nft/$nftId" params={{ nftId: nft.id }} className="group mt-2.5 block overflow-hidden rounded-[18px]" aria-label={`NFT em destaque: ${nft.name}`}>
           <img
-            src={nft.image}
+            {...artSources(nft.image, ART_SIZES.featuredBox)}
             alt=""
             width={310}
             height={366}
@@ -362,33 +367,35 @@ function PromoBanners() {
       title: ['Lançamentos gênesis', 'de edição limitada'],
       text: ['Colecione edições escassas', 'diretamente dos criadores antes', 'da revelação pública.'],
       nft: data?.items[0],
-      pad: 'pr-4 xl:pr-[30px]',
+      pad: 'pr-4 xl:pr-[30px] wide:pr-[calc(30*var(--u))]',
     },
     {
       title: ['Arte digital selecionada', 'e muito mais'],
       text: ['Explore novos artistas,', 'coleções verificadas e obras', 'digitais que definem a cultura.'],
       nft: data?.items[2],
-      pad: 'pr-4 xl:pr-[35px]',
+      pad: 'pr-4 xl:pr-[35px] wide:pr-[calc(35*var(--u))]',
     },
   ]
   return (
     // Mobile: cada cartão cresce com o texto (16px no título, 13px no texto) e o botão fica inteiro no pé do
     // cartão; a arte tem 160px como no Figma 414 e encolhe até 124px em 360. A partir de md, as medidas do Figma desktop.
-    <section aria-label="Destaques da Kurio" className="container-page mt-16 grid gap-6 md:mt-24 md:grid-cols-2 xl:gap-[30px]" data-reveal-group>
+    // Telas largas: o cartão inteiro é ampliado como no Figma (arte 286x250 encostada à esquerda, texto logo
+    // ao lado alinhado à direita), com o bloco de texto centralizado na altura maior.
+    <section aria-label="Destaques da Kurio" className="container-page mt-16 grid gap-6 md:mt-24 md:grid-cols-2 xl:gap-[30px] wide:gap-[calc(30*var(--u))]" data-reveal-group>
       {banners.map((b) => (
         <article
           key={b.title[0]}
-          className="grid min-h-[250px] grid-cols-[clamp(124px,calc(100%_-_206px),160px)_1fr] md:h-[250px] md:grid-cols-[130px_1fr] lg:grid-cols-[200px_1fr] xl:grid-cols-[max(286px,48.8%)_1fr]"
+          className="grid min-h-[250px] grid-cols-[clamp(124px,calc(100%_-_206px),160px)_1fr] md:h-[250px] md:grid-cols-[130px_1fr] lg:grid-cols-[200px_1fr] xl:grid-cols-[286px_1fr] wide:h-[calc(250*var(--u))] wide:grid-cols-[calc(286*var(--u))_1fr]"
         >
           {/* A arte tem cantos de 12px e fica por cima da caixa marrom (os cantos da esquerda mostram o fundo da página). */}
           <div className="relative z-10 h-full overflow-hidden rounded-xl bg-secondary">
             {b.nft ? (
-              <img src={b.nft.image} alt="" width={286} height={250} loading="lazy" className="size-full object-cover" />
+              <img {...artSources(b.nft.image, ART_SIZES.banner)} alt="" width={286} height={250} loading="lazy" className="size-full object-cover" />
             ) : (
               <Skeleton className="size-full rounded-none" />
             )}
           </div>
-          <div className={cn('-ml-3 flex flex-col items-end rounded-r-[4px] bg-card pb-5 pl-4 pt-5 text-right md:pb-0 md:pt-[37px]', b.pad)}>
+          <div className={cn('-ml-3 flex flex-col items-end rounded-r-[4px] bg-card pb-5 pl-4 pt-5 text-right md:pb-0 md:pt-[37px] wide:justify-center wide:pb-[9px] wide:pt-0', b.pad)}>
             <h2 className="text-[16px] font-bold leading-[22px] md:text-lg md:leading-6">
               {b.title.map((line, i) => (
                 <span key={line} className="xl:block xl:whitespace-nowrap">
@@ -436,12 +443,12 @@ function Journal() {
       </h2>
       <p className="mt-[11px] text-center leading-5 text-muted-foreground">Histórias, guias e insights para colecionadores sobre o universo da propriedade digital.</p>
       {/* Figma: 4 cards de 268px com 24px entre eles, alinhados à esquerda do container (sobram 56px à
-          direita em 1200). Em telas maiores os cards crescem na mesma proporção. */}
-      <div data-reveal-group className="mt-[39px] grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6 xl:max-[1441px]:grid-cols-[repeat(4,max(268px,calc((100%_-_128px)_/_4)))]">
+          direita em 1200). Em telas largas cards, espaços e sobra crescem na mesma proporção. */}
+      <div data-reveal-group className="mt-[39px] grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6 xl:grid-cols-[repeat(4,268px)] wide:grid-cols-[repeat(4,calc(268*var(--u)))] wide:gap-[calc(24*var(--u))]">
         {ARTICLES.map((a) => (
           <article key={a.title} className="overflow-hidden rounded-md bg-card">
-            <img src={a.img} alt="" width={268} height={195} loading="lazy" className="aspect-[268/195] w-full object-cover" />
-            <div className="px-4 pb-[15px] pt-3">
+            <img {...artSources(a.img, ART_SIZES.journal)} alt="" width={268} height={195} loading="lazy" className="aspect-[268/195] w-full object-cover" />
+            <div className="px-4 pb-[15px] pt-3 wide:px-[calc(16*var(--u))]">
               <p className="whitespace-pre-wrap text-xs leading-4 text-muted-foreground">
                 {a.date}
                 {'  |  '}Leitura de {a.read}
