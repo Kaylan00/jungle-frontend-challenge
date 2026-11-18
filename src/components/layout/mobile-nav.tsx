@@ -56,23 +56,29 @@ function ScanIcon() {
 }
 
 /*
- * Peça central da barra com o recorte do Figma: círculo de raio 50 com centro 5px abaixo da borda
- * superior, ligado à borda por curvas de transição (raio 10) em vez de quinas. A peça fica entre
- * duas metades com cantos de 40px; o caminho passa 1px de cada lado para não abrir fresta.
+ * Peça central da barra com o recorte medido no Figma (Mobile / Início), coluna a coluna:
+ * círculo de raio 45 com centro 10px abaixo da borda (fundo a 55px), ombro esquerdo com curva curta
+ * (raio 7) e ombro direito com curva longa (raio 30) — o recorte do Figma é assimétrico.
+ * Os pontos de tangência saem da geometria (filete tangente à borda e ao círculo); o caminho passa
+ * 1px de cada lado para não abrir fresta entre a peça e as duas metades da barra.
  */
-const NOTCH = { w: 140, cx: 70, R: 50, cy: 5, r: 10 }
+const NOTCH = { w: 150, cx: 75, R: 45, cy: 10, left: 7, right: 30 }
 const notchPath = (() => {
-  const { w, cx, R, cy, r } = NOTCH
-  const d = Math.sqrt((R + r) ** 2 - (r - cy) ** 2)
-  const k = R / (R + r)
-  const tx = d * k
-  const ty = cy + (r - cy) * k
+  const { w, cx, R, cy, left, right } = NOTCH
   const f = (n: number) => n.toFixed(2)
+  // Filete de raio r tangente à borda (y=0) e por fora do círculo: centro do filete a (R + r) do centro do círculo.
+  const fillet = (r: number, side: -1 | 1) => {
+    const d = Math.sqrt((R + r) ** 2 - (r - cy) ** 2)
+    const k = R / (R + r)
+    return { edgeX: cx + side * d, tx: cx + side * d * k, ty: cy + (r - cy) * k }
+  }
+  const L = fillet(left, -1)
+  const Rt = fillet(right, 1)
   return [
-    `M-1 0H${f(cx - d)}`,
-    `A${r} ${r} 0 0 1 ${f(cx - tx)} ${f(ty)}`,
-    `A${R} ${R} 0 0 0 ${f(cx + tx)} ${f(ty)}`,
-    `A${r} ${r} 0 0 1 ${f(cx + d)} 0`,
+    `M-1 0H${f(L.edgeX)}`,
+    `A${left} ${left} 0 0 1 ${f(L.tx)} ${f(L.ty)}`,
+    `A${R} ${R} 0 0 0 ${f(Rt.tx)} ${f(Rt.ty)}`,
+    `A${right} ${right} 0 0 1 ${f(Rt.edgeX)} 0`,
     `H${w + 1}V96H-1Z`,
   ].join('')
 })()
