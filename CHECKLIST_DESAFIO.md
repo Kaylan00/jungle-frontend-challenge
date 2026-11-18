@@ -19,7 +19,7 @@ horizontal, no build local e na URL publicada; e a execução completa a partir 
 | `npm run lint` (oxlint) | ✅ 0 avisos, 0 erros |
 | `npm run test:unit` (Vitest) | ✅ 12 arquivos, 231 testes |
 | `npm run test:api` (função de e-mail) | ✅ 11 testes |
-| `npx playwright test` (20 arquivos + visual, desktop e mobile) | ✅ 123 passaram, 9 pulados de propósito (casos só de um viewport), 0 falhas — regressão visual sem diferença nas 8 baselines |
+| `npx playwright test` (20 arquivos + visual, desktop e mobile) | ✅ 136 execuções (68 por viewport): 126 passaram, 10 puladas de propósito (casos só de um viewport), 0 falhas — regressão visual sem diferença nas 8 baselines. Reexecutada com `CI=1` depois dos últimos commits (tema e skeletons do painel) |
 | Checkout limpo (`git clone` → `npm ci` → `npx playwright install chromium` → typecheck, lint, unitários, API, build, E2E) | ✅ `git clone` do repositório local em `/tmp/clean` + as mudanças desta conferência; `npm ci` (0 vulnerabilidades), tipos, lint, 231 unitários, 11 da API, build e E2E com `CI=1 --retries=0` (servidor próprio, sem reaproveitar nada): 123 passaram, 9 pulados, 0 falhas |
 | Rotas na URL publicada (acesso direto + refresh, 26 endereços × 3 contas) | ✅ todas abrem a tela certa; privadas levam ao login com `redirect`; inexistentes mostram 404 |
 | Overflow horizontal em 390 / 768 / 1440 (todas as rotas, 3 contas) | ✅ após a correção do cabeçalho em 768 (abaixo) |
@@ -31,13 +31,13 @@ horizontal, no build local e na URL publicada; e a execução completa a partir 
 | Teste `e2e/08` (carteiras, mobile) falhava às vezes: salvava, recarregava e o endereço voltava vazio | **Causa raiz no teste, não no servidor simulado.** O trace da falha mostra o `POST /api/wallets` sem resposta (abortado) e o `reload` 110 ms depois. O teste esperava `getByText(/Carteira .*salva/i)`, que casava com o **próprio formulário** (“Carteira principal … Salvar carteira”) antes da resposta; o `reload` matava a requisição em voo e a carteira nunca era gravada. As transações do `db.ts` (Web Locks + `BroadcastChannel`) gravam antes de responder e estavam corretas | O teste espera o `201` e o aviso com o texto exato; o mesmo ajuste nos avisos de perfil e senha. O teste também passou a cobrir o que o título prometia: a carteira **secundária** (com o 409 de endereço repetido no campo) e a **edição** da principal (`PUT`), com persistência das duas | `e2e/08-perfil-carteiras.spec.ts`; o arquivo rodou 8 vezes seguidas nos dois projetos (`--repeat-each=8`: 48 execuções, 16 do teste de carteiras) sem falha, e depois na suíte completa e no checkout limpo |
 | Cabeçalho estourava 7 px em 768 px com nome de usuário longo (`kurio_admin`) | O botão da conta aceitava até 112 px de nome entre 768 e 1279 px | Nome cortado com reticências a partir de 80 px abaixo de `xl` (o nome completo continua no rótulo do botão); 1440 e 390 inalterados | `src/components/layout/header.tsx`; teste novo em `e2e/11` (“nome de usuário longo não empurra o cabeçalho em 768 px”) |
 | Mudança de preço por evento no detalhe aberto (NFT fora do carrinho) não era anunciada ao leitor de tela | Só o carrinho anunciava | `RealtimeClient` anuncia na região `aria-live` quando a consulta do detalhe tem alguém observando (sem aviso visual novo) | `src/realtime/client.ts`; teste em `src/realtime/client.test.ts` |
+| Documentação | Tabela de contratos quebrada no meio (Senha e Carteiras fora dela), numeração duplicada, contagem de testes divergente, painel de cenários descrito no lugar errado, desvios vindos dos comentários do Figma não registrados | ARCHITECTURE (tabela, tipos de erro, comentários do Figma, limitações e decisões de UX na seção 17), README (checkout limpo, filtros ativos, mais fluxos de falha) | este arquivo e os dois documentos |
 
 ## Pendências que dependem do dono (não feitas aqui, de propósito)
 
 | Pendência | Por quê | O que fazer |
 | --- | --- | --- |
-| ⚠️ **Repositório no GitHub** | O repositório local não tem `remote` e `github.com/Kaylan00/jungle-frontend-challenge` não existe (o badge do CI no README aponta para ele). A entrega exige o link do repositório | Criar o repositório, `git remote add origin …` e `git push`; a CI (`.github/workflows/ci.yml`) roda sozinha e o badge passa a funcionar |
-| ⚠️ **Deploy desatualizado** | A URL publicada funciona (todas as rotas conferidas), mas serve um build anterior aos últimos commits e a estas correções (`index-hwGMOi5d.js` publicado × `index-ClyTKKkC.js` do `HEAD`). O enunciado pede que a versão publicada corresponda ao código entregue | Depois do commit: `vercel --prod` (ou push, se ligar a integração com o GitHub) |
+| ⚠️ **Deploy desatualizado** | A URL publicada funciona (todas as rotas conferidas), mas serve um build anterior ao `HEAD` (`index-DDXLrUC1.js` publicado × `index-CQx-Cfjl.js` do build local; o tema do painel, por exemplo, ainda não está no ar). O enunciado pede que a versão publicada corresponda ao código entregue | Depois do commit: `vercel --prod` (ou push, se ligar a integração com o GitHub) |
 | Commit | Pedido para não commitar nesta conferência | `git add -A && git commit` com as mudanças listadas acima |
 
 ---
@@ -271,7 +271,7 @@ horizontal, no build local e na URL publicada; e a execução completa a partir 
 | Deploy público com mocks e tempo real | ✅ | https://jungle-frontend-challenge-navy.vercel.app |
 | Acesso direto e refresh no ambiente publicado (inclusive `/admin`, `/admin/entrar`, `/recuperar-senha`, `/redefinir-senha`, `/perfil/<seção>`, 404) | ✅ | `vercel.json` (rewrite para `index.html`); conferido por script em todas as rotas, como visitante, Ana e admin |
 | Versão publicada corresponde ao código entregue | ⚠️ | Ver “Pendências”: publicar de novo depois do commit |
-| Link do repositório | ⚠️ | Ver “Pendências”: criar e enviar o repositório |
+| Link do repositório | ⚠️ | https://github.com/Kaylan00/jungle-frontend-challenge (privado); ver “Pendências” |
 | README: setup, variáveis (inclusive as opcionais do Brevo), credenciais (inclusive admin), seleção e reset de cenários, comandos, reprodução de falhas | ✅ | `README.md` |
 | ARCHITECTURE: contratos REST e eventos, sessão, carrinho, cache, reconciliação, limitações, decisões de UX, desvios do Figma (inclusive dos comentários) e painel admin no mesmo origin | ✅ | `ARCHITECTURE.md` §2–§9, §13, §15, §17 |
 | Comandos dev, build, preview, typecheck, lint, testes Playwright e Lighthouse | ✅ | `package.json` (`dev`, `build`, `preview`, `typecheck`, `lint`, `test:unit`, `test:api`, `test:e2e`, `lighthouse`) |
