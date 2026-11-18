@@ -18,6 +18,7 @@ import { NftUpdatedEvent, OrderUpdatedEvent, SOCKET_EVENTS, type NftDetail, type
 import { qk } from '@/api/queries'
 import { sessionStore } from '@/api/session-store'
 import { announce } from '@/lib/announcer'
+import { explorerUrl } from '@/lib/explorer'
 
 export type RealtimeStatus = 'connecting' | 'connected' | 'reconnecting' | 'offline'
 
@@ -197,7 +198,8 @@ export class RealtimeClient {
     this.queryClient.setQueryData<Order>(key, (old) => {
       if (!old) return old
       if (old.status !== 'pending') return old // terminal não regride
-      return { ...old, ...e.data, version: e.version, explorerUrl: e.data.txHash ? `https://sepolia.etherscan.io/tx/${e.data.txHash}` : null }
+      // Explorador da rede do próprio pedido (Polygon e Solana não ficam no Etherscan).
+      return { ...old, ...e.data, version: e.version, explorerUrl: e.data.txHash ? explorerUrl(old.network, e.data.txHash) : null }
     })
     // Busca o recibo completo e atualiza o carrinho (itens comprados saem dele).
     void this.queryClient.invalidateQueries({ queryKey: key })

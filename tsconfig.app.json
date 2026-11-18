@@ -23,5 +23,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Testes unitários têm o próprio tsconfig (tsconfig.test.json, com os tipos do Node e do Vitest).
+  "exclude": ["src/**/*.test.ts", "src/test"]
 }

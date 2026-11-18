@@ -11,10 +11,14 @@ Decimal.set({ precision: 40, rounding: Decimal.ROUND_HALF_UP })
 
 export const ETH_DECIMALS = 18
 
-/** Normaliza para string decimal sem notação científica e sem zeros à direita. */
+/**
+ * Normaliza para string decimal sem notação científica e sem zeros à direita.
+ * NaN e infinito não são valores ETH: falham aqui em vez de virar "NaN"/"Infinity" no contrato.
+ */
 export function toEthString(value: Decimal.Value): string {
-  const d = new Decimal(value).toDecimalPlaces(ETH_DECIMALS, Decimal.ROUND_DOWN)
-  return d.toFixed()
+  const d = new Decimal(value)
+  if (!d.isFinite()) throw new RangeError(`Valor ETH inválido: ${String(value)}`)
+  return d.toDecimalPlaces(ETH_DECIMALS, Decimal.ROUND_DOWN).toFixed()
 }
 
 export function addEth(...values: Decimal.Value[]): string {
@@ -52,7 +56,8 @@ export function formatEth(value: Decimal.Value, opts: { maxDecimals?: number; wi
   const fixed = d.toDecimalPlaces(maxDecimals, Decimal.ROUND_DOWN)
   const [int, frac = ''] = fixed.toFixed(Math.max(2, Math.min(maxDecimals, fixed.decimalPlaces()))).split('.')
   // Convenção de cripto (e do Figma): ponto como separador decimal, ex.: "1.19 ETH".
-  const intFmt = Number(int).toLocaleString('en-US')
+  // Milhar agrupado na própria string: Number(int) perderia dígitos acima de 2^53.
+  const intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
   const text = frac ? `${intFmt}.${frac}` : intFmt
   return withUnit ? `${text} ETH` : text
 }

@@ -25,6 +25,7 @@ import type {
 } from '@/api/contracts'
 import { NftDetail as NftDetailSchema } from '@/api/contracts'
 import { addEth, compareEth, mulEth, percentOf, subEth } from '@/lib/eth'
+import { explorerUrl } from '@/lib/explorer'
 import { buildNftFixtures } from './fixtures/nfts'
 import { COUPONS, NETWORK_FEES, SEED_USERS } from './fixtures/users'
 
@@ -889,13 +890,6 @@ export function settleDueOrders() {
       data: { status: order.status, failureReason: order.failureReason, txHash: order.txHash },
     })
   }
-}
-
-/** Links de exploração simulados (rede de testes de cada blockchain). */
-export function explorerUrl(network: Order['network'], txHash: string) {
-  if (network === 'polygon') return `https://amoy.polygonscan.com/tx/${txHash}`
-  if (network === 'solana') return `https://explorer.solana.com/tx/${txHash}?cluster=devnet`
-  return `https://sepolia.etherscan.io/tx/${txHash}`
 }
 
 // ---------- Carteiras ----------

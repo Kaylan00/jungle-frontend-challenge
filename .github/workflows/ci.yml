@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      lighthouse:
+        description: Rodar também a auditoria Lighthouse (3 medições por página e perfil)
+        type: boolean
+        default: true
+
+# Um push novo no mesmo branch (ou PR) cancela a execução anterior que ainda estiver rodando.
+# O evento entra no grupo para uma execução manual (Lighthouse) não cancelar a do push, e vice-versa.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+  NODE_VERSION: 22
+
+jobs:
+  quality:
+    name: Qualidade (tipos, lint, unitários, API, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes unitários (Vitest)
+        run: npm run test:unit
+
+      - name: Teste da função de e-mail (api/)
+        run: npm run test:api
+
+      - name: Build
+        run: npm run build
+
+  e2e:
+    name: E2E (Playwright, desktop e mobile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Instalar Chromium do Playwright
+        run: npx playwright install --with-deps chromium
+
+      # O playwright.config.ts sobe build + preview sozinho (em CI nunca reaproveita servidor).
+      - name: Testes E2E
+        run: npm run test:e2e
+
+      - name: Publicar relatório do Playwright
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # Traces, screenshots e diffs visuais das falhas (abrir com: npx playwright show-trace <trace.zip>).
+      - name: Publicar traces e resultados
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  lighthouse:
+    name: Lighthouse (manual)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.lighthouse }}
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # lighthouse/run.mjs usa o Chromium baixado pelo Playwright.
+      - name: Instalar Chromium do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build e auditoria
+        run: npm run build && npm run lighthouse
+
+      - name: Publicar relatórios do Lighthouse
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: lighthouse/reports/
+          retention-days: 30
+          if-no-files-found: warn

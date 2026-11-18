@@ -1,5 +1,7 @@
 # Kurio — Marketplace de NFTs
 
+[![CI](https://github.com/Kaylan00/jungle-frontend-challenge/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaylan00/jungle-frontend-challenge/actions/workflows/ci.yml)
+
 Solução do [desafio de frontend da Jungle Gaming](https://github.com/junglegaming/frontend-challenge): marketplace de NFTs com descoberta, compra e conta do colecionador, em desktop e mobile, seguindo o [layout do Figma](https://www.figma.com/design/Ff0SksUi7UFtPWUO8kyNtw/Frontend-Challenge?node-id=0-1).
 
 - **Aplicação publicada:** https://jungle-frontend-challenge-navy.vercel.app
@@ -28,7 +30,8 @@ npm run dev            # http://localhost:5173 com mocks ligados
 | `npm run build` | Verificação de tipos + build de produção (`dist/`) |
 | `npm run preview` | Serve o build em http://localhost:4173 |
 | `npm run typecheck` | `tsc -b` (app, config, testes e a função de e-mail em `api/`) |
-| `npm run lint` | oxlint em `src/`, `e2e/`, `api/` e `scripts/` |
+| `npm run lint` | oxlint em `src/` (testes incluídos), `e2e/`, `api/` e `scripts/` |
+| `npm run test:unit` | Vitest (Node, sem navegador, ~1 s): valores ETH, contratos zod, cliente HTTP, cliente de tempo real e regras do servidor simulado (`src/**/*.test.ts`). `test:unit:watch` para o modo observação (Node 22.12+) |
 | `npm run test:api` | Teste isolado da função de envio de e-mail (`api/send-reset-email.ts`), sem rede e sem chave real (Node 22.18+) |
 | `npm run test:e2e` | Playwright: 13 cenários + regressão visual, desktop e mobile (sobe build + preview sozinho) |
 | `npm run test:e2e:desktop` / `:mobile` | Só um viewport |

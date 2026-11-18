@@ -98,8 +98,13 @@ export async function request<S extends z.ZodTypeAny>(schema: S, config: AxiosRe
   if (String(res.headers['content-type'] ?? '').includes('text/html')) {
     const method = (config.method ?? 'get').toLowerCase()
     if (attempt === 0 && networkRecovery) {
-      await networkRecovery()
-      if (method === 'get') return request(schema, config, 1)
+      // Se a recuperação falhar, o erro continua sendo de rede (ApiError), nunca o erro cru dela:
+      // é o ApiError que a política de retry e as telas de erro sabem tratar.
+      const recovered = await networkRecovery().then(
+        () => true,
+        () => false,
+      )
+      if (recovered && method === 'get') return request(schema, config, 1)
     }
     throw new ApiError({ code: 'NETWORK_ERROR', message: 'Sem conexão com o servidor.', status: null })
   }
