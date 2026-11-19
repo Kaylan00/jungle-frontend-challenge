@@ -154,7 +154,7 @@ export function CatalogFilters({
                 checked={Boolean(search.category?.includes(c))}
                 onToggle={() => onChange({ category: toggle(search.category, c) })}
                 label={CATEGORY_LABEL[c]}
-                count={facets?.category[c] ?? 0}
+                count={facets ? (facets.category[c] ?? 0) : undefined}
                 className="pr-3"
               />
             </li>
@@ -244,7 +244,7 @@ export function CatalogFilters({
                 checked={Boolean(search.network?.includes(n))}
                 onToggle={() => onChange({ network: toggle(search.network, n) })}
                 label={NETWORK_LABEL[n]}
-                count={facets?.network[n] ?? 0}
+                count={facets ? (facets.network[n] ?? 0) : undefined}
                 className="pr-0"
               />
             </li>
@@ -269,6 +269,7 @@ const legend = 'text-lg font-bold leading-6'
 /**
  * Linha de filtro do Figma: só texto, sem caixinha; marcada fica laranja.
  * Continua sendo um checkbox de verdade (role="checkbox", Espaço alterna, nome = rótulo + contagem).
+ * Sem a resposta da API (carregando ou com erro) a contagem não aparece: nunca um "(0)" que não é real.
  */
 function FilterRow({
   id,

@@ -9,8 +9,12 @@ test.describe('Carregamento e falhas de rede', () => {
     const loading = page.getByTestId('catalog-loading')
     await expect(loading).toBeVisible()
     await expect(loading).toHaveAttribute('aria-busy', 'true')
+    // Enquanto a lista carrega, os filtros não inventam contagens: nenhum "(0)" antes da resposta da API.
+    const zeroCounts = page.getByRole('checkbox', { name: /\(0\)/ })
+    if (!app.isMobile) await expect(zeroCounts).toHaveCount(0)
     await expect(page.getByTestId('catalog-grid')).toBeVisible({ timeout: 10_000 })
     await expect(loading).toBeHidden()
+    if (!app.isMobile) await expect(page.getByRole('checkbox', { name: /Arte digital \(\d+\)/ })).toBeVisible()
 
     await app.goto('/nft/nft-05')
     await expect(page.getByTestId('detail-loading')).toBeVisible()
@@ -23,6 +27,7 @@ test.describe('Carregamento e falhas de rede', () => {
     await app.setScenario({ faults: [{ route: 'GET /api/nfts', kind: 'http500', times: -1 }] })
     await page.reload()
     await expect(page.getByText('Não foi possível carregar o catálogo')).toBeVisible({ timeout: 15_000 })
+    if (!app.isMobile) await expect(page.getByRole('checkbox', { name: /\(0\)/ })).toHaveCount(0)
     await app.setScenario({ faults: [] })
     await page.getByRole('button', { name: 'Tentar novamente' }).click()
     await expect(page.getByTestId('catalog-grid').getByTestId('nft-card')).toHaveCount(9)
