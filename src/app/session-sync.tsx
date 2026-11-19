@@ -14,21 +14,39 @@ import { authNavigation, readAuthOverlay } from '@/features/auth/auth-overlay'
 import { isPanelPath } from '@/features/admin/panel-path'
 import { clearPriceDrops } from '@/features/favorites/price-drops'
 import { announce } from '@/lib/announcer'
+import type { Session } from '@/api/contracts'
 import type { createAppRouter } from './router'
 
 export function SessionSync({ router }: { router: ReturnType<typeof createAppRouter> }) {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    return sessionStore.subscribe(({ reason }) => {
+    return sessionStore.subscribe(({ reason, external }) => {
       // Selos de "Preço caiu" são da conta que estava logada: nada passa para a próxima.
       clearPriceDrops()
       const onPanel = isPanelPath(router.state.location.pathname)
       if (reason === 'login') {
         // Kurio Admin: outra aba pode ter entrado com outra conta (a sessão é uma só por navegador). A sessão é
         // relida e o guard do painel confere o papel de novo (conta comum vai para a entrada, com o aviso).
-        if (onPanel) void queryClient.invalidateQueries({ queryKey: qk.session }).then(() => router.invalidate())
-        return // na loja, o fluxo de login cuida do cache
+        if (onPanel) {
+          void queryClient.invalidateQueries({ queryKey: qk.session }).then(() => router.invalidate())
+          return
+        }
+        // Login nesta aba: o próprio fluxo de login cuida do cache.
+        if (!external) return
+        // Login em outra aba (a sessão é uma só por navegador, inclusive a do painel): esta aba passa a falar com a
+        // API com o token novo. Relê a sessão; se a conta mudou, nada da conta anterior fica no cache desta aba.
+        const before = queryClient.getQueryData<Session | null>(qk.session)?.user.id ?? null
+        void queryClient.invalidateQueries({ queryKey: qk.session }).then(() => {
+          const after = queryClient.getQueryData<Session | null>(qk.session)?.user.id ?? null
+          if (after === before) return
+          queryClient.removeQueries({ queryKey: qk.private })
+          void router.invalidate()
+          const message = 'Outra conta entrou em outra aba deste navegador. Esta aba agora mostra os dados dessa conta.'
+          toast.info(message, { id: 'session-switched' })
+          announce(message, 'assertive')
+        })
+        return
       }
       queryClient.removeQueries({ queryKey: qk.private })
       queryClient.setQueryData(qk.session, null)

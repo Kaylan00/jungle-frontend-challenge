@@ -1,5 +1,5 @@
 /** Cenário 3 — cadastro, login, expiração de sessão, logout e troca de usuário. */
-import { expect, test, USERS } from './fixtures'
+import { App, expect, test, USERS } from './fixtures'
 
 test.describe('Conta e sessão', () => {
   test('cadastro com validação, conflito e sucesso', async ({ app, page }) => {
@@ -69,5 +69,24 @@ test.describe('Conta e sessão', () => {
     await expect(grid.first()).toContainText('Violet Nomad #314')
     await app.goto('/perfil/carteiras')
     await expect(page.getByLabel('Endereço da carteira').first()).not.toHaveValue(/A91F/)
+  })
+
+  test('outra conta entra em outra aba: esta aba descarta os dados da conta anterior e avisa', async ({ app, page }) => {
+    await app.login('ana')
+    await app.addToCart('nft-01', { edition: 'nft-01-ed-3' })
+    await expect(app.cartItems()).toHaveCount(1)
+
+    // Outra aba do mesmo navegador entra no painel como admin (a sessão é uma só por navegador)
+    const other = new App(await page.context().newPage(), app.isMobile)
+    await other.panelLogin('admin')
+
+    // Esta aba percebe a troca, avisa e não mostra mais nada da Ana
+    await expect(page.getByTestId('live-assertive')).toContainText('Outra conta entrou em outra aba')
+    await expect(page.getByText('Seu carrinho está vazio')).toBeVisible()
+    await expect(app.cartItems()).toHaveCount(0)
+    if (!app.isMobile) {
+      await expect(page.getByRole('button', { name: /, menu da conta$/ })).toHaveAccessibleName('kurio_admin, menu da conta')
+    }
+    await other.page.close()
   })
 })

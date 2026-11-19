@@ -9,7 +9,8 @@
 const TOKEN_KEY = 'jungle.session.token'
 const GUEST_CART_KEY = 'jungle.cart.guest'
 
-export type SessionChange = { reason: 'login' | 'logout' | 'expired' | 'restore'; epoch: number }
+/** `external`: a troca aconteceu em outra aba (evento `storage`), não por uma ação nesta. */
+export type SessionChange = { reason: 'login' | 'logout' | 'expired' | 'restore'; epoch: number; external: boolean }
 
 function read(key: string) {
   try {
@@ -33,9 +34,9 @@ let epoch = 0
 let expired = false
 const listeners = new Set<(c: SessionChange) => void>()
 
-function notify(reason: SessionChange['reason']) {
+function notify(reason: SessionChange['reason'], external = false) {
   epoch += 1
-  listeners.forEach((l) => l({ reason, epoch }))
+  listeners.forEach((l) => l({ reason, epoch, external }))
 }
 
 export const sessionStore = {
@@ -82,6 +83,6 @@ if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
     if (e.key !== TOKEN_KEY) return
     token = e.newValue
-    notify(e.newValue ? 'login' : 'logout')
+    notify(e.newValue ? 'login' : 'logout', true)
   })
 }
