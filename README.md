@@ -13,7 +13,7 @@ Solução do [desafio de frontend da Jungle Gaming](https://github.com/junglegam
 
 ## Em 30 segundos
 
-<img src="./e2e/__screenshots__/visual.spec.ts/inicio-desktop.png" alt="Página inicial no desktop" width="560"> <img src="./e2e/__screenshots__/visual.spec.ts/inicio-mobile.png" alt="Página inicial no celular" width="150">
+<img src="./docs/img/capa-desktop.png" alt="Página inicial no desktop" width="560"> <img src="./docs/img/capa-mobile.png" alt="Página inicial no celular" width="170">
 
 | O que importa | O que foi entregue | Onde conferir |
 | --- | --- | --- |
