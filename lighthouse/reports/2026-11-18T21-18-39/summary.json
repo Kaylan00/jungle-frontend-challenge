@@ -5,7 +5,7 @@
   "environment": {
     "lighthouse": "13.6.0",
     "node": "v22.23.5",
-    "chrome": "/home/kaylan/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome",
+    "chrome": "~/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome",
     "os": "linux 6.18.58.1-microsoft-standard-WSL2",
     "cpus": "4x 13th Gen Intel(R) Core(TM) i5-13450HX",
     "memoryGb": 8,

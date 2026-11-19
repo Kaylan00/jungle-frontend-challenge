@@ -107,7 +107,8 @@ const summary = {
   environment: {
     lighthouse: (await import('lighthouse/package.json', { with: { type: 'json' } })).default.version,
     node: process.version,
-    chrome: chromePath,
+    // Sem o caminho completo da máquina de quem mediu (pasta pessoal vira ~).
+    chrome: chromePath.replace(homedir(), '~'),
     os: `${platform()} ${release()}`,
     cpus: `${cpus().length}x ${cpus()[0]?.model ?? ''}`.trim(),
     memoryGb: Math.round(totalmem() / 1e9),
