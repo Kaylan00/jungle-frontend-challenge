@@ -19,7 +19,7 @@ import { AuthBackdrop, AuthDialog, AuthMobileBrand, AuthTitle } from './auth-dia
 import { authInput, authSubmit, isTouchLayout } from './auth-ui'
 import { isResetLinkError, passwordResetQuery, useConfirmPasswordReset } from './use-password-reset'
 
-const INVALID_LINK = 'Este link de redefinição não é válido. Confira o endereço ou peça um novo.'
+const INVALID_LINK = 'Este link de redefinição não é válido neste navegador. Na demonstração, a conta fica salva no navegador em que o link foi pedido: abra o link nele ou peça um novo aqui.'
 
 /**
  * Página do link do e-mail (/redefinir-senha?token=...).

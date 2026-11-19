@@ -100,7 +100,7 @@ function resetTokenError(status: 'invalid' | 'expired' | 'used' | 'superseded') 
     case 'superseded':
       return apiError('RESET_TOKEN_EXPIRED', 'Este link foi substituído por um pedido mais recente. Use o último e-mail que enviamos.', { details: { reason: status } })
     default:
-      return apiError('RESET_TOKEN_INVALID', 'Este link de redefinição não é válido. Confira o endereço ou peça um novo.', { details: { reason: 'invalid' } })
+      return apiError('RESET_TOKEN_INVALID', 'Este link de redefinição não é válido neste navegador. Na demonstração, a conta fica salva no navegador em que o link foi pedido: abra o link nele ou peça um novo aqui.', { details: { reason: 'invalid' } })
   }
 }
 
