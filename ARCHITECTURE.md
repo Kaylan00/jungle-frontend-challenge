@@ -68,7 +68,7 @@ Regras do cliente (`src/realtime/client.ts`):
 2. **Ordem**: maior `version` por recurso (`nft:<id>`, `order:<id>`), inclusive a da REST. Versão menor ou igual é descartada.
 3. **Terminal**: `confirmed`/`rejected` nunca volta para `pending`.
 4. **Isolamento**: `order.updated` com outro `userId` é descartado. Na troca de sessão o socket desconecta, versões de pedido e ids vistos são zerados e reconecta com o token novo.
-5. **Efeitos**: `nft.updated` grava no cache do detalhe, dos cards e da lista do admin (`setQueryData`); destaque mudou → vitrine rebuscada; NFT no carrinho → carrinho rebuscado + anúncio `aria-live`; preço caiu num favorito → alerta (seção 14). `order.updated` atualiza o pedido e invalida pedido, carrinho e catálogo. `admin.activity` entra no topo do feed em cache e invalida os números do painel.
+5. **Efeitos**: `nft.updated` grava no cache do detalhe, dos cards e da lista do admin (`setQueryData`); destaque mudou → vitrine rebuscada; NFT no carrinho → carrinho rebuscado + anúncio `aria-live`; preço caiu num favorito → alerta (seção 14). `order.updated` atualiza o pedido e, com as mesmas regras (versão, terminal não regride), o item dele no histórico de compras (`/perfil/atividade`); invalida pedido, histórico, carrinho e catálogo. `admin.activity` entra no topo do feed em cache e invalida os números do painel.
 6. **Ciclo de vida**: um socket por aba (`RealtimeProvider`); `dispose()` remove os listeners.
 
 **Reconciliação**: o socket avisa, a REST é a verdade. Ao reconectar, o cliente invalida as consultas ativas do catálogo e todas as privadas. Pedido pendente é consultado a cada 5 s até ficar terminal. No pagamento, o servidor compara o `fingerprint` da cotação e recusa com `409 QUOTE_OUTDATED` mesmo que o evento não chegue.
@@ -274,6 +274,7 @@ Revisão com o OWASP Top 10 / ASVS nível 1 aplicada às camadas que existem; de
 - E-mail real depende das variáveis do Brevo na Vercel; sem elas, só a caixa de saída simulada.
 
 **Decisões de UX fora do Figma**
+- "Atividade" do perfil virou o histórico de compras (o Figma só tem o item no menu): cards no padrão das outras telas do perfil, status com ícone e texto, link para o recibo.
 - Revisão em diálogo e trava de confirmação quando a cotação muda.
 - Conexão da carteira no pagamento.
 - Login por cima da página de origem, com retorno ao fluxo.

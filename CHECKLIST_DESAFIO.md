@@ -42,6 +42,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 | Confirmação: resultado, transação, itens, taxas, total | `features/checkout/order-page.tsx` | `e2e/06` |
 | Login e cadastro com retorno ao fluxo | `features/auth/` | `e2e/03`, `05` |
 | Perfil e carteiras | `features/profile/` | `e2e/08` |
+| Histórico de compras (Atividade), status ao vivo | `features/profile/activity-page.tsx` | `e2e/25`, `client.test.ts` |
 | Fora do escopo sem simular sucesso | `footer.tsx`, `header.tsx`, `soon-sections.ts` | inspeção |
 | URL guarda busca, filtros, ordem e página | `routes/index.tsx` (`validateSearch`) | `e2e/01` |
 | Detalhe por acesso direto e inexistente | `routes/nft.$nftId.tsx` | `e2e/02` |

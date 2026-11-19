@@ -170,7 +170,7 @@ Toda tela que depende da API tem os três estados, no mesmo padrão visual do Fi
 
 ## Testes
 
-**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900), `mobile` (Pixel 7, 390×844) e `tablet` (768×1024, só os fluxos principais: catálogo, detalhe, carrinho, compra e carregamento), 24 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
+**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900), `mobile` (Pixel 7, 390×844) e `tablet` (768×1024, só os fluxos principais: catálogo, detalhe, carrinho, compra e carregamento), 25 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
 
 | # | Cenário do enunciado | Arquivo |
 | --- | --- | --- |
@@ -187,7 +187,7 @@ Toda tela que depende da API tem os três estados, no mesmo padrão visual do Fi
 | 11 | Teclado, foco em diálogos, validação de formulários (com axe) | `e2e/11-teclado-acessibilidade.spec.ts` e `e2e/24-acessibilidade-foco.spec.ts` (foco nos fluxos com conta, barras fixas, zoom de 400%, axe nas telas logadas) |
 | 12 | Skeletons em rede lenta, falha e nova tentativa | `e2e/12-carregamento-falhas.spec.ts` |
 
-- **Extras**: `e2e/13` a `e2e/23` (recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, compartilhar, cabeçalhos de segurança/CSP, casca do painel, religar o socket em até 6 s, presets que partem do cenário base e service worker do MSW que cai e se recupera sozinho).
+- **Extras**: `e2e/13` a `e2e/23` e `e2e/25` (histórico de compras, recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, compartilhar, cabeçalhos de segurança/CSP, casca do painel, religar o socket em até 6 s, presets que partem do cenário base e service worker do MSW que cai e se recupera sozinho).
 - **Tempo, latência e eventos controlados pelo teste** (o enunciado pede): relógio do Playwright (`page.clock`) na expiração da sessão (`03`), na confirmação do pagamento, que fica pendente até o teste avançar o tempo (`06`), nas respostas fora de ordem (`01`) e no backoff de reconexão do socket (`21`); latência e falhas escolhidas por cenário; eventos disparados pelo controle dos mocks. Nenhum teste espera milissegundos fixos (`waitForTimeout`): para provar que um evento duplicado, antigo ou de outro usuário foi descartado, o teste manda um evento "sentinela" depois dele e grava tudo o que a tela mostrou e anunciou até lá (`10`, `16`). Única exceção de tempo real: o timeout do pedido (`07`), porque o limite de 8 s é do próprio XHR do navegador.
 - **Regressão visual**: `e2e/visual.spec.ts`, início, detalhe, carrinho e pagamento nos dois viewports; 8 baselines versionadas em `e2e/__screenshots__/`. As baselines são do Linux (o mesmo da CI): em Windows ou macOS esses 8 testes são pulados com aviso, porque a renderização de fontes muda entre sistemas. No Windows, rode-os pelo WSL.
 - **Relatório e traces**: relatório HTML em `playwright-report/` (`npm run test:e2e:report`); traces das falhas em `test-results/` (`trace: 'retain-on-failure'`).
@@ -226,6 +226,7 @@ Nada desta seção é exigido pelo enunciado.
 - **Busca com sugestões**: até 5 NFTs a partir de 2 letras, navegáveis por teclado.
 - **Alerta de preço**: queda de preço de um favorito gera aviso com link e selo “Caiu de …” na lista de favoritos.
 - **Compartilhar**: folha de compartilhamento do sistema quando existe; senão, copia o link.
+- **Histórico de compras** (`/perfil/atividade`): pedidos da conta com número, data, itens, total, rede e status (pendente, confirmado ou recusado com o motivo), link para o recibo; o status muda ao vivo pelo socket e a mudança é anunciada ao leitor de tela.
 - **Animações** (GSAP e Lenis), desligadas com `prefers-reduced-motion`. São só realce: nada fica escondido esperando a rolagem (todo o conteúdo aparece desde o primeiro render, inclusive em print de página inteira e na impressão).
 - **CI** no GitHub Actions e **testes unitários** (Vitest).
 - **Cabeçalhos de segurança** (CSP sem `unsafe-eval`, HSTS e outros), testados em `e2e/19-seguranca.spec.ts`. Ver [SECURITY.md](./SECURITY.md).
