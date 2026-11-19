@@ -204,6 +204,12 @@ A descrição de cada arquivo está em [ARCHITECTURE.md §10](./ARCHITECTURE.md#
 
 Num PC Windows comum, com o Chrome do sistema contra o site publicado (Lighthouse 13.6, 5 execuções por página e perfil, mediana):
 
+Início (`/`), execução mediana de cada perfil:
+
+| Mobile | Desktop |
+| --- | --- |
+| ![Lighthouse mobile do início: Performance 98, Accessibility 100, Best Practices 100, SEO 100](./docs/img/lighthouse-mobile.png) | ![Lighthouse desktop do início: Performance 100, Accessibility 100, Best Practices 100, SEO 100](./docs/img/lighthouse-desktop.png) |
+
 | Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | TBT | CLS |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `/` | mobile | 98 | 100 | 100 | 100 | 2,07 s | 146 ms | 0 |
