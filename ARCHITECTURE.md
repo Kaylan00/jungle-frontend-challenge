@@ -14,7 +14,7 @@ Componente React ──► hook (TanStack Query) ──► endpoint tipado ─�
 socket.io-client ──► WebSocket ─────────┘   nft.updated / order.updated / admin.activity
 ```
 
-- **Uma fonte de contratos**: `src/api/contracts.ts` (zod). `request()` em `api/http.ts` valida toda resposta na borda; os handlers do MSW usam os mesmos schemas.
+- **Uma fonte de contratos**: `src/api/contracts.ts` (zod). `request()` em `src/api/http.ts` valida toda resposta na borda; os handlers do MSW usam os mesmos schemas.
 - **Mocks só na rede**: componentes, hooks e Axios não têm dado fictício nem "se mock, faça X". Desligar `VITE_ENABLE_MOCKS` e apontar `VITE_API_URL`/`VITE_SOCKET_URL` para um backend real não muda o app.
 - **Rotas** (TanStack Router, por arquivo): `/`, `/nft/$nftId`, `/carrinho`, `/login`, `/cadastro`, `/recuperar-senha`, `/redefinir-senha?token=`; sob o layout protegido `_auth`: `/pagamento`, `/pedido/$orderId`, `/perfil`, `/perfil/carteiras`, `/perfil/favoritos`. O **Kurio Admin** é outra aplicação no mesmo origin: `/admin/entrar` e, sob `admin/_painel` (guard + casca), `/admin`, `/admin/nfts`, `/admin/cupons`, `/admin/pedidos`, `/admin/usuarios` (seção 13). A raiz escolhe a moldura (loja ou painel). Rota inexistente cai no `NotFound`. Cada página define o próprio `document.title` (`lib/page-title.ts`), anunciado na troca de rota (`route-announcer.tsx`).
 
@@ -40,7 +40,7 @@ Base `/api`. Autenticação por `Authorization: Bearer <token>`; visitante ident
 | Admin cupons | `GET/POST /admin/coupons` · `POST /admin/coupons/:code/deactivate` | 200/201 · 409 (código repetido) · 422 |
 | Admin pedidos / usuários | `GET /admin/orders?status&q&page` · `GET /admin/users?q&page` | 200 (sem perfil do colecionador nem carteira; e-mail mascarado) · 403 |
 
-Contratos do painel em `api/admin-contracts.ts`; leituras do painel em `mocks/admin-db.ts`.
+Contratos do painel em `src/api/admin-contracts.ts`; leituras do painel em `mocks/admin-db.ts`.
 
 **Tipos de erro**: `422 VALIDATION_ERROR` (com `fields`), `401 UNAUTHENTICATED`/`SESSION_EXPIRED`, `403 FORBIDDEN`, `404 NOT_FOUND`, `409` (`AVAILABILITY_CONFLICT`, `EMAIL_TAKEN`, `CONFLICT`, `QUOTE_OUTDATED`, `IDEMPOTENCY_CONFLICT`, `WALLET_REJECTED`) e transitórios (`503 TRANSIENT_FAILURE`, `500`, rede, timeout), os únicos que o cliente repete. Os cenários geram transitórios em qualquer rota.
 

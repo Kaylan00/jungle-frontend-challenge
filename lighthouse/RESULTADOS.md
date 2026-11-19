@@ -19,7 +19,7 @@ Windows 11, 18/11/2026. Mediana [mínimo–máximo]:
 | `/nft/nft-01` | mobile | **99** [96–99] | 100 | 100 | 100 | 2,04 s | 77 ms | 0 |
 | `/nft/nft-01` | desktop | **100** [100–100] | 100 | 100 | 100 | 0,49 s | 0 ms | 0 |
 
-Relatórios JSON das 20 execuções: [reports/2026-11-18-windows/](./reports/2026-11-18-windows/).
+Relatórios HTML e JSON das 20 execuções: [reports/2026-11-18-windows/](./reports/2026-11-18-windows/).
 
 Conferência manual no mesmo PC, pelo DevTools (perfil Mobile, página inicial): **96** no Chrome em janela anônima
 e **93** no Edge, com 100 nas outras três categorias.
@@ -125,7 +125,7 @@ seções do painel) e o chunk que toda página avalia antes de pintar dobrou (14
 - *Code splitting* por rota (TanStack Router `autoCodeSplitting`), inclusive dos skeletons de espera.
 - Preload da arte do destaque; imagens WebP com `srcset`, `width`/`height` declarados e `loading="lazy"` abaixo da dobra.
 - Fonte servida localmente (`@fontsource-variable/roboto-mono`).
-- Skeletons com as mesmas dimensões do conteúdo: **CLS 0** em todas as páginas.
+- Skeletons com as mesmas dimensões do conteúdo: **CLS entre 0 e 0,001** em todas as páginas.
 - Cache imutável para assets com hash (`vercel.json`).
 - MSW enxuto (sem `tough-cookie`), com os arquivos estáticos passando pelo primeiro handler, e animações (GSAP, Lenis) carregadas só depois da primeira tela.
 - Só o layout do tamanho de tela atual é montado.

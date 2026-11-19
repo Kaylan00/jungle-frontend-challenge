@@ -65,7 +65,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 
 | Item | Onde | Teste |
 | --- | --- | --- |
-| Contratos tipados de ponta a ponta | `api/contracts.ts` (zod) | `contracts.test.ts` |
+| Contratos tipados de ponta a ponta | `src/api/contracts.ts` (zod) | `contracts.test.ts` |
 | Carregamento, vazio, erro, sucesso | skeletons, `ErrorState` | `e2e/12` |
 | Invalidação após mutations e eventos | `realtime/client.ts`, hooks | `client.test.ts` |
 | Respostas obsoletas descartadas | chave por parâmetros + `signal` | `e2e/01` (`fora-de-ordem`) |
@@ -155,7 +155,7 @@ O enunciado lista seis. Cada um, com o que a entrega faz e como conferir sem con
 
 | Eliminatório (texto do enunciado) | Como a entrega cumpre | Como conferir |
 | --- | --- | --- |
-| Ausência de uso efetivo da stack obrigatória | Cada tecnologia tem papel real: TanStack Router (rotas por arquivo, guards, search params validados), TanStack Query (cache por dono, otimista com rollback), Axios (cliente único `api/http.ts`), Socket.IO (`realtime/client.ts`), Tailwind e shadcn/ui (`components/ui`), MSW (REST e Socket.IO), Playwright e Lighthouse | `package.json`; seções 1-2 e 4 deste checklist; `npm run typecheck` |
+| Ausência de uso efetivo da stack obrigatória | Cada tecnologia tem papel real: TanStack Router (rotas por arquivo, guards, search params validados), TanStack Query (cache por dono, otimista com rollback), Axios (cliente único `src/api/http.ts`), Socket.IO (`realtime/client.ts`), Tailwind e shadcn/ui (`components/ui`), MSW (REST e Socket.IO), Playwright e Lighthouse | `package.json`; seções 1-2 e 4 deste checklist; `npm run typecheck` |
 | Fluxos principais apenas visuais | Catálogo, carrinho, cupom, compra, conta, perfil, carteiras, favoritos e histórico passam pela API simulada, com estado persistido e regras no servidor (estoque, cotação, idempotência, validação) | `e2e/05`, `06`, `08`, `25`; `__jungleMock.getOrders()` no console do site |
 | Compra confirmada sem resposta da simulação | O pedido nasce `pending` e só vira `confirmed` ou `rejected` pela simulação (evento `order.updated` ou leitura da API); o recibo é o snapshot devolvido pela API | `e2e/06` com relógio controlado: pendente até o prazo do pagamento, confirmado depois; `e2e/07` (recusa, timeout) |
 | Exposição de dados entre usuários | Chaves de cache privadas com o id do dono, limpeza no logout e na troca de conta (inclusive vinda de outra aba), evento de pedido filtrado por usuário no servidor e no cliente | `isolation.test.ts`; `e2e/03` (troca de usuário e conta trocada em outra aba); `e2e/10` (evento da conta anterior ignorado); `e2e/25` |

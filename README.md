@@ -166,7 +166,7 @@ O cenário fica no `localStorage` e sobrevive ao refresh. Cada preset (painel, `
 
 Toda tela que depende da API tem os três estados, no mesmo padrão visual do Figma:
 
-- **Carregando**: skeleton com shimmer nas mesmas dimensões do conteúdo (`components/ui/skeleton.tsx` e os `*Pending`/`*Skeleton` de cada tela); CLS 0 no Lighthouse. Com movimento reduzido o shimmer para.
+- **Carregando**: skeleton com shimmer nas mesmas dimensões do conteúdo (`components/ui/skeleton.tsx` e os `*Pending`/`*Skeleton` de cada tela); CLS entre 0 e 0,001 no Lighthouse. Com movimento reduzido o shimmer para.
 - **Erro**: `ErrorState` (`components/shared/error-state.tsx`) com a mensagem da API e "Tentar novamente"; falhas de mutation desfazem o otimista e avisam (`aria-live`). Reproduzir: tabela acima e `e2e/12`.
 - **Vazio**: `EmptyState` (mesmo arquivo) com a ação que resolve, por exemplo "Limpar busca e filtros" no catálogo.
 
@@ -213,7 +213,7 @@ Início (`/`), execução mediana de cada perfil:
 | Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | TBT | CLS |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `/` | mobile | 98 | 100 | 100 | 100 | 2,07 s | 146 ms | 0 |
-| `/` | desktop | 100 | 100 | 100 | 100 | 0,51 s | 1 ms | 0 |
+| `/` | desktop | 100 | 100 | 100 | 100 | 0,51 s | 1 ms | 0,001 |
 | `/nft/nft-01` | mobile | 99 | 100 | 100 | 100 | 2,04 s | 77 ms | 0 |
 | `/nft/nft-01` | desktop | 100 | 100 | 100 | 100 | 0,49 s | 0 ms | 0 |
 
