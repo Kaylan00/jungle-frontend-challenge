@@ -101,10 +101,13 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  # A cada push no main (e sob demanda): início e detalhe, mobile e desktop, 3 medições e mediana. Informativo:
+  # a máquina da CI é mais lenta que um PC comum, então não reprova o pipeline; o resumo vai para a página da execução.
   lighthouse:
-    name: Lighthouse (manual)
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.lighthouse }}
+    name: Lighthouse (3 medições, mediana)
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.lighthouse) }}
     needs: quality
+    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -122,7 +125,14 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build e auditoria
+        env:
+          LH_RUNS: 3
+          LH_OUT: lighthouse/reports/ci
         run: npm run build && npm run lighthouse
+
+      - name: Resumo na página da execução
+        if: ${{ !cancelled() }}
+        run: cat lighthouse/reports/ci/summary.md >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: Publicar relatórios do Lighthouse
         if: ${{ !cancelled() }}
