@@ -84,7 +84,7 @@ npm run dev                        # http://localhost:5173, com mocks
 | `npm run test:unit` | Vitest, sem navegador (`test:unit:watch` para o modo observação) |
 | `npm run test:coverage` | Vitest com cobertura (relatório HTML em `coverage/`; a CI reprova abaixo dos limites) |
 | `npm run test:api` | Teste isolado da função de e-mail `api/send-reset-email.ts`, sem rede e sem chave |
-| `npm run test:e2e` | Playwright, desktop e mobile; sobe build + preview sozinho na porta 4173 |
+| `npm run test:e2e` | Playwright, desktop, tablet e mobile; sobe build + preview sozinho na porta 4173 |
 | `npm run test:e2e:desktop` / `test:e2e:mobile` / `test:e2e:tablet` | Só um viewport |
 | `npm run test:e2e:update` | Regrava as baselines visuais |
 | `npm run test:e2e:report` | Abre o relatório HTML (com os traces das falhas) |
@@ -172,7 +172,7 @@ Toda tela que depende da API tem os três estados, no mesmo padrão visual do Fi
 
 ## Testes
 
-**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900), `mobile` (Pixel 7, 390×844) e `tablet` (768×1024, só os fluxos principais: catálogo, detalhe, carrinho, compra e carregamento), 25 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
+**E2E (Playwright, Chromium)**: projetos `desktop` (1440×900), `mobile` (Pixel 7, 390×844) e `tablet` (768×1024, só os fluxos principais: catálogo, detalhe, carrinho, compra e carregamento), 24 arquivos de cenário + regressão visual. Cada teste começa com a seed limpa; os eventos chegam pelo `socket.io-client` e as respostas REST vêm dos handlers MSW.
 
 | # | Cenário do enunciado | Arquivo |
 | --- | --- | --- |
@@ -189,12 +189,12 @@ Toda tela que depende da API tem os três estados, no mesmo padrão visual do Fi
 | 11 | Teclado, foco em diálogos, validação de formulários (com axe) | `e2e/11-teclado-acessibilidade.spec.ts` e `e2e/24-acessibilidade-foco.spec.ts` (foco nos fluxos com conta, barras fixas, zoom de 400%, axe nas telas logadas) |
 | 12 | Skeletons em rede lenta, falha e nova tentativa | `e2e/12-carregamento-falhas.spec.ts` |
 
-- **Extras**: `e2e/13` a `e2e/23` e `e2e/25` (histórico de compras, recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, cabeçalhos de segurança/CSP, casca do painel, religar o socket em até 6 s, presets que partem do cenário base e service worker do MSW que cai e se recupera sozinho).
+- **Extras**: `e2e/13` a `e2e/17`, `e2e/19` a `e2e/23` e `e2e/25` (histórico de compras, recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, cabeçalhos de segurança/CSP, casca do painel, religar o socket em até 6 s, presets que partem do cenário base e service worker do MSW que cai e se recupera sozinho).
 - **Tempo, latência e eventos controlados pelo teste** (o enunciado pede): relógio do Playwright (`page.clock`) na expiração da sessão (`03`), na confirmação do pagamento, que fica pendente até o teste avançar o tempo (`06`), nas respostas fora de ordem (`01`) e no backoff de reconexão do socket (`21`); latência e falhas escolhidas por cenário; eventos disparados pelo controle dos mocks. Nenhum teste espera milissegundos fixos (`waitForTimeout`): para provar que um evento duplicado, antigo ou de outro usuário foi descartado, o teste manda um evento "sentinela" depois dele e grava tudo o que a tela mostrou e anunciou até lá (`10`, `16`). Única exceção de tempo real: o timeout do pedido (`07`), porque o limite de 8 s é do próprio XHR do navegador.
 - **Regressão visual**: `e2e/visual.spec.ts`, início, detalhe, carrinho e pagamento nos dois viewports; 8 baselines versionadas em `e2e/__screenshots__/`. As baselines são do Linux (o mesmo da CI): em Windows ou macOS esses 8 testes são pulados com aviso, porque a renderização de fontes muda entre sistemas. No Windows, rode-os pelo WSL.
 - **Relatório e traces**: relatório HTML em `playwright-report/` (`npm run test:e2e:report`); traces das falhas em `test-results/` (`trace: 'retain-on-failure'`).
-- **Unitários (Vitest)**: 19 arquivos, 307 testes: valores em ETH, contratos zod, cliente HTTP, **cliente REST de ponta a ponta** (cada função de `api` pelo Axios e pelos handlers MSW reais), chaves e opções do TanStack Query, cliente de tempo real, regras do servidor simulado (inclusive senha com PBKDF2), isolamento entre contas, rotas do painel admin, propagação entre abas, socket simulado com o `socket.io-client` de verdade (recusa e reconexão), presets de cenário e vigia do service worker.
-- **Cobertura** (`npm run test:coverage`, lógica que roda em Node): **92% das linhas, 87% das instruções, 85% das funções e 79% dos ramos**. A CI reprova abaixo de 90/85/82/76. Telas, hooks do React e módulos só de navegador ficam fora dessa conta, declarados em `vitest.config.ts`: quem os exercita são os E2E.
+- **Unitários (Vitest)**: 19 arquivos, 311 testes: valores em ETH, contratos zod, cliente HTTP, **cliente REST de ponta a ponta** (cada função de `api` pelo Axios e pelos handlers MSW reais), chaves e opções do TanStack Query, cliente de tempo real, regras do servidor simulado (inclusive senha com PBKDF2), isolamento entre contas, rotas do painel admin, propagação entre abas, socket simulado com o `socket.io-client` de verdade (recusa e reconexão), presets de cenário e vigia do service worker.
+- **Cobertura** (`npm run test:coverage`, lógica que roda em Node): **91% das linhas, 86% das instruções, 83% das funções e 78% dos ramos**. A CI reprova abaixo de 90/85/82/76. Telas, hooks do React e módulos só de navegador ficam fora dessa conta, declarados em `vitest.config.ts`: quem os exercita são os E2E.
 - **Função de e-mail**: `npm run test:api`, 16 verificações com `fetch` falso e relógio controlado.
 - **CI** ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)): a cada push, tipos, lint, unitários com cobertura (relatório como artefato), `test:api`, build e a suíte E2E nos três viewports, publicando o relatório HTML e os traces como artefatos. Um teste que só passa na segunda tentativa reprova a CI (`failOnFlakyTests`): instabilidade não passa escondida. A cada push no `main` roda também o Lighthouse (3 medições, mediana, resumo na página da execução e relatórios como artefato), sem reprovar o pipeline.
 
@@ -229,7 +229,7 @@ Nada desta seção é exigido pelo enunciado.
 
 - **Painel Kurio Admin** (`/admin`, conta `admin@kurio.test`): visão geral com eventos ao vivo, NFTs e edições (preço, estoque, status, destaque), cupons, pedidos e usuários (somente leitura, e-mail mascarado), busca global (Ctrl+K) e tema claro/escuro. A API confere o papel em toda rota `/api/admin/*` (401/403) e gravações concorrentes recebem 409 com os valores atuais. Detalhes em [ARCHITECTURE.md §13](./ARCHITECTURE.md#13-painel-administrativo-kurio-admin-e-permissão).
 - **Tempo real entre abas**: abas do mesmo navegador dividem o estado e os eventos do servidor simulado (Web Locks + `BroadcastChannel`), cada uma recebendo pelo próprio socket. Ver o passo 3 do roteiro e [ARCHITECTURE.md §15](./ARCHITECTURE.md#15-propagação-entre-abas-do-servidor-simulado).
-- **Recuperação de senha**: `/recuperar-senha` com resposta neutra, link de uso único válido por 30 min e encerramento das sessões abertas. O e-mail é simulado (link “Abrir e-mail simulado” na tela, ou `__jungleMock.lastEmail('ana@kurio.test')`); o envio real pelo Brevo via Vercel Function é opcional e fica desligado sem as variáveis.
+- **Recuperação de senha**: `/recuperar-senha` com resposta neutra, link de uso único válido por 30 min e encerramento das sessões abertas. O e-mail é simulado (link “Abrir e-mail simulado” na tela, ou `__jungleMock.lastEmail('ana@kurio.test')`); além disso, o envio real pelo Brevo via Vercel Function está ligado no site publicado (sem as variáveis, fica só o simulado). Como o "servidor" da demonstração vive no navegador, o link do e-mail real funciona no mesmo navegador em que o pedido foi feito.
 
   O e-mail segue a identidade do site (cores, fonte mono, campo de senha mascarada) e foi montado para clientes de e-mail: tabelas, estilos inline e botão que funciona mesmo sem CSS externo.
 

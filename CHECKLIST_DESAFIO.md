@@ -8,7 +8,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 | --- | --- |
 | Tipos | `npm run typecheck` |
 | Lint (oxlint) | `npm run lint` |
-| Unitários (307 testes, 19 arquivos) e cobertura com limite mínimo | `npm run test:unit`, `npm run test:coverage` |
+| Unitários (311 testes, 19 arquivos) e cobertura com limite mínimo | `npm run test:unit`, `npm run test:coverage` |
 | Função de e-mail (16 casos) | `npm run test:api` |
 | E2E desktop + mobile + regressão visual | `npx playwright test` |
 | Lighthouse | `npm run lighthouse` → `lighthouse/RESULTADOS.md` |
@@ -138,7 +138,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 | 10 | Duplicados, desconexão, pedido pendente | `e2e/10` |
 | 11 | Teclado e foco | `e2e/11`, `e2e/24` |
 | 12 | Skeletons, falha e nova tentativa | `e2e/12` |
-| Extras | Senha, admin, alerta, sugestões, CSP, socket, presets, service worker | `e2e/13` a `23` |
+| Extras | Senha, filtros ativos, admin, alerta, sugestões, CSP, socket, presets, service worker, histórico | `e2e/13` a `17`, `19` a `23` e `25` |
 | Infra | Chromium desktop + mobile + tablet, estado isolado, relógio (`page.clock` em `01`, `03`, `06`, `21`), sem `waitForTimeout`, `failOnFlakyTests` na CI, relatório HTML e traces | `playwright.config.ts`, `e2e/fixtures.ts` |
 
 ## 10. Performance

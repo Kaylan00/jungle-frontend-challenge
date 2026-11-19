@@ -202,7 +202,7 @@ Resposta sempre `202` neutra. Token `rst_` + 24 bytes aleatórios, guardado só 
 | `24-acessibilidade-foco` | foco mantido em botões em andamento, devolvido pelos diálogos, nunca atrás das barras fixas; zoom de 400%; axe nas telas logadas |
 | `visual` | início, detalhe, carrinho e pagamento, desktop e mobile (8 baselines do Linux; fora do Linux são pulados com aviso) |
 
-Unitários (Vitest, 307 testes em 19 arquivos, cobertura com limite mínimo na CI): contratos, cliente HTTP, ETH, artes, search params, redirect do login, cliente de tempo real, banco simulado (`db`, `sync` entre "abas", `isolation` entre contas, `admin`, `admin-panel`), `realtime` (socket real contra o mock), `scenario` e `worker-watchdog`. `npm run test:api`: 16 casos da função de e-mail.
+Unitários (Vitest, 311 testes em 19 arquivos, cobertura com limite mínimo na CI): contratos, cliente HTTP, ETH, artes, search params, redirect do login, cliente de tempo real, banco simulado (`db`, `sync` entre "abas", `isolation` entre contas, `admin`, `admin-panel`), `realtime` (socket real contra o mock), `scenario` e `worker-watchdog`. `npm run test:api`: 16 casos da função de e-mail.
 
 Cada teste roda num contexto novo (seed limpa). Eventos saem do servidor simulado e chegam pelo `socket.io-client`. Tempo controlado com `page.clock` onde o comportamento depende de tempo (sessão, pagamento, respostas fora de ordem, backoff do socket); nenhum `waitForTimeout`. Na CI, `failOnFlakyTests`: um teste que só passa na segunda tentativa reprova. Relatório e traces: `npm run test:e2e:report`.
 
