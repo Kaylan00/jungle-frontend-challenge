@@ -73,3 +73,24 @@ test('compra confirmada com itens sobrando no carrinho: o cupom continua aplicad
   await expect(page.getByTestId('summary-subtotal')).toHaveText('0.95 ETH')
   await expect(page.getByTestId('summary-discount')).toHaveText('(-) 0.095 ETH')
 })
+
+test('trocar a rede no pagamento atualiza a taxa e o total do resumo, iguais aos da revisão', async ({ app, page }) => {
+  await app.login('ana')
+  await app.addToCart('nft-01', { edition: 'nft-01-ed-3' })
+  await page.getByTestId('checkout-button').click()
+  await expect(page).toHaveURL(/\/pagamento$/)
+  const summary = page.getByTestId('cart-summary').filter({ visible: true })
+  await expect(summary.getByTestId('summary-fee')).toContainText('0.016 ETH') // Ethereum
+
+  // Carteira "Reserva", na Polygon: select no desktop, cartões abaixo de 1024 px
+  const select = page.locator('#checkout-wallet')
+  if (page.viewportSize()!.width >= 1024) await select.selectOption((await select.locator('option', { hasText: 'Reserva' }).getAttribute('value'))!)
+  else await page.getByTestId('wallet-option').filter({ hasText: 'Reserva' }).click()
+  await expect(summary.getByTestId('summary-fee')).toContainText('0.0004 ETH')
+  const total = await summary.getByTestId('summary-total').textContent()
+
+  await page.getByTestId('connect-wallet').click()
+  await expect(page.getByTestId('wallet-connection')).toHaveAttribute('data-status', 'connected')
+  await page.getByTestId('review-button').click()
+  await expect(page.getByTestId('review-dialog').getByTestId('summary-total')).toHaveText(total!)
+})

@@ -306,6 +306,15 @@ export const handlers = [
     return HttpResponse.json(db.serializeCart(cart))
   }),
 
+  // Totais do carrinho para uma rede (a taxa muda com a rede): o resumo do pagamento acompanha a escolha.
+  route('get', '/cart/summary', ({ request }) => {
+    const cart = cartFor(request)
+    if (cart instanceof Response) return cart
+    const network = Network.safeParse(new URL(request.url).searchParams.get('network'))
+    if (!network.success) return apiError('VALIDATION_ERROR', 'Rede inválida', { fields: { network: 'Rede inválida' } })
+    return HttpResponse.json(db.serializeCart(cart, network.data).summary)
+  }),
+
   route('post', '/cart/items', async ({ request }) => {
     const cart = cartFor(request)
     if (cart instanceof Response) return cart

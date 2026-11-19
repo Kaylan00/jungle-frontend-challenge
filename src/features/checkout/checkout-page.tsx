@@ -20,7 +20,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ChevronLeft, Loader2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Cart, Wallet } from '@/api/contracts'
 import { api } from '@/api/endpoints'
@@ -150,7 +150,7 @@ function CheckoutForm({ cart, wallets }: { cart: Cart; wallets: Wallet[] }) {
       <form onSubmit={review.review} noValidate className={CHECKOUT_GRID} aria-label="Pagamento" data-testid="checkout-form">
         <CollectorProfileSection checkout={checkout} connection={connection} wallets={wallets} />
         <aside aria-label="Resumo e carteira" className="space-y-5 max-lg:order-1 max-md:flex max-md:flex-col max-md:gap-5 max-md:space-y-0 lg:space-y-0">
-          <CheckoutSummary cart={cart} />
+          <CheckoutSummary cart={cart} network={checkout.network} />
           <WalletNetworkFieldset cart={cart} wallets={wallets} checkout={checkout} connection={connection} />
         </aside>
         <SubmitBar quoting={review.quoting} />
@@ -216,11 +216,11 @@ function RecoverAttempt({ attempt, onGiveUp }: { attempt: OrderAttempt; onGiveUp
     }
   }
 
+  const start = useEffectEvent(() => void run())
   useEffect(() => {
     if (started.current) return
     started.current = true
-    void run()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    start()
   }, [])
 
   return (

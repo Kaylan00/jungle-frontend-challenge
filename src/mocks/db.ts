@@ -1169,7 +1169,7 @@ function totals(subtotal: string, coupon: Coupon | null, network: Network | null
   return { subtotal, discount, networkFee, total }
 }
 
-export function serializeCart(cart: StoredCart): Cart {
+export function serializeCart(cart: StoredCart, network: Network | null = null): Cart {
   // Cupom que expirou depois de aplicado deixa de valer automaticamente.
   let coupon: Coupon | null = null
   if (cart.couponCode) {
@@ -1207,7 +1207,8 @@ export function serializeCart(cart: StoredCart): Cart {
     owner: cart.userId ? 'user' : 'guest',
     items,
     coupon,
-    summary: totals(subtotal, coupon, null, items.length > 0),
+    // Taxa de rede da rede pedida (sem rede: a padrão, Ethereum). O pagamento pede a da rede escolhida.
+    summary: totals(subtotal, coupon, network, items.length > 0),
     version: cart.version,
     updatedAt: cart.updatedAt,
   }

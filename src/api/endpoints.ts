@@ -46,6 +46,7 @@ import {
   type SignupRequest,
   type WalletInput,
   OrderList,
+  CartSummary,
 } from './contracts'
 import { request } from './http'
 
@@ -92,6 +93,7 @@ export const api = {
 
   // Carrinho
   getCart: ({ signal }: Opts = {}) => request(Cart, { url: '/cart', signal }),
+  getCartSummary: (network: Network, { signal }: Opts = {}) => request(CartSummary, { url: '/cart/summary', params: { network }, signal }),
   addToCart: (body: AddToCartInput) => request(Cart, { method: 'POST', url: '/cart/items', data: body }),
   updateCartItem: (itemId: string, quantity: number) => request(Cart, { method: 'PATCH', url: `/cart/items/${encodeURIComponent(itemId)}`, data: { quantity } }),
   removeCartItem: (itemId: string) => request(Cart, { method: 'DELETE', url: `/cart/items/${encodeURIComponent(itemId)}` }),

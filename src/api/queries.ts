@@ -9,7 +9,7 @@
  */
 import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { AdminOrderListParams, AdminUserListParams } from './admin-contracts'
-import type { AdminNftListParams, NftListParams, Session } from './contracts'
+import type { AdminNftListParams, Network, NftListParams, Session } from './contracts'
 import { api } from './endpoints'
 import { ApiError } from './http'
 import { sessionStore } from './session-store'
@@ -181,6 +181,17 @@ export const ordersQuery = (owner: Owner) =>
     staleTime: 0,
     // Com pedido pendente, confere a cada 5 s mesmo sem socket (a mesma rede de segurança do recibo).
     refetchInterval: (q) => (q.state.data?.items.some((o) => o.status === 'pending') ? 5_000 : false),
+  })
+
+/**
+ * Totais do carrinho para a rede escolhida no pagamento. Fica sob a chave do carrinho: toda invalidação do carrinho
+ * (cupom, quantidade, evento de preço) atualiza também estes totais.
+ */
+export const cartSummaryQuery = (owner: Owner, network: Network) =>
+  queryOptions({
+    queryKey: [...qk.cart(owner), 'summary', network] as const,
+    queryFn: ({ signal }) => api.getCartSummary(network, { signal }),
+    placeholderData: keepPreviousData,
   })
 
 export const orderQuery = (owner: Owner, id: string) =>

@@ -1,7 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
-import type { Cart } from '@/api/contracts'
+import type { Cart, Network } from '@/api/contracts'
+import { cartSummaryQuery } from '@/api/queries'
+import { useSession } from '@/features/auth/use-session'
 import { CouponForm, SummaryLines } from '@/features/cart/cart-summary'
 import { ART_SIZES, artSources } from '@/lib/art'
 import { formatEth } from '@/lib/eth'
@@ -10,8 +13,12 @@ import { formatEth } from '@/lib/eth'
  * Resumo da compra na coluna da direita: "Seus NFTs", cupom e os valores. São irmãos diretos da coluna (a ordem
  * no celular é dada por CSS junto com a carteira), por isso o componente devolve um fragmento.
  */
-export function CheckoutSummary({ cart }: { cart: Cart }) {
+export function CheckoutSummary({ cart, network }: { cart: Cart; network: Network }) {
   const [showCoupon, setShowCoupon] = useState(false)
+  const { user } = useSession()
+  // Taxa e total da rede escolhida, calculados pela API (o resumo do carrinho usa a rede padrão).
+  const forNetwork = useQuery(cartSummaryQuery(user!.id, network))
+  const summary = forNetwork.data ?? cart.summary
   return (
     <>
       <section aria-labelledby="seus-nfts" className="max-md:order-3">
@@ -57,7 +64,7 @@ export function CheckoutSummary({ cart }: { cart: Cart }) {
         </button>
       )}
 
-      <SummaryLines summary={cart.summary} coupon={cart.coupon} variant="checkout" className="max-md:order-5 lg:!mt-[7px]" />
+      <SummaryLines summary={summary} coupon={cart.coupon} variant="checkout" className="max-md:order-5 lg:!mt-[7px]" />
       <p className="-mt-2 text-[11px] text-muted-foreground max-md:order-6 max-md:-mt-3 lg:sr-only">A taxa de rede final depende da rede escolhida e é confirmada na revisão.</p>
     </>
   )
