@@ -1,5 +1,5 @@
 /**
- * Layout comum das páginas da conta (perfil, carteiras, lista de interesse).
+ * Layout comum das páginas da conta (perfil, carteiras, atividade, lista de interesse).
  * No desktop o menu "Meu perfil" fica num card à esquerda (Figma); no celular vira uma faixa
  * horizontal com rolagem acima do conteúdo. Itens fora do escopo do desafio levam a uma tela
  * "Em breve" dentro deste layout (coming-soon-page.tsx), sem simular funcionalidade.
@@ -12,12 +12,12 @@ import { usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
 
 /** `to`: página da conta. `soon`: seção fora do escopo, que abre a tela "Em breve" (/perfil/<soon>). */
-type MenuItem = { label: string; icon: LucideIcon } & ({ to: '/perfil' | '/perfil/carteiras' | '/perfil/favoritos' } | { soon: string })
+type MenuItem = { label: string; icon: LucideIcon } & ({ to: '/perfil' | '/perfil/carteiras' | '/perfil/atividade' | '/perfil/favoritos' } | { soon: string })
 
 const menu: MenuItem[] = [
   { label: 'Dados do perfil', icon: UserRound, to: '/perfil' },
   { label: 'Carteiras', icon: MapPin, to: '/perfil/carteiras' },
-  { label: 'Atividade', icon: ShoppingCart, soon: 'atividade' },
+  { label: 'Atividade', icon: ShoppingCart, to: '/perfil/atividade' },
   { label: 'Lista de interesse', icon: Heart, to: '/perfil/favoritos' },
   { label: 'Ofertas', icon: SquareActivity, soon: 'ofertas' },
   { label: 'Arquivos baixados', icon: ArrowDownToLine, soon: 'arquivos-baixados' },

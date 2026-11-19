@@ -45,6 +45,7 @@ import {
   type QuoteInput,
   type SignupRequest,
   type WalletInput,
+  OrderList,
 } from './contracts'
 import { request } from './http'
 
@@ -105,7 +106,7 @@ export const api = {
     request(Order, { method: 'POST', url: '/orders', data: body, headers: { 'Idempotency-Key': idempotencyKey }, timeout: 8_000 }),
   getOrder: (id: string, { signal }: Opts = {}) => request(Order, { url: `/orders/${encodeURIComponent(id)}`, signal }),
   listOrders: (status?: Order['status'], { signal }: Opts = {}) =>
-    request(z.object({ items: z.array(Order) }), { url: '/orders', params: status ? { status } : {}, signal }),
+    request(OrderList, { url: '/orders', params: status ? { status } : {}, signal }),
 
   // Perfil
   getProfile: ({ signal }: Opts = {}) => request(User, { url: '/profile', signal }),

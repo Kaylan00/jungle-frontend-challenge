@@ -14,7 +14,7 @@
  */
 import type { QueryClient } from '@tanstack/react-query'
 import { io, type Socket } from 'socket.io-client'
-import { NftUpdatedEvent, OrderUpdatedEvent, SOCKET_EVENTS, type AdminNftListResponse, type NftDetail, type NftListResponse, type Order } from '@/api/contracts'
+import { NftUpdatedEvent, OrderUpdatedEvent, SOCKET_EVENTS, type AdminNftListResponse, type NftDetail, type NftListResponse, type Order, type OrderList } from '@/api/contracts'
 import { ADMIN_SOCKET_EVENTS, AdminActivityEvent, type AdminActivityList } from '@/api/admin-contracts'
 import { ADMIN_ACTIVITY_LIMIT, favoritesQuery, nftDetailQuery, qk } from '@/api/queries'
 import { sessionStore } from '@/api/session-store'
@@ -273,18 +273,22 @@ export class RealtimeClient {
     // Evento de outro usuário (ex.: sessão anterior) nunca toca o cache atual.
     if (!this.userId || e.userId !== this.userId) return
     const key = qk.order(this.userId, e.resource.id)
-    const cached = this.queryClient.getQueryData<Order>(key)
+    const listKey = qk.orders(this.userId)
+    const cached = this.queryClient.getQueryData<Order>(key) ?? this.queryClient.getQueryData<OrderList>(listKey)?.items.find((o) => o.id === e.resource.id)
     if (cached) this.noteVersion(`order:${e.resource.id}`, cached.version)
     if (!this.accept(e.eventId, `order:${e.resource.id}`, e.version)) return
 
-    this.queryClient.setQueryData<Order>(key, (old) => {
-      if (!old) return old
+    const apply = (old: Order): Order => {
       if (old.status !== 'pending') return old // terminal não regride
       // Explorador da rede do próprio pedido (Polygon e Solana não ficam no Etherscan).
       return { ...old, ...e.data, version: e.version, explorerUrl: e.data.txHash ? explorerUrl(old.network, e.data.txHash) : null }
-    })
+    }
+    this.queryClient.setQueryData<Order>(key, (old) => (old ? apply(old) : old))
+    // Histórico de compras (Atividade): o mesmo pedido muda na lista, com as mesmas regras.
+    this.queryClient.setQueryData<OrderList>(listKey, (old) => (old ? { ...old, items: old.items.map((o) => (o.id === e.resource.id ? apply(o) : o)) } : old))
     // Busca o recibo completo e atualiza o carrinho (itens comprados saem dele).
     void this.queryClient.invalidateQueries({ queryKey: key })
+    void this.queryClient.invalidateQueries({ queryKey: listKey, exact: true })
     void this.queryClient.invalidateQueries({ queryKey: qk.cart(this.userId) })
     void this.queryClient.invalidateQueries({ queryKey: qk.nfts })
   }

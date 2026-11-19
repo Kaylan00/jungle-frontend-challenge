@@ -6,6 +6,7 @@
 import { useRouterState } from '@tanstack/react-router'
 import { CheckoutPending } from '@/features/checkout/checkout-page'
 import { OrderPending } from '@/features/checkout/order-page'
+import { ActivityPending } from '@/features/profile/activity-page'
 import { ComingSoonPage } from '@/features/profile/coming-soon-page'
 import { FavoritesPending } from '@/features/profile/favorites-page'
 import { ProfilePending } from '@/features/profile/profile-page'
@@ -17,6 +18,7 @@ export function PrivatePagePending() {
   if (pathname === '/perfil') return <ProfilePending />
   if (pathname === '/perfil/carteiras') return <WalletsPending />
   if (pathname === '/perfil/favoritos') return <FavoritesPending />
+  if (pathname === '/perfil/atividade') return <ActivityPending />
   const soon = pathname.match(/^\/perfil\/([^/]+)$/)?.[1]
   if (soon && isSoonSection(soon)) return <ComingSoonPage section={soon} />
   if (pathname === '/pagamento') return <CheckoutPending />

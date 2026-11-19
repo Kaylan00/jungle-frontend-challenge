@@ -552,6 +552,10 @@ export const Order = z.object({
 })
 export type Order = z.infer<typeof Order>
 
+/** GET /orders: pedidos da conta logada, do mais recente para o mais antigo. */
+export const OrderList = z.object({ items: z.array(Order) })
+export type OrderList = z.infer<typeof OrderList>
+
 // ---------- Eventos de tempo real ----------
 
 const EventBase = z.object({

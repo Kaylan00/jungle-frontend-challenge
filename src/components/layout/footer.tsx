@@ -132,7 +132,7 @@ export function Footer() {
             <ul className="mt-[5px]">
               <li><Link to="/perfil" className={linkClass}>Meu perfil</Link></li>
               <li><Soon>Minha coleção</Soon></li>
-              <li><Soon>Atividade</Soon></li>
+              <li><Link to="/perfil/atividade" className={linkClass}>Atividade</Link></li>
               <li><Soon>Estúdio do criador</Soon></li>
               <li><Link to="/perfil/favoritos" className={linkClass}>Lista de interesse</Link></li>
             </ul>

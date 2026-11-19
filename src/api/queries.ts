@@ -173,6 +173,16 @@ export const cartQuery = (owner: Owner) =>
     staleTime: 0,
   })
 
+/** Histórico de compras (Atividade). Sempre confere ao abrir: um pedido novo ou que mudou de status aparece na hora. */
+export const ordersQuery = (owner: Owner) =>
+  queryOptions({
+    queryKey: qk.orders(owner),
+    queryFn: ({ signal }) => api.listOrders(undefined, { signal }),
+    staleTime: 0,
+    // Com pedido pendente, confere a cada 5 s mesmo sem socket (a mesma rede de segurança do recibo).
+    refetchInterval: (q) => (q.state.data?.items.some((o) => o.status === 'pending') ? 5_000 : false),
+  })
+
 export const orderQuery = (owner: Owner, id: string) =>
   queryOptions({
     queryKey: qk.order(owner, id),

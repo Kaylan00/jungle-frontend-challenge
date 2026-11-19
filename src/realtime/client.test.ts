@@ -1,7 +1,7 @@
 import { QueryClient, QueryObserver } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminActivity } from '@/api/admin-contracts'
-import type { NftDetail, NftListResponse, NftUpdatedEvent, Order, OrderUpdatedEvent } from '@/api/contracts'
+import type { NftDetail, NftListResponse, NftUpdatedEvent, Order, OrderList, OrderUpdatedEvent } from '@/api/contracts'
 import { ADMIN_ACTIVITY_LIMIT, qk } from '@/api/queries'
 import { sessionStore } from '@/api/session-store'
 import { clearPriceDrops, getPriceDrops, onPriceDropAlert, type PriceDrop } from '@/features/favorites/price-drops'
@@ -385,6 +385,36 @@ describe('order.updated', () => {
     socket().serverEmit('order.updated', orderEvent('evt-1', 2, {}, 'usr-bruno'))
     expect(qc.getQueryData<Order>(key)).toMatchObject({ status: 'pending', version: 1 })
     expect(qc.getQueryState(key)?.isInvalidated).toBe(false)
+  })
+
+  describe('histórico de compras (Atividade)', () => {
+    const listKey = qk.orders(USER)
+
+    it('o pedido muda também na lista, sem tocar os outros, e a lista é conferida de novo na API', () => {
+      qc.setQueryData<OrderList>(listKey, { items: [order(), order({ id: 'ord-2', number: 'JG-00002' })] })
+      socket().serverEmit('order.updated', orderEvent('evt-1', 2))
+      const items = qc.getQueryData<OrderList>(listKey)!.items
+      expect(items[0]).toMatchObject({ id: 'ord-1', status: 'confirmed', txHash: '0xabc', version: 2 })
+      expect(items[1]).toMatchObject({ id: 'ord-2', status: 'pending', version: 1 })
+      expect(qc.getQueryState(listKey)?.isInvalidated).toBe(true)
+    })
+
+    it('só com a lista no cache: evento antigo é ignorado e pedido terminal não volta a pendente', () => {
+      qc.setQueryData<OrderList>(listKey, { items: [order({ version: 3 })] })
+      socket().serverEmit('order.updated', orderEvent('evt-1', 2))
+      expect(qc.getQueryData<OrderList>(listKey)!.items[0]).toMatchObject({ status: 'pending', version: 3 })
+
+      qc.setQueryData<OrderList>(listKey, { items: [order({ status: 'rejected', version: 4 })] })
+      socket().serverEmit('order.updated', orderEvent('evt-11', 5, { status: 'confirmed' }))
+      expect(qc.getQueryData<OrderList>(listKey)!.items[0]).toMatchObject({ status: 'rejected', version: 4 })
+    })
+
+    it('evento de outro usuário não toca a lista', () => {
+      qc.setQueryData<OrderList>(listKey, { items: [order()] })
+      socket().serverEmit('order.updated', orderEvent('evt-1', 2, {}, 'usr-bruno'))
+      expect(qc.getQueryData<OrderList>(listKey)!.items[0]).toMatchObject({ status: 'pending', version: 1 })
+      expect(qc.getQueryState(listKey)?.isInvalidated).toBe(false)
+    })
   })
 
   it('sem usuário logado, nenhum evento de pedido é aplicado', () => {
