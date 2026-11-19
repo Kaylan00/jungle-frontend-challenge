@@ -21,6 +21,7 @@ const PRESET_LABEL: Record<string, string> = {
   'carteira-recusa': 'Carteira recusa conexão',
   'sessao-curta': 'Sessão de 60 s',
   'tempo-real-offline': 'Socket.IO fora do ar',
+  'eventos-caoticos': 'Eventos duplicados e antigos',
 }
 
 export default function ScenarioPanel() {

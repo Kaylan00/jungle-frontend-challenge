@@ -75,4 +75,26 @@ test.describe('Presets de cenário', () => {
     await app.mock('applyPreset', 'padrao')
     await expect(page.getByTestId('realtime-status')).toHaveAttribute('data-status', 'connected', { timeout: 6_000 })
   })
+
+  test('preset "eventos-caoticos": cada evento chega duplicado e seguido de uma versão antiga, e a tela só aplica o original', async ({ app, page }) => {
+    await app.goto('/nft/nft-01?edicao=nft-01-ed-3')
+    await app.realtimeConnected()
+    await app.mock('applyPreset', 'eventos-caoticos')
+    const price = page.getByTestId('detail-price')
+    await expect(price).toHaveText('1.19 ETH')
+    // Grava cada texto que o preço assumir: o 999 da versão antiga nunca pode aparecer, nem por um quadro.
+    await price.evaluate((el) => {
+      const w = window as unknown as { __prices: string[] }
+      w.__prices = []
+      new MutationObserver(() => w.__prices.push(el.textContent ?? '')).observe(el, { childList: true, subtree: true, characterData: true })
+    })
+    await app.mock('changePrice', 'nft-01', 'nft-01-ed-3', '1.40')
+    await expect(price).toHaveText('1.40 ETH')
+    // Sentinela: outro evento depois do caos; quando ele aparece, os extras do anterior já foram descartados.
+    await app.mock('changePrice', 'nft-01', 'nft-01-ed-3', '1.45')
+    await expect(price).toHaveText('1.45 ETH')
+    const seen = await page.evaluate(() => (window as unknown as { __prices: string[] }).__prices)
+    expect(seen.filter((t) => t.includes('999'))).toEqual([])
+    await expect(page.getByText('999')).toHaveCount(0)
+  })
 })

@@ -48,6 +48,7 @@ onRemoteReset(() => dropAllConnections())
 // (mesmo eventId e versão; o cliente deduplica). Pedido continua indo só para as conexões do dono; o feed do
 // painel (admin.activity) só para conexões de contas admin (papel lido da sessão no servidor, ao conectar).
 onDbEvent((event) => {
+  const chaos = getScenario().chaosEvents
   connections.forEach((c) => {
     if (event.type === 'admin.activity') {
       if (c.isAdmin) c.emit(ADMIN_SOCKET_EVENTS.activity, event)
@@ -55,10 +56,25 @@ onDbEvent((event) => {
     }
     if (event.type === 'order.updated') {
       // Evento de pedido só vai para o dono (isolamento entre usuários).
-      if (c.userId === event.userId) c.emit(SOCKET_EVENTS.orderUpdated, event)
+      if (c.userId !== event.userId) return
+      c.emit(SOCKET_EVENTS.orderUpdated, event)
+      if (chaos) {
+        c.emit(SOCKET_EVENTS.orderUpdated, event)
+        c.emit(SOCKET_EVENTS.orderUpdated, { ...event, eventId: `${event.eventId}-antigo`, version: event.version - 1, data: { status: 'pending', failureReason: null, txHash: null } })
+      }
       return
     }
     c.emit(SOCKET_EVENTS.nftUpdated, event)
+    if (chaos) {
+      // Cenário "eventos caóticos": duplicata (mesmo eventId) e versão antiga com dados absurdos, na mesma conexão.
+      c.emit(SOCKET_EVENTS.nftUpdated, event)
+      c.emit(SOCKET_EVENTS.nftUpdated, {
+        ...event,
+        eventId: `${event.eventId}-antigo`,
+        version: event.version - 1,
+        data: { ...event.data, price: '999', available: 0, editions: event.data.editions.map((e) => ({ ...e, price: '999', available: 0 })) },
+      })
+    }
   })
 })
 

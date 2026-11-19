@@ -35,6 +35,11 @@ export interface Scenario {
   sessionTtlSec: number
   /** Socket.IO fora do ar: conexões são derrubadas na hora */
   realtimeOffline: boolean
+  /**
+   * Eventos caóticos: cada nft.updated e order.updated chega três vezes pelo socket, o original, uma duplicata
+   * (mesmo eventId) e uma versão antiga com dados divergentes. O cliente precisa aplicar só o original.
+   */
+  chaosEvents: boolean
   faults: Fault[]
   /** Semente do gerador pseudoaleatório (latência variável reproduzível) */
   seed: number
@@ -49,6 +54,7 @@ export const DEFAULT_SCENARIO: Scenario = {
   walletRejectOnce: false,
   sessionTtlSec: 60 * 60 * 8,
   realtimeOffline: false,
+  chaosEvents: false,
   faults: [],
   seed: 42,
 }
@@ -76,6 +82,7 @@ export const PRESETS: Record<string, Partial<Scenario>> = {
   'carteira-recusa': { walletRejectOnce: true },
   'sessao-curta': { sessionTtlSec: 60 },
   'tempo-real-offline': { realtimeOffline: true },
+  'eventos-caoticos': { chaosEvents: true },
 }
 
 const STORAGE_KEY = 'jungle.mock.scenario.v1'
@@ -160,6 +167,7 @@ export function applyScenarioFromUrl(search: string) {
     if (k === 'payment' && (v === 'approve' || v === 'reject')) next.payment = v
     if (k === 'seed' && Number.isFinite(Number(v))) next.seed = Number(v)
     if (k === 'outOfOrder') next.outOfOrder = v !== 'false'
+    if (k === 'chaosEvents') next.chaosEvents = v !== 'false'
   }
   replaceScenario(next)
 }
