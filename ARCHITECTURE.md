@@ -144,7 +144,7 @@ Resposta sempre `202` neutra. Token `rst_` + 24 bytes aleatórios, guardado só 
 
 - `mocks/db.ts`: um estado (catálogo, favoritos, carrinhos, perfil, carteiras, cotações, pedidos, chaves de idempotência) no `localStorage`. Toda mudança gera o evento correspondente: REST e socket concordam. Estado salvo inválido é descartado na carga; versões antigas são migradas.
 - `mocks/handlers.ts`: rotas REST validadas pelos contratos. `mocks/realtime.ts`: servidor Socket.IO (`ws.link` + `toSocketIo`).
-- `mocks/scenario.ts`: latência (semente fixa, reproduzível), falhas por rota, resultado do pagamento, timeout do pedido, recusa da carteira, duração da sessão, socket fora do ar. Todo preset parte do cenário base inteiro (`presetScenario`): `?mock=padrao`, o "Padrão" do painel e `applyPreset('padrao')` zeram tudo; trocar de preset não herda o anterior; `reset()` restaura uma cópia nova do base; preset desconhecido é erro. Testes: `scenario.test.ts`, `e2e/22-cenarios-presets`.
+- `mocks/scenario.ts`: latência (semente fixa, reproduzível), falhas por rota, resultado do pagamento, timeout do pedido, recusa da carteira, duração da sessão, socket fora do ar e eventos caóticos (`eventos-caoticos`: cada `nft.updated` e `order.updated` sai pelo socket três vezes, o original, uma duplicata com o mesmo `eventId` e uma versão antiga com dados absurdos; o cliente aplica só o original). Todo preset parte do cenário base inteiro (`presetScenario`): `?mock=padrao`, o "Padrão" do painel e `applyPreset('padrao')` zeram tudo; trocar de preset não herda o anterior; `reset()` restaura uma cópia nova do base; preset desconhecido é erro. Testes: `scenario.test.ts`, `e2e/22-cenarios-presets`.
 - **Vigia do service worker** (`mocks/browser.ts` + `mocks/worker-watchdog.ts`): o navegador pode encerrar ou trocar o worker, e os pedidos passam a ir ao host (que devolve `index.html`). A camada de mocks confere com `GET /api/__health` (só o MSW responde `{ mock: true }`) quando um pedido `/api` termina sem o MSW ter visto o início, a cada 20 s com a aba visível, ao voltar à aba, ao voltar a rede e em `controllerchange`. Resposta errada → `worker.stop()` + `worker.start()`; worker saudável nunca é parado. Medido: 9 cards da página 3 em ~0,65 s após encerrar o worker. Testes: `worker-watchdog.test.ts`, `e2e/23-service-worker-recupera` (encerra pelo CDP).
 - `mocks/controls.ts`: `window.__jungleMock`, usada pelo painel de cenários e pelos testes; altera o servidor, nunca a interface.
 - Pagamentos pendentes são liquidados por um relógio do "servidor" (a cada 500 ms e na carga), então o pedido anda mesmo após refresh.
@@ -195,7 +195,7 @@ Resposta sempre `202` neutra. Token `rst_` + 24 bytes aleatórios, guardado só 
 | `13-recuperar-senha` | fluxo completo, link reusado/inválido/expirado, resposta neutra, falhas, foco, axe |
 | `14-filtros-ativos` | etiquetas removíveis, mín./máx. sincronizados |
 | `15-admin` | 403 para conta comum; preço mudado no painel chega a outra aba pelo socket; 409 de versão; cupom do painel vale no carrinho |
-| `16` a `18` | alerta de preço, sugestões de busca, compartilhar |
+| `16` e `17` | alerta de preço, sugestões de busca |
 | `19-seguranca` | cabeçalhos; app inteiro sob a CSP de produção; inline bloqueado |
 | `20-painel-casca` | entrada do painel, trilho, busca global, axe nas seções, pedidos ao vivo |
 | `21` a `23` | socket religado rápido, presets, service worker recuperado |
@@ -232,11 +232,10 @@ Sistema à parte no modelo de casca do CMS PIPA: trilho à esquerda, lousa arred
 - **Tempo real**: feed e números por `admin.activity`; edições usam `updateEdition` do banco e emitem `nft.updated` para a loja. Desativar cupom tira o cupom dos carrinhos e invalida as cotações.
 - **Dados expostos**: pedidos sem perfil do colecionador nem carteira; e-mail de usuário mascarado pelo servidor; usuários só leitura.
 
-## 14. Alerta de preço, busca com sugestões e compartilhar
+## 14. Alerta de preço e busca com sugestões
 
 - **"Preço caiu"** (`features/favorites/price-drops.ts`): depois de aceitar um `nft.updated`, compara com `previousPrice`; se caiu num favorito do usuário logado: toast com link, `aria-live` e selo em `/perfil/favoritos` (no `sessionStorage`, chave com o id do usuário, apagado na troca de sessão).
 - **Sugestões** (`features/catalog/search-suggest.tsx`): combobox ARIA 1.2, debounce 250 ms, mínimo 2 letras, `signal` cancela termo abandonado, carregando/vazio/erro.
-- **Compartilhar** (`features/nft/share-button.tsx`): `navigator.share` quando existe; senão copia o link canônico com "Link copiado".
 
 ## 15. Propagação entre abas do servidor simulado
 

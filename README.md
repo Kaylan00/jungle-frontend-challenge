@@ -126,6 +126,7 @@ O cenário fica no `localStorage` e sobrevive ao refresh. Cada preset (painel, `
 | `carteira-recusa` | A próxima conexão de carteira é recusada |
 | `sessao-curta` | Sessões novas duram 60 s |
 | `tempo-real-offline` | O servidor Socket.IO derruba as conexões e recusa as novas (ao religar, o cliente reconecta em até ~4 s) |
+| `eventos-caoticos` | Cada `nft.updated` e `order.updated` chega três vezes: o original, uma duplicata (mesmo `eventId`) e uma versão antiga com dados absurdos (preço 999, pedido voltando a pendente). A tela aplica só o original |
 
 ## Como reproduzir os fluxos de falha
 
@@ -157,6 +158,7 @@ O cenário fica no `localStorage` e sobrevive ao refresh. Cada preset (painel, `
 | Carteira recusa / desconexão | `?mock=carteira-recusa` e **Conectar** no pagamento; **Desconectar** depois de conectar | “Conexão recusada na carteira”; sem carteira conectada a revisão pede para conectar |
 | Eventos duplicados ou antigos | No detalhe do Emerald Ape #042: **Mudar preço**, depois **Duplicar evento** e **Evento antigo** | O preço não volta ao valor antigo |
 | Queda do tempo real | `?mock=tempo-real-offline` ou Painel → **Derrubar socket** | Indicador “Reconectando”; ao reconectar, os dados são conferidos pela REST |
+| Eventos duplicados e antigos | `?mock=eventos-caoticos`, depois mude um preço (Painel ou `__jungleMock.changePrice('nft-01','nft-01-ed-3','1.40')`) | O preço vai para o valor novo e nunca mostra o 999 da versão antiga; nada é anunciado duas vezes |
 | Pedido pendente sem conexão | Confirme uma compra e, ainda em “Processando pagamento”, Painel → **Desligar socket** e recarregue; depois **Ligar socket** | O estado vem da REST, sem criar outra compra |
 | Link de redefinição de senha inválido, usado ou expirado | `/redefinir-senha?token=qualquer`, o mesmo link aberto de novo, ou `await __jungleMock.expirePasswordResets()` antes de abrir | Mensagem do motivo e “Pedir um novo link” |
 
@@ -187,14 +189,14 @@ Toda tela que depende da API tem os três estados, no mesmo padrão visual do Fi
 | 11 | Teclado, foco em diálogos, validação de formulários (com axe) | `e2e/11-teclado-acessibilidade.spec.ts` e `e2e/24-acessibilidade-foco.spec.ts` (foco nos fluxos com conta, barras fixas, zoom de 400%, axe nas telas logadas) |
 | 12 | Skeletons em rede lenta, falha e nova tentativa | `e2e/12-carregamento-falhas.spec.ts` |
 
-- **Extras**: `e2e/13` a `e2e/23` e `e2e/25` (histórico de compras, recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, compartilhar, cabeçalhos de segurança/CSP, casca do painel, religar o socket em até 6 s, presets que partem do cenário base e service worker do MSW que cai e se recupera sozinho).
+- **Extras**: `e2e/13` a `e2e/23` e `e2e/25` (histórico de compras, recuperação de senha, filtros ativos, painel admin, alerta de preço, busca com sugestões, cabeçalhos de segurança/CSP, casca do painel, religar o socket em até 6 s, presets que partem do cenário base e service worker do MSW que cai e se recupera sozinho).
 - **Tempo, latência e eventos controlados pelo teste** (o enunciado pede): relógio do Playwright (`page.clock`) na expiração da sessão (`03`), na confirmação do pagamento, que fica pendente até o teste avançar o tempo (`06`), nas respostas fora de ordem (`01`) e no backoff de reconexão do socket (`21`); latência e falhas escolhidas por cenário; eventos disparados pelo controle dos mocks. Nenhum teste espera milissegundos fixos (`waitForTimeout`): para provar que um evento duplicado, antigo ou de outro usuário foi descartado, o teste manda um evento "sentinela" depois dele e grava tudo o que a tela mostrou e anunciou até lá (`10`, `16`). Única exceção de tempo real: o timeout do pedido (`07`), porque o limite de 8 s é do próprio XHR do navegador.
 - **Regressão visual**: `e2e/visual.spec.ts`, início, detalhe, carrinho e pagamento nos dois viewports; 8 baselines versionadas em `e2e/__screenshots__/`. As baselines são do Linux (o mesmo da CI): em Windows ou macOS esses 8 testes são pulados com aviso, porque a renderização de fontes muda entre sistemas. No Windows, rode-os pelo WSL.
 - **Relatório e traces**: relatório HTML em `playwright-report/` (`npm run test:e2e:report`); traces das falhas em `test-results/` (`trace: 'retain-on-failure'`).
 - **Unitários (Vitest)**: 19 arquivos, 307 testes: valores em ETH, contratos zod, cliente HTTP, **cliente REST de ponta a ponta** (cada função de `api` pelo Axios e pelos handlers MSW reais), chaves e opções do TanStack Query, cliente de tempo real, regras do servidor simulado (inclusive senha com PBKDF2), isolamento entre contas, rotas do painel admin, propagação entre abas, socket simulado com o `socket.io-client` de verdade (recusa e reconexão), presets de cenário e vigia do service worker.
 - **Cobertura** (`npm run test:coverage`, lógica que roda em Node): **92% das linhas, 87% das instruções, 85% das funções e 79% dos ramos**. A CI reprova abaixo de 90/85/82/76. Telas, hooks do React e módulos só de navegador ficam fora dessa conta, declarados em `vitest.config.ts`: quem os exercita são os E2E.
 - **Função de e-mail**: `npm run test:api`, 16 verificações com `fetch` falso e relógio controlado.
-- **CI** ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)): a cada push, tipos, lint, unitários com cobertura (relatório como artefato), `test:api`, build e a suíte E2E nos três viewports, publicando o relatório HTML e os traces como artefatos. Um teste que só passa na segunda tentativa reprova a CI (`failOnFlakyTests`): instabilidade não passa escondida. O Lighthouse roda sob demanda (`workflow_dispatch`).
+- **CI** ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)): a cada push, tipos, lint, unitários com cobertura (relatório como artefato), `test:api`, build e a suíte E2E nos três viewports, publicando o relatório HTML e os traces como artefatos. Um teste que só passa na segunda tentativa reprova a CI (`failOnFlakyTests`): instabilidade não passa escondida. A cada push no `main` roda também o Lighthouse (3 medições, mediana, resumo na página da execução e relatórios como artefato), sem reprovar o pipeline.
 
 A descrição de cada arquivo está em [ARCHITECTURE.md §10](./ARCHITECTURE.md#10-testes).
 
@@ -225,7 +227,6 @@ Nada desta seção é exigido pelo enunciado.
 - **Filtros ativos e preço digitável**: cada filtro vira uma etiqueta removível, com “Limpar tudo”; a faixa de preço aceita mínimo e máximo digitados, sincronizados com o slider.
 - **Busca com sugestões**: até 5 NFTs a partir de 2 letras, navegáveis por teclado.
 - **Alerta de preço**: queda de preço de um favorito gera aviso com link e selo “Caiu de …” na lista de favoritos.
-- **Compartilhar**: folha de compartilhamento do sistema quando existe; senão, copia o link.
 - **Histórico de compras** (`/perfil/atividade`): pedidos da conta com número, data, itens, total, rede e status (pendente, confirmado ou recusado com o motivo), link para o recibo; o status muda ao vivo pelo socket e a mudança é anunciada ao leitor de tela.
 - **Animações** (GSAP e Lenis), desligadas com `prefers-reduced-motion`. São só realce: nada fica escondido esperando a rolagem (todo o conteúdo aparece desde o primeiro render, inclusive em print de página inteira e na impressão).
 - **CI** no GitHub Actions e **testes unitários** (Vitest).
