@@ -27,7 +27,6 @@ import { formatEth } from '@/lib/eth'
 import { usePageTitle } from '@/lib/page-title'
 import { cn } from '@/lib/utils'
 import { useRealtimeClient } from '@/realtime/use-realtime'
-import { rememberPendingOrder } from './order-attempt'
 
 const PROVIDER_LABEL = {
   walletconnect: 'WalletConnect',
@@ -55,8 +54,7 @@ export function OrderPage({ orderId }: { orderId: string }) {
     previous.current = status
     if (status === 'confirmed') announce('Pagamento confirmado. Seus NFTs estão na sua carteira.', 'assertive')
     if (status === 'rejected') announce('Pagamento recusado. Seus itens continuam no carrinho.', 'assertive')
-    if (status !== 'pending') rememberPendingOrder(user!.id, null)
-  }, [status, user])
+  }, [status])
 
   if (query.isError) {
     if (notFound) {

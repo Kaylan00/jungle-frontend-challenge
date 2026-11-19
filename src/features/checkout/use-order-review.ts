@@ -9,7 +9,7 @@ import { qk } from '@/api/queries'
 import { useSession } from '@/features/auth/use-session'
 import { announce } from '@/lib/announcer'
 import { clearDraft, type CheckoutValues } from './checkout-model'
-import { clearAttempt, newIdempotencyKey, rememberPendingOrder, saveAttempt, submitAttempt, type OrderAttempt } from './order-attempt'
+import { clearAttempt, newIdempotencyKey, saveAttempt, submitAttempt, type OrderAttempt } from './order-attempt'
 import type { CheckoutFormApi } from './use-checkout-form'
 import type { WalletConnectionApi } from './use-wallet-connection'
 
@@ -108,7 +108,6 @@ export function useOrderReview({ cart, checkout, connection }: { cart: Cart; che
     try {
       const order = await submitAttempt(attempt, (n) => announce(`Sem resposta do servidor. Reenviando o mesmo pedido (tentativa ${n + 1})…`))
       clearAttempt()
-      rememberPendingOrder(user!.id, order.id)
       queryClient.setQueryData(qk.order(user!.id, order.id), order)
       clearDraft()
       setOpen(false)

@@ -37,7 +37,7 @@ import { CHECKOUT_GRID, SUBMIT_BAR } from './checkout-model'
 import { CheckoutSkeleton } from './checkout-skeleton'
 import { CheckoutSummary } from './checkout-summary'
 import { CollectorProfileSection } from './collector-profile-section'
-import { clearAttempt, loadAttempt, rememberPendingOrder, submitAttempt, type OrderAttempt } from './order-attempt'
+import { clearAttempt, loadAttempt, submitAttempt, type OrderAttempt } from './order-attempt'
 import { ReviewDialog } from './review-dialog'
 import { useCheckoutForm } from './use-checkout-form'
 import { useOrderReview, type OrderReviewApi } from './use-order-review'
@@ -197,7 +197,6 @@ function RecoverAttempt({ attempt, onGiveUp }: { attempt: OrderAttempt; onGiveUp
     try {
       const order = await submitAttempt(attempt)
       clearAttempt()
-      rememberPendingOrder(attempt.userId, order.id)
       queryClient.setQueryData(qk.order(attempt.userId, order.id), order)
       void navigate({
         to: '/pedido/$orderId',

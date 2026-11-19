@@ -15,7 +15,6 @@ import { api } from '@/api/endpoints'
 import { ApiError, toApiError } from '@/api/http'
 
 const ATTEMPT_KEY = 'kurio.checkout.attempt'
-const PENDING_KEY = (userId: string) => `kurio.pendingOrder.${userId}`
 
 export interface OrderAttempt {
   userId: string
@@ -52,23 +51,6 @@ export function clearAttempt() {
     sessionStorage.removeItem(ATTEMPT_KEY)
   } catch {
     /* ignore */
-  }
-}
-
-export function rememberPendingOrder(userId: string, orderId: string | null) {
-  try {
-    if (orderId) localStorage.setItem(PENDING_KEY(userId), orderId)
-    else localStorage.removeItem(PENDING_KEY(userId))
-  } catch {
-    /* ignore */
-  }
-}
-
-export function getRememberedPendingOrder(userId: string) {
-  try {
-    return localStorage.getItem(PENDING_KEY(userId))
-  } catch {
-    return null
   }
 }
 
