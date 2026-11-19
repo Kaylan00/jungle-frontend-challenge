@@ -169,9 +169,9 @@ O cenário fica no `localStorage` e sobrevive ao refresh. Cada preset (painel, `
 | Clique repetido | Clique várias vezes em **Confirmar compra** | Um pedido só |
 | Pagamento recusado | `?mock=pagamento-recusado` e compre | “Pagamento recusado”; os itens continuam no carrinho |
 | Carteira recusa / desconexão | `?mock=carteira-recusa` e **Conectar** no pagamento; **Desconectar** depois de conectar | “Conexão recusada na carteira”; sem carteira conectada a revisão pede para conectar |
-| Eventos duplicados ou antigos | No detalhe do Emerald Ape #042: **Mudar preço**, depois **Duplicar evento** e **Evento antigo** | O preço não volta ao valor antigo |
+| Um evento duplicado ou antigo | No detalhe do Emerald Ape #042: **Mudar preço**, depois **Duplicar evento** e **Evento antigo** | O preço não volta ao valor antigo |
 | Queda do tempo real | `?mock=tempo-real-offline` ou Painel → **Derrubar socket** | Indicador “Reconectando”; ao reconectar, os dados são conferidos pela REST |
-| Eventos duplicados e antigos | `?mock=eventos-caoticos`, depois mude um preço (Painel ou `__jungleMock.changePrice('nft-01','nft-01-ed-3','1.40')`) | O preço vai para o valor novo e nunca mostra o 999 da versão antiga; nada é anunciado duas vezes |
+| Todos os eventos chegando repetidos e fora de ordem | `?mock=eventos-caoticos`, depois mude um preço (Painel ou `__jungleMock.changePrice('nft-01','nft-01-ed-3','1.40')`) | O preço vai para o valor novo e nunca mostra o 999 da versão antiga; nada é anunciado duas vezes |
 | Pedido pendente sem conexão | Confirme uma compra e, ainda em “Processando pagamento”, Painel → **Desligar socket** e recarregue; depois **Ligar socket** | O estado vem da REST, sem criar outra compra |
 | Link de redefinição de senha inválido, usado ou expirado | `/redefinir-senha?token=qualquer`, o mesmo link aberto de novo, ou `await __jungleMock.expirePasswordResets()` antes de abrir | Mensagem do motivo e “Pedir um novo link” |
 
@@ -217,18 +217,18 @@ A descrição de cada arquivo está em [ARCHITECTURE.md §10](./ARCHITECTURE.md#
 
 Num PC Windows comum, com o Chrome do sistema contra o site publicado (Lighthouse 13.6, 5 execuções por página e perfil, mediana):
 
-Início (`/`), execução mediana de cada perfil:
-
-| Mobile | Desktop |
-| --- | --- |
-| ![Lighthouse mobile do início: Performance 98, Accessibility 100, Best Practices 100, SEO 100](./docs/img/lighthouse-mobile.png) | ![Lighthouse desktop do início: Performance 100, Accessibility 100, Best Practices 100, SEO 100](./docs/img/lighthouse-desktop.png) |
-
 | Página | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | TBT | CLS |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `/` | mobile | 98 | 100 | 100 | 100 | 2,07 s | 146 ms | 0 |
 | `/` | desktop | 100 | 100 | 100 | 100 | 0,51 s | 1 ms | 0,001 |
 | `/nft/nft-01` | mobile | 99 | 100 | 100 | 100 | 2,04 s | 77 ms | 0 |
 | `/nft/nft-01` | desktop | 100 | 100 | 100 | 100 | 0,49 s | 0 ms | 0 |
+
+Notas da página inicial (execução mediana de cada perfil):
+
+| Mobile | Desktop |
+| --- | --- |
+| ![Lighthouse mobile do início: Performance 98, Accessibility 100, Best Practices 100, SEO 100](./docs/img/lighthouse-mobile.png) | ![Lighthouse desktop do início: Performance 100, Accessibility 100, Best Practices 100, SEO 100](./docs/img/lighthouse-desktop.png) |
 
 Pior caso das 20 execuções no mobile: 96. O script `npm run lighthouse` (build local em HTTPS/HTTP2, 5 execuções) dá números menores quando roda num ambiente lento, como Linux dentro do Windows: lá o início no mobile ficou entre 82 e 90. O motivo, o efeito do service worker do MSW na simulação, o passo a passo das otimizações e os relatórios de cada execução estão em [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md).
 
