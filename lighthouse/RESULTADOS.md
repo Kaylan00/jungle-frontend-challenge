@@ -45,7 +45,7 @@ Metas: Performance ≥ 90 · Accessibility ≥ 95 · Best Practices ≥ 95 · SE
 
 1. **Variação entre momentos e entre máquinas.** O perfil mobile simula CPU 4× mais lenta a partir do tempo real
    medido, então a carga do computador entra no número. Dentro desta rodada o início foi de 87 a 92. Horas depois,
-   a mesma build (commit `a543c5b`, sem nenhuma mudança) mediu **82** de mediana no início, com TBT de 620 ms em vez
+   a mesma build (commit `62cb0d7`, sem nenhuma mudança) mediu **82** de mediana no início, com TBT de 620 ms em vez
    de 363 ms. No ambiente do script o início no mobile fica
    **entre 82 e 90**; no Windows nativo, 96 a 98 (tabela acima). O detalhe fica uns 4 pontos acima do início.
 2. **Arquivos servidos pelo service worker do MSW.** Depois que o MSW assume a página, os chunks, a fonte e as artes
@@ -101,10 +101,10 @@ Playwright compara as telas pixel a pixel com as referências e passou sem regra
 
 ### Regressão encontrada e corrigida antes
 
-Uma rodada anterior (2026-11-18 16:10 UTC, commit `edc8b26`, relatórios em
+Uma rodada anterior (2026-11-18 16:10 UTC, commit `aa360ef`, relatórios em
 [`reports/2026-11-18T16-10-14/`](./reports/2026-11-18T16-10-14/), ainda em HTTP/1.1) mediu 82 / 84 no mobile e
 99 / 98 no desktop. Medindo de novo antes da entrega, os números tinham caído para 72 / 73 e 91 / 92. Medindo
-commit a commit, a queda veio de um único commit (`46898e6`): os skeletons de espera das rotas
+commit a commit, a queda veio de um único commit (`651d825`): os skeletons de espera das rotas
 (`pendingComponent`) entraram no pacote comum, porque o plugin do TanStack Router por padrão só separa
 `component`, `errorComponent` e `notFoundComponent`. Com eles foram as páginas de onde vêm (pagamento, perfil,
 seções do painel) e o chunk que toda página avalia antes de pintar dobrou (144 → 288 kB). Correção em
