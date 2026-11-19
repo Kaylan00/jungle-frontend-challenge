@@ -11,6 +11,21 @@ Solução do [desafio de frontend da Jungle Gaming](https://github.com/junglegam
 - **Auditoria Lighthouse**: [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md)
 - **Segurança**: [SECURITY.md](./SECURITY.md)
 
+## Em 30 segundos
+
+<img src="./e2e/__screenshots__/visual.spec.ts/inicio-desktop.png" alt="Página inicial no desktop" width="560"> <img src="./e2e/__screenshots__/visual.spec.ts/inicio-mobile.png" alt="Página inicial no celular" width="150">
+
+| O que importa | O que foi entregue | Onde conferir |
+| --- | --- | --- |
+| Eliminatórios | Os seis atendidos, cada um com teste ou código que prova | [tabela abaixo](#critérios-eliminatórios) |
+| Fidelidade ao Figma | Desktop e mobile como composições próprias, medidas no Figma; tablet e telas largas adaptados | [Telas](#telas), baselines visuais em `e2e/__screenshots__/` |
+| Compra segura | Pedido idempotente (timeout, clique repetido ou refresh recuperam o mesmo pedido), cotação com 409 quando o preço muda, recibo só com a confirmação da simulação | `e2e/06`, `e2e/07`, `e2e/09` |
+| Tempo real que aguenta caos | Socket.IO de verdade; eventos duplicados, antigos, de outra conta ou fora de ordem são descartados; ao reconectar, a REST reconcilia | preset `?mock=eventos-caoticos`, `e2e/10`, `e2e/22` |
+| Todo cenário de falha reproduzível | Painel de cenários e `?mock=` no site publicado: latência, 5xx, sem rede, sessão expirada, pagamento recusado, socket caído | [Como reproduzir](#como-reproduzir-os-fluxos-de-falha) |
+| Testes | 178 E2E em desktop, tablet e mobile, sem esperas fixas e com relógio controlado; 311 unitários; CI reprova teste instável | [Testes](#testes), selo da CI acima |
+| Qualidade medida | Lighthouse 98–100 em Performance e 100 em Accessibility, Best Practices e SEO; typecheck e lint sem avisos | [Lighthouse](#lighthouse) |
+| Além do pedido | Painel admin com permissão (403) e conflito (409), histórico de compras ao vivo, alerta de preço, e-mail real de recuperação de senha | [Extras](#além-do-pedido-extras) |
+
 ## Critérios eliminatórios
 
 Os seis do enunciado, com onde conferir. Tabela completa, com o que cada um exige e como verificar, em [CHECKLIST_DESAFIO.md §11](./CHECKLIST_DESAFIO.md#11-critérios-eliminatórios-um-por-um).
