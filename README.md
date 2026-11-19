@@ -230,6 +230,13 @@ Nada desta seção é exigido pelo enunciado.
 - **Painel Kurio Admin** (`/admin`, conta `admin@kurio.test`): visão geral com eventos ao vivo, NFTs e edições (preço, estoque, status, destaque), cupons, pedidos e usuários (somente leitura, e-mail mascarado), busca global (Ctrl+K) e tema claro/escuro. A API confere o papel em toda rota `/api/admin/*` (401/403) e gravações concorrentes recebem 409 com os valores atuais. Detalhes em [ARCHITECTURE.md §13](./ARCHITECTURE.md#13-painel-administrativo-kurio-admin-e-permissão).
 - **Tempo real entre abas**: abas do mesmo navegador dividem o estado e os eventos do servidor simulado (Web Locks + `BroadcastChannel`), cada uma recebendo pelo próprio socket. Ver o passo 3 do roteiro e [ARCHITECTURE.md §15](./ARCHITECTURE.md#15-propagação-entre-abas-do-servidor-simulado).
 - **Recuperação de senha**: `/recuperar-senha` com resposta neutra, link de uso único válido por 30 min e encerramento das sessões abertas. O e-mail é simulado (link “Abrir e-mail simulado” na tela, ou `__jungleMock.lastEmail('ana@kurio.test')`); o envio real pelo Brevo via Vercel Function é opcional e fica desligado sem as variáveis.
+
+  O e-mail segue a identidade do site (cores, fonte mono, campo de senha mascarada) e foi montado para clientes de e-mail: tabelas, estilos inline e botão que funciona mesmo sem CSS externo.
+
+  | Desktop | Celular |
+  | --- | --- |
+  | ![E-mail de redefinição de senha no desktop](./docs/img/email-redefinir-senha.png) | ![E-mail de redefinição de senha no celular](./docs/img/email-redefinir-senha-mobile.png) |
+
 - **Filtros ativos e preço digitável**: cada filtro vira uma etiqueta removível, com “Limpar tudo”; a faixa de preço aceita mínimo e máximo digitados, sincronizados com o slider.
 - **Busca com sugestões**: até 5 NFTs a partir de 2 letras, navegáveis por teclado.
 - **Alerta de preço**: queda de preço de um favorito gera aviso com link e selo “Caiu de …” na lista de favoritos.

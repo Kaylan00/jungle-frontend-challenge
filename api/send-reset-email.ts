@@ -226,29 +226,85 @@ function textContent(link: string) {
   ].join('\n')
 }
 
-function htmlContent(link: string) {
+/**
+ * HTML do e-mail com a identidade da Kurio (fundo marrom, laranja, fonte mono, "KURIO" espaçado). Feito para
+ * clientes de e-mail: tabelas, estilos inline, botão "à prova de bala" (célula com cor) e nada que dependa de
+ * CSS externo ou JavaScript. `origin` é o do deploy, para os links do rodapé.
+ */
+export function htmlContent(link: string, origin: string) {
   const href = escapeHtml(link)
+  const home = escapeHtml(origin)
+  const mono = "'Roboto Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
 <title>${SUBJECT}</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  @media (max-width: 480px) {
+    .px { padding-left: 22px !important; padding-right: 22px !important; }
+    .title { font-size: 22px !important; line-height: 30px !important; }
+  }
+</style>
 </head>
 <body style="margin:0;padding:0;background:#140d0a;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#140d0a;">Seu link para criar uma senha nova vale por ${LINK_TTL_MIN} minutos e só pode ser usado uma vez.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#140d0a;">
-<tr><td align="center" style="padding:32px 16px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#241612;border-bottom:8px solid #d28a4c;font-family:'Roboto Mono',Menlo,Consolas,monospace;color:#f5ece4;">
-<tr><td style="padding:32px 32px 8px;font-size:28px;font-weight:700;letter-spacing:0.11em;">KURIO</td></tr>
-<tr><td style="padding:16px 32px 0;font-size:18px;font-weight:700;">Redefinir a senha</td></tr>
-<tr><td style="padding:12px 32px 0;font-size:15px;line-height:24px;color:#e6d6c8;">Recebemos um pedido para redefinir a senha da sua conta Kurio. Para criar uma senha nova, use o botão abaixo. O link vale por ${LINK_TTL_MIN} minutos e só pode ser usado uma vez.</td></tr>
-<tr><td style="padding:24px 32px;">
-<a href="${href}" style="display:inline-block;background:#d28a4c;color:#140d0a;font-size:16px;font-weight:700;text-decoration:none;padding:13px 24px;border-radius:4px;">Criar senha nova</a>
+<tr><td align="center" style="padding:36px 14px 40px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:${mono};color:#f5f1eb;">
+
+<tr><td style="padding:0 4px 22px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td style="font-size:18px;font-weight:700;letter-spacing:0.18em;color:#f5f1eb;"><a href="${home}" style="color:#f5f1eb;text-decoration:none;">KURIO</a></td>
+    <td align="right"><span style="display:inline-block;border:1px solid #442c1b;border-radius:999px;padding:5px 12px;font-size:11px;letter-spacing:0.06em;color:#cfb28c;">SEGURANÇA DA CONTA</span></td>
+  </tr></table>
 </td></tr>
-<tr><td style="padding:0 32px;font-size:13px;line-height:20px;color:#c9a785;">Se o botão não abrir, copie e cole este endereço no navegador:<br><a href="${href}" style="color:#e89b55;word-break:break-all;">${href}</a></td></tr>
-<tr><td style="padding:24px 32px 32px;font-size:13px;line-height:20px;color:#c9a785;">Se não foi você, ignore este e-mail: sua senha continua a mesma.</td></tr>
+
+<tr><td style="background:#241612;border:1px solid #442c1b;border-radius:14px;overflow:hidden;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="height:4px;line-height:4px;font-size:0;background:#d28a4c;border-radius:14px 14px 0 0;">&nbsp;</td></tr>
+    <tr><td class="px" style="padding:34px 36px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="background:#140d0a;border:1px solid #442c1b;border-radius:8px;"><tr>
+        <td style="padding:10px 14px;font-size:12px;color:#cfb28c;letter-spacing:0.04em;">senha</td>
+        <td style="padding:10px 16px 10px 0;font-size:18px;letter-spacing:0.22em;color:#e89b55;">&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;<span style="color:#f5f1eb;font-weight:700;">|</span></td>
+      </tr></table>
+    </td></tr>
+    <tr><td class="px title" style="padding:26px 36px 0;font-size:26px;line-height:34px;font-weight:700;color:#f5f1eb;">Vamos criar uma senha nova</td></tr>
+    <tr><td class="px" style="padding:14px 36px 0;font-size:15px;line-height:25px;color:#e6d6c8;">Recebemos um pedido para redefinir a senha da sua conta Kurio. Toque no botão abaixo para escolher a nova senha e voltar às suas coleções.</td></tr>
+    <tr><td class="px" style="padding:28px 36px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td bgcolor="#d28a4c" style="border-radius:8px;">
+          <a href="${href}" style="display:inline-block;padding:15px 30px;font-family:${mono};font-size:15px;font-weight:700;color:#140d0a;text-decoration:none;border-radius:8px;">Criar senha nova &rarr;</a>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td class="px" style="padding:22px 36px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="padding:6px 12px;background:#2c1d19;border-radius:999px;font-size:12px;color:#cfb28c;">&#10003; Vale por ${LINK_TTL_MIN} min</td>
+        <td style="width:8px;font-size:0;">&nbsp;</td>
+        <td style="padding:6px 12px;background:#2c1d19;border-radius:999px;font-size:12px;color:#cfb28c;">&#10003; Uso único</td>
+      </tr></table>
+    </td></tr>
+    <tr><td class="px" style="padding:28px 36px 0;"><div style="height:1px;line-height:1px;font-size:0;background:#442c1b;">&nbsp;</div></td></tr>
+    <tr><td class="px" style="padding:20px 36px 0;font-size:12px;line-height:20px;color:#cfb28c;">Se o botão não abrir, copie e cole este endereço no navegador:<br><a href="${href}" style="color:#e89b55;word-break:break-all;">${href}</a></td></tr>
+    <tr><td class="px" style="padding:22px 36px 34px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1b110d;border-left:3px solid #e89b55;border-radius:6px;"><tr>
+        <td style="padding:14px 16px;font-size:12px;line-height:20px;color:#e6d6c8;"><strong style="color:#f5f1eb;">Não foi você?</strong> Ignore este e-mail: sua senha continua a mesma. A Kurio nunca pede sua senha por e-mail.</td>
+      </tr></table>
+    </td></tr>
+  </table>
+</td></tr>
+
+<tr><td align="center" style="padding:26px 8px 0;font-size:12px;line-height:20px;color:#8a735f;">
+  <a href="${home}" style="color:#cfb28c;text-decoration:none;">Catálogo</a>&nbsp;&nbsp;&middot;&nbsp;&nbsp;<a href="${home}/perfil" style="color:#cfb28c;text-decoration:none;">Minha conta</a>&nbsp;&nbsp;&middot;&nbsp;&nbsp;<a href="${home}/recuperar-senha" style="color:#cfb28c;text-decoration:none;">Pedir outro link</a><br>
+  <span style="letter-spacing:0.12em;">KURIO</span> &middot; marketplace de NFTs (projeto de demonstração)
+</td></tr>
+
 </table>
-<p style="margin:16px 0 0;font-family:Menlo,Consolas,monospace;font-size:12px;color:#8a735f;">Kurio, marketplace de NFTs (projeto de demonstração)</p>
 </td></tr>
 </table>
 </body>
@@ -305,7 +361,7 @@ export async function POST(request: Request): Promise<Response> {
         sender: { name: config.senderName, email: config.senderEmail },
         to: [{ email: to }],
         subject: SUBJECT,
-        htmlContent: htmlContent(link),
+        htmlContent: htmlContent(link, allowedOrigin),
         textContent: textContent(link),
         tags: ['password-reset'],
       }),
