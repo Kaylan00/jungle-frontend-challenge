@@ -11,6 +11,19 @@ Solução do [desafio de frontend da Jungle Gaming](https://github.com/junglegam
 - **Auditoria Lighthouse**: [lighthouse/RESULTADOS.md](./lighthouse/RESULTADOS.md)
 - **Segurança**: [SECURITY.md](./SECURITY.md)
 
+## Critérios eliminatórios
+
+Os seis do enunciado, com onde conferir. Tabela completa, com o que cada um exige e como verificar, em [CHECKLIST_DESAFIO.md §11](./CHECKLIST_DESAFIO.md#11-critérios-eliminatórios-um-por-um).
+
+| Critério | Como a entrega cumpre | Prova |
+| --- | --- | --- |
+| Uso efetivo da stack | TanStack Router e Query, Axios (cliente único com zod), `socket.io-client`, Tailwind/shadcn, MSW (REST e Socket.IO) e Playwright, cada um com papel real | `package.json`, `src/api/`, `src/realtime/client.ts` |
+| Fluxos não só visuais | Catálogo, carrinho, cupom, compra, conta, perfil, carteiras e favoritos passam pela API simulada, com as regras no servidor (estoque, cotação, 409, idempotência) | `e2e/05`, `06`, `08`, `25` |
+| Compra confirmada só pela simulação | O pedido nasce `pending` e só vira `confirmed` pela resposta da API ou pelo `order.updated`; o recibo é o snapshot devolvido | `e2e/06` (relógio controlado), `e2e/07` |
+| Sem exposição entre usuários | 403 para recurso de outra conta, evento de pedido filtrado por usuário no servidor e no cliente, cache privado limpo na troca de conta (inclusive vinda de outra aba) | `src/mocks/isolation.test.ts`, `e2e/03`, `e2e/10` |
+| Eventos não simulados na UI | Os eventos saem do banco simulado e chegam pelo `socket.io-client`; nenhuma tela importa os mocks | `src/mocks/realtime.test.ts` (cliente real contra o mock), `e2e/09`, `10`, `22` |
+| E2E executáveis | `npm run test:e2e` a partir de um checkout limpo, desktop, tablet e mobile, sem esperas fixas; CI a cada push, reprovando teste instável | [Actions](https://github.com/Kaylan00/jungle-frontend-challenge/actions) |
+
 ## Credenciais fictícias
 
 | Conta | E-mail | Senha | Para quê |
