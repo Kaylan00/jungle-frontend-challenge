@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Category, Network, NftListResponse } from '@/api/contracts'
 import { Checkbox as CheckboxPrimitive } from 'radix-ui'
 import { Button } from '@/components/ui/button'
@@ -80,14 +80,17 @@ export function CatalogFilters({
   const maxInput = useRef<HTMLInputElement>(null)
   const errorId = `${idPrefix}-price-error`
 
-  // A URL mudou por fora (etiqueta removida, voltar do navegador, "Limpar tudo"): o rascunho acompanha.
-  useEffect(() => {
+  // A URL mudou por fora (etiqueta removida, voltar do navegador, "Limpar tudo"): o rascunho acompanha,
+  // ajustado durante a renderização (sem efeito nem um quadro com o valor antigo).
+  const source = `${search.minPrice ?? ''}|${search.maxPrice ?? ''}|${lo}|${hi}`
+  const [syncedSource, setSyncedSource] = useState(source)
+  if (syncedSource !== source) {
+    setSyncedSource(source)
     const r = applied()
     setRange(r)
     setText(formatRange(r))
     setError(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.minPrice, search.maxPrice, lo, hi])
+  }
 
   const fromSlider = (v: number[]) => {
     const r: Range = [v[0], v[1]]

@@ -14,7 +14,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { CornerDownLeft, ExternalLink, Gem, Monitor, Moon, Search, Sun, TicketPercent, type LucideIcon } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from 'react'
 import { adminCouponsQuery, adminSearchNftsQuery } from '@/api/queries'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { useSession } from '@/features/auth/use-session'
@@ -124,15 +124,19 @@ function PaletteBody({ close }: { close: () => void }) {
     return [...areas, ...nftItems, ...couponItems, ...themeItems]
   }, [q, debounced, nfts.data, coupons.data, navigate, close, themeChoice])
 
-  // Lista mudou: a seleção volta ao primeiro resultado.
-  useEffect(() => setActive(0), [q])
+  // Lista mudou: a seleção volta ao primeiro resultado (ajustado durante a renderização).
+  const [activeFor, setActiveFor] = useState(q)
+  if (activeFor !== q) {
+    setActiveFor(q)
+    setActive(0)
+  }
   const current = Math.min(active, Math.max(0, results.length - 1))
   const optionId = (i: number) => `${listId}-opt-${i}`
 
-  useEffect(() => {
-    listRef.current?.querySelector(`#${CSS.escape(optionId(current))}`)?.scrollIntoView({ block: 'nearest' })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current])
+  const scrollToOption = useEffectEvent((i: number) => {
+    listRef.current?.querySelector(`#${CSS.escape(optionId(i))}`)?.scrollIntoView({ block: 'nearest' })
+  })
+  useEffect(() => scrollToOption(current), [current])
 
   const searchingNfts = q.length >= 2 && (fold(debounced) !== q || nfts.isFetching)
   const groups = (['Áreas', 'NFTs', 'Cupons', 'Tema'] as const).map((g) => ({ g, items: results.map((r, i) => ({ r, i })).filter(({ r }) => r.group === g) }))

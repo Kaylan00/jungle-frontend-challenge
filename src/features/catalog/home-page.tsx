@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { SortOption } from '@/api/contracts'
 import { featuredQuery, nftListQuery } from '@/api/queries'
 import { EmptyState, ErrorState } from '@/components/shared/error-state'
@@ -84,15 +84,15 @@ function useSearchTerm(search: CatalogSearch, update: ReturnType<typeof useCatal
     pushed.current = q
     setTerm(q)
   }, [search.q])
-  useEffect(() => {
-    const next = term.trim()
+  // Grava na URL com a URL e o `update` mais recentes; o efeito abaixo só reage ao texto digitado.
+  const commit = useEffectEvent((next: string) => {
     if ((search.q ?? '') === next) return
-    const t = setTimeout(() => {
-      pushed.current = next
-      void update({ q: next || undefined })
-    }, 350)
+    pushed.current = next
+    void update({ q: next || undefined })
+  })
+  useEffect(() => {
+    const t = setTimeout(() => commit(term.trim()), 350)
     return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term])
   return [term, setTerm] as const
 }

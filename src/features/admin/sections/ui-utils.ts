@@ -1,5 +1,5 @@
 /** Funções e hooks das seções do Kurio Admin (separados dos componentes por causa do Fast Refresh). */
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import Decimal from 'decimal.js'
 import type { OrderStatus } from '@/api/contracts'
 import { toEthString } from '@/lib/eth'
@@ -7,14 +7,18 @@ import { toEthString } from '@/lib/eth'
 /** Termo digitado → URL depois de uma pausa (refresh e voltar mantêm a busca). */
 export function useDebouncedSearch(urlValue: string | undefined, apply: (value: string | undefined) => void) {
   const [term, setTerm] = useState(urlValue ?? '')
-  // A URL mudou por fora (voltar, link): o campo acompanha.
-  // oxlint-disable-next-line react/set-state-in-effect
-  useEffect(() => setTerm(urlValue ?? ''), [urlValue])
+  // A URL mudou por fora (voltar, link): o campo acompanha, ajustado durante a renderização (sem efeito).
+  const [syncedUrl, setSyncedUrl] = useState(urlValue)
+  if (syncedUrl !== urlValue) {
+    setSyncedUrl(urlValue)
+    setTerm(urlValue ?? '')
+  }
+  const commit = useEffectEvent((next: string) => {
+    if ((urlValue ?? '') !== next) apply(next || undefined)
+  })
   useEffect(() => {
-    if ((urlValue ?? '') === term.trim()) return
-    const t = setTimeout(() => apply(term.trim() || undefined), 300)
+    const t = setTimeout(() => commit(term.trim()), 300)
     return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term])
   return [term, setTerm] as const
 }

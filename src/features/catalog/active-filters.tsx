@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import { announce } from '@/lib/announcer'
 import { cn } from '@/lib/utils'
 import { activeFilters, type ActiveFilter, type CatalogSearch } from './search-params'
@@ -32,16 +32,16 @@ export function ActiveFilters({
   const pendingFocus = useRef<number | null>(null)
   const keys = filters.map((f) => f.key).join('|')
 
-  useEffect(() => {
+  const restoreFocus = useEffectEvent(() => {
     const index = pendingFocus.current
     if (index === null) return
     pendingFocus.current = null
     const buttons = listRef.current?.querySelectorAll<HTMLButtonElement>('button')
     if (buttons?.length) buttons[Math.min(index, buttons.length - 1)].focus()
     else focusFallback()
-    // Só reage quando o conjunto de filtros muda (a URL já foi atualizada).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keys])
+  })
+  // Só reage quando o conjunto de filtros muda (a URL já foi atualizada).
+  useEffect(() => restoreFocus(), [keys])
 
   if (!filters.length) return null
 

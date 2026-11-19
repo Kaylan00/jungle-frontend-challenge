@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ChevronDown, ChevronLeft, ChevronRight, Search, Star } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { AdminEditionForm, type AdminNftListResponse, type Edition, type NftDetail } from '@/api/contracts'
 import { ApiError } from '@/api/http'
@@ -51,12 +51,19 @@ export function AdminNfts({ query, search }: { query: UseQueryResult<AdminNftLis
   const [editing, setEditing] = useState<{ nft: NftDetail; editionId: string } | null>(null)
 
   // Busca com debounce: a URL guarda o termo (refresh e voltar mantêm) e a página volta para 1.
-  useEffect(() => setTerm(search.q ?? ''), [search.q])
+  // A URL mudou por fora (voltar, link): o campo acompanha, ajustado durante a renderização.
+  const [syncedQ, setSyncedQ] = useState(search.q)
+  if (syncedQ !== search.q) {
+    setSyncedQ(search.q)
+    setTerm(search.q ?? '')
+  }
+  const commitSearch = useEffectEvent((next: string) => {
+    if ((search.q ?? '') === next) return
+    void navigate({ to: '/admin/nfts', search: { q: next || undefined }, replace: true, resetScroll: false })
+  })
   useEffect(() => {
-    if ((search.q ?? '') === term.trim()) return
-    const t = setTimeout(() => void navigate({ to: '/admin/nfts', search: { q: term.trim() || undefined }, replace: true, resetScroll: false }), 300)
+    const t = setTimeout(() => commitSearch(term.trim()), 300)
     return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term])
 
   const goToPage = (pagina: number) =>
