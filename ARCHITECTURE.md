@@ -269,7 +269,8 @@ Revisão com o OWASP Top 10 / ASVS nível 1 aplicada às camadas que existem; de
 - Tempo real entre abas só no mesmo navegador e perfil (seção 15).
 - Socket só `websocket`, ping e entrega por usuário feitos pelo servidor simulado (seção 3).
 - Conexão de carteira é da aba: recarregar desconecta.
-- Performance mobile abaixo de 90: causa e alternativas na seção 11 e em `lighthouse/RESULTADOS.md`.
+- Performance mobile depende da máquina: 98 / 99 num PC Windows comum, menos num ambiente lento (82 a 90 no Linux dentro do Windows) e ~73 com throttling aplicado de verdade (`--throttling-method=devtools`), porque a primeira tela espera o service worker e os mocks subirem. Causa e próximos passos na seção 11 e em `lighthouse/RESULTADOS.md`.
+- Sessão é uma só por navegador (como um cookie): entrar com outra conta em outra aba, inclusive no painel, troca a conta de todas as abas; as outras abas relêem a sessão, descartam o cache privado da conta anterior e avisam.
 - E-mail real depende das variáveis do Brevo na Vercel; sem elas, só a caixa de saída simulada.
 
 **Decisões de UX fora do Figma**

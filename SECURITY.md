@@ -83,9 +83,7 @@ backend real, as mesmas regras valeriam no servidor.
 - **CSP com `style-src 'unsafe-inline'`**: necessário para os estilos que bibliotecas injetam (sonner, Radix).
   Scripts continuam restritos. Em deploys de *preview* da Vercel a barra de comentários da Vercel é bloqueada
   pela CSP (o domínio de produção não a usa).
-- **Dependências**: `npm audit --omit=dev` sem vulnerabilidades. No conjunto com as de desenvolvimento há um
-  alerta alto em `picomatch` (ReDoS, GHSA-fc5q-39xc-vjpf) sem versão corrigida publicada; ele só roda no
-  build e nos testes (Vite, Vitest, plugin do roteador), com padrões de glob do próprio projeto.
+- **Dependências**: `npm audit` sem vulnerabilidades (produção e desenvolvimento), conferido em 18/11/2026.
 
 ## Como reportar uma vulnerabilidade
 

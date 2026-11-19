@@ -54,7 +54,10 @@ Metas: Performance ≥ 90 · Accessibility ≥ 95 · Best Practices ≥ 95 · SE
    worker deixando esses arquivos passarem direto (o Lighthouse passa a cobrar o download): **77 / 77** no mobile
    (LCP ~3,1 s, TBT ~600 ms). A configuração entregue é a padrão do MSW (com o primeiro handler devolvendo os
    estáticos para a rede); a diferença existe só na simulação e fica registrada aqui para quem comparar.
-3. **O que pesa de verdade no mobile** é a camada de demonstração: antes da primeira requisição o navegador baixa e
+3. **Throttling aplicado de verdade.** Com `--throttling-method=devtools` (o navegador fica de fato lento, em vez
+   da simulação padrão do Lighthouse), o mobile cai para cerca de 73 (FCP ~4,1 s, LCP ~4,5 s): nada aparece antes de
+   o service worker e os mocks subirem. É o mesmo custo descrito no item seguinte.
+4. **O que pesa de verdade no mobile** é a camada de demonstração: antes da primeira requisição o navegador baixa e
    avalia React e MSW e liga o service worker. Com backend real (`VITE_ENABLE_MOCKS=false`) isso não existe. O
    próximo passo, se houvesse mais tempo, seria pré-renderizar a primeira tela no HTML no build, para o conteúdo
    acima da dobra não depender do MSW.

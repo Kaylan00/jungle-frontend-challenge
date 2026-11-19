@@ -8,7 +8,7 @@ Cada item do [enunciado](https://github.com/junglegaming/frontend-challenge) com
 | --- | --- |
 | Tipos | `npm run typecheck` |
 | Lint (oxlint) | `npm run lint` |
-| Unitários (273 testes, 15 arquivos) | `npm run test:unit` |
+| Unitários (307 testes, 19 arquivos) e cobertura com limite mínimo | `npm run test:unit`, `npm run test:coverage` |
 | Função de e-mail (16 casos) | `npm run test:api` |
 | E2E desktop + mobile + regressão visual | `npx playwright test` |
 | Lighthouse | `npm run lighthouse` → `lighthouse/RESULTADOS.md` |
