@@ -1,3 +1,7 @@
 * text=auto eol=lf
 *.png binary
 *.webp binary
+
+# Relatórios gerados pelo Lighthouse: fora da contagem de linguagens do GitHub
+lighthouse/reports/** linguist-generated
+coverage/** linguist-generated
